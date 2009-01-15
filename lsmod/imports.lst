@@ -1,0 +1,23 @@
+
+DECLARE_IMPORT_TABLE(ioman, 1, 1) // ioman_IMPORTS_start
+I_open
+I_close
+I_write
+END_IMPORT_TABLE // ioman_IMPORTS_end
+
+DECLARE_IMPORT_TABLE(loadcore, 1, 1) // loadcore_IMPORTS_start
+I_GetLibraryEntryTable
+END_IMPORT_TABLE
+
+DECLARE_IMPORT_TABLE(sifcmd, 1, 1) // sifcmd_IMPORTS_start
+I_sceSifInitRpc
+END_IMPORT_TABLE
+
+DECLARE_IMPORT_TABLE(stdio, 1, 2) // stdio_IMPORTS_start
+I_printf
+END_IMPORT_TABLE
+
+DECLARE_IMPORT_TABLE(sysclib, 1, 1) // sysclib_IMPORTS_start
+I_memcpy
+I_strlen
+END_IMPORT_TABLE

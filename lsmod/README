@@ -1,0 +1,35 @@
+
+lsmod 1.1 - Copyright (C) 2007-2008 misfire <misfire@xploderfreax.de>
+
+
+DESCRIPTION
+
+lsmod shows what IOP modules and libraries are currently loaded and provides
+information about their states.
+
+Its main goal is to find out more about the innards of commercial PS2 games.
+It is, for example, possible to direct lsmod's output to a text file on memory
+card while running a game.
+
+
+USAGE
+
+Simply call SifLoadModule() or use ps2client to run lsmod.
+
+Without an argument, lsmod prints its output to stdout and the file mc0:modlist.
+
+$ ps2client -t 1 execiop host:lsmod.irx
+
+If necessary, you can specify a different output file as an argument, e.g.:
+
+$ ps2client -t 1 execiop host:lsmod.irx host:modlist
+
+A more sophisticated approach is required if you want to use lsmod with games.
+I recommend calling the game's SifLoadModule() function from your code.  Keep in
+mind that the right modules have to be loaded before accessing mc0.  So you
+should probably load lsmod _after_ the game has loaded its native modules.
+
+
+LICENSE
+
+lsmod is licensed under the AFL v2.0.  See file LICENSE.
