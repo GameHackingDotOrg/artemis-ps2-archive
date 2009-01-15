@@ -1,0 +1,31 @@
+##
+# Win32 Makefile for irxtool
+#
+# Copyright (C) 2008 misfire <misfire@xploderfreax.de>
+##
+
+CC      = mingw32-gcc
+PROGRAM = irxtool.exe
+CFLAGS	= -Wall -O2
+LDFLAGS = -s
+
+all: $(PROGRAM)
+
+clean:
+	rm -f *.o $(PROGRAM)
+
+rebuild: clean all
+
+install: all
+	cp -f $(PROGRAM) $(PS2DEV)/bin/
+
+import.db:
+	#./generatedb.pl $(PS2SDKSRC)/iop/kernel/include/*.h >import.db
+	find $(PS2SDKSRC)/iop/ -iname "*.h" | xargs ./generatedb.pl >import.db
+
+$(PROGRAM): irxtool.o
+	$(CC) $(LDFLAGS) -o $@ $^
+
+irxtool.o: irxtool.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+

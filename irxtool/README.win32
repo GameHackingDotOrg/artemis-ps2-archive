@@ -1,0 +1,9 @@
+
+This is the Win32 port of irxtool by Mega Man.
+
+To compile it, run this command:
+
+$ make -f Makefile.win32
+
+  -misfire (Oct 10 2008)
+
