@@ -38,5 +38,5 @@ run:
 	$(IOP_CC) $(IOP_CFLAGS) build-exports.c -o $@
 	-rm -f build-exports.c
 
-include $(PS2SDK)/Makefile.pref
-include $(PS2SDK)/Makefile.iopglobal
+include $(PS2SDK)/samples/Makefile.pref
+include $(PS2SDK)/samples/Makefile.iopglobal
