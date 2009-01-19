@@ -1,0 +1,7 @@
+Many thanks to Misfire!
+
+Functions provided my him:
+KernelRead()
+HookSyscall() - the all important one :)
+
+and the PS2dev folks for all their great examples included with the SDK

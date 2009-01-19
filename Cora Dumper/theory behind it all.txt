@@ -1,0 +1,19 @@
+Firstly we find where all the systemcall function poiters are located.
+
+We pick a system call that will be called ingame (near startup) i used AddIntcHandler (0x10).
+
+We write a jal to our cheat engine(in kernel memory)on the address that holds the pointer to
+the actual AddIntcHandler function, and then take the actual pointer, create a jal with it
+and place this jal at the end of our code so the AddIntcHandler function is still called.
+
+We run the game and because our code is in kernel memory it is not cleared!! Then once the
+game calls AddIntcHandler it saves a jal to our function that writes the cheats on a
+function that is called regularly (padread!!) so that the codes are always writen. We take
+the origional opp code we replaced and place it at the end of our cheat writing function
+so it doesnt throw any errors.
+
+And thats it, very simple hardcoding mastercode cheat device. Look out for my tutorial on 
+thread system master codes which in the progress i dissasemble codebreaker 9.2 :)
+
+Cheers!
+Driver

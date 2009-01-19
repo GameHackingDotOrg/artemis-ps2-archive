@@ -1,0 +1,16 @@
+Mod 1: 
+
+Fixed lines 1/2, 6, and 40 of r5900_regs.h, to conform with proper commenting standards and reduce compiler warnings (/* */, rather than //)
+
+___________________________________________________
+
+
+Mod 2:
+
+Force print screen
+
+___________________________________________________
+
+method1:
+
+Newest attempt
