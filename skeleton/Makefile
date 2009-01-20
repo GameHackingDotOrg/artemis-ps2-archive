@@ -8,16 +8,21 @@
 #
 # $Id: Makefile.sample 577 2004-09-14 14:41:46Z pixel $
 
-
 EE_BIN = skeleton.elf
 EE_OBJS = skeleton.o
-EE_LIBS = -ldebug -lpad -lc
+EE_LIBS = -lpadx -ldebug
 
-all: $(EE_BIN)
+all: $(EE_BIN) freesio2.irx freepad.irx
 
 clean:
-	rm -f *.elf *.o *.a
+	rm -f *.elf *.o *.a freepad.irx freesio2.irx
+
+freesio2.irx: 
+	cp $(PS2SDK)/iop/irx/freesio2.irx $@
+
+freepad.irx: 
+	cp $(PS2SDK)/iop/irx/freepad.irx $@
+
 
 include $(PS2SDK)/samples/Makefile.pref
 include $(PS2SDK)/samples/Makefile.eeglobal
-
