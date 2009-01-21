@@ -322,6 +322,15 @@ int main(int argc, char **argv)
                                         old_pad[port] = paddata[port];
 
                                         // Values 50 and 200 used because my controllers are worn out :-)
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
+                                        
 
                                 
                             			if(new_pad[port] & PAD_LEFT);		
@@ -330,35 +339,86 @@ int main(int argc, char **argv)
                                         if(new_pad[port] & PAD_RIGHT);		
                                         
                                         
-                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"mainMenuO") == 0))   mainMenuS();		
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"mainMenuS") == 0)) {   
+	                                        mainMenuO();
+	                                        continue;
+                                        }
                                         
                                         
-                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu2") == 0))   startMenu1();
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"mainMenuO") == 0))  { 
+                                        mainMenuS();	
+                                         continue;
+                                        }
                                         
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu1") == 0))   {
+                                        startMenu3();	
+                                         continue;
+                                        }
                                         
-                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu3") == 0))   startMenu2();
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu2") == 0))   {
+                                        startMenu1();
+                                         continue;
+                                        }
                                         
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu3") == 0))   {
+                                        startMenu2();
+                                         continue;
+                                        }
                                         
-                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"optionsMenu2") == 0))   optionsMenu1();
- 
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"optionsMenu1") == 0))   {
+                                        optionsMenu3();
+                                         continue;
+                                        }
                                         
-                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"optionsMenu3") == 0))   optionsMenu2();
-                                       
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"optionsMenu2") == 0))   {
+                                        optionsMenu1();
+ 										 continue;
+                                        }
                                         
-                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"mainMenuS") == 0))   mainMenuO();
-                                                                               
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"optionsMenu3") == 0))   {
+                                        optionsMenu2();
+                                        continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"mainMenuS") == 0))   {
+                                        mainMenuO();
+                                         continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"mainMenuO") == 0))   {
+                                        mainMenuS();
+                                              continue;
+                                        }                                  
                                         	
-                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"startMenu1") == 0))   startMenu2();	
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"startMenu1") == 0))   {
+                                        startMenu2();	
+                                         continue;
+                                        }
                                         
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"startMenu2") == 0))   {
+                                        startMenu3();
+                                         continue;
+                                        }
                                         
-                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"startMenu2") == 0))   startMenu3();
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"startMenu3") == 0))   {
+                                        startMenu1();
+                                         continue;
+                                        }
                                         
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"optionsMenu1") == 0))   {
+                                        optionsMenu2();
+                                         continue;
+                                        }
                                         
-                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"optionsMenu1") == 0))   optionsMenu2();
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"optionsMenu2") == 0))   {
+                                        optionsMenu3();
+                                         continue;
+                                        }
                                         
-                                        
-                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"optionsMenu2") == 0))   optionsMenu3();
-                                        
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"optionsMenu3") == 0))   {
+                                        optionsMenu1();
+                                         continue;
+                                        }
                                         
                                         if(new_pad[port] & PAD_START); 	
                                         
@@ -369,17 +429,24 @@ int main(int argc, char **argv)
                                         if(new_pad[port] & PAD_SQUARE); 		
                                         
                                         
-                                        if((new_pad[port] & PAD_TRIANGLE) && (strcmp(currentMenu,"mainMenuS") != 0) && (strcmp(currentMenu,"mainMenuO") != 0))  mainMenuS();	
+                                        if((new_pad[port] & PAD_TRIANGLE) && (strcmp(currentMenu,"mainMenuS") != 0) && (strcmp(currentMenu,"mainMenuO") != 0))  {
+	                                        mainMenuS();	
+	                                         continue;
+                                        }
                                         
                                         
                                         if(new_pad[port] & PAD_CIRCLE);		
                                         
                                         
-                                        if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"mainMenuS") == 0))   startMenu1();
+                                        if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"mainMenuS") == 0))   {
+	                                        startMenu1();
+                                         continue;
+                                        }
                                         
-                                        
-                                        if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"mainMenuO") == 0))   optionsMenu1();		
-		
+                                        if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"mainMenuO") == 0))   {
+	                                        optionsMenu1();		
+		 									continue;
+                                        }
                                         
                                         
                                         if(new_pad[port] & PAD_L1)			
