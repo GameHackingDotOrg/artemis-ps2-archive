@@ -50,81 +50,87 @@ char currentMenu[25];
 
 void mainMenuS() {
 	init_scr();
-    scr_printf("\n\n\n\n\n          Project Artemis\n\n"
-               "          Welcome to the Project Artemis (terrible) skeleton GUI.\n\n\n\n"
-               "         *Start Game\n\n"
-               "          Options\n\n");
-						strcpy(currentMenu,"mainMenuS");
+    scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+               "\t \t \t Welcome to the Project Artemis (terrible) skeleton GUI.\n\n\n\n\n\n\n"
+               "\t \t \t \t \t \t    *Start Game\n\n"
+               "\t \t \t \t \t \t     Options\n\n");
+				strcpy(currentMenu,"mainMenuS");
                
 			}
 			
 void mainMenuO() {
 	init_scr();
 
-    scr_printf("\n\n\n\n\n          Project Artemis\n\n"
-               "          Welcome to the Project Artemis (terrible) skeleton GUI.\n\n\n\n"
-               "          Start Game\n\n"
-               "         *Options\n\n");
+    scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+               "\t \t \t Welcome to the Project Artemis (terrible) skeleton GUI.\n\n\n\n\n\n\n"
+               "\t \t \t \t \t \t     Start Game\n\n"
+               "\t \t \t \t \t \t    *Options\n\n");
                strcpy(currentMenu,"mainMenuO");
                 
 			}
 
 void startMenu1() {
 	init_scr();
-	scr_printf("\n\n\n\n\n          Welcome to the (terrible) Start menu.\n\n\n\n"
-				"         *Choice 1\n\n"
-				"          Choice 2\n\n"
-				"          Choice 3\n\n");
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Start menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t \t    *Choice 1\n\n"
+				"\t \t \t \t \t \t     Choice 2\n\n"
+				"\t \t \t \t \t \t     Choice 3\n\n");
 				strcpy(currentMenu,"startMenu1");
 						
 			}	
 			
 void startMenu2() {
 	init_scr();
-	scr_printf("\n\n\n\n\n          Welcome to the (terrible) Start menu.\n\n\n\n"
-				"          Choice 1\n\n"
-				"         *Choice 2\n\n"
-				"          Choice 3\n\n");
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Start menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t \t     Choice 1\n\n"
+				"\t \t \t \t \t \t    *Choice 2\n\n"
+				"\t \t \t \t \t \t     Choice 3\n\n");
 				strcpy(currentMenu,"startMenu2");
 				
 			}
 			
 void startMenu3() {
 	init_scr();
-	scr_printf("\n\n\n\n\n          Welcome to the (terrible) Start menu.\n\n\n\n"
-				"          Choice 1\n\n"
-				"          Choice 2\n\n"
-				"         *Choice 3\n\n");
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Start menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t \t     Choice 1\n\n"
+				"\t \t \t \t \t \t     Choice 2\n\n"
+				"\t \t \t \t \t \t    *Choice 3\n\n");
 				strcpy(currentMenu,"startMenu3");
 				
 			}
 			
 void optionsMenu1() {
 	init_scr();
-	scr_printf("\n\n\n\n\n          Welcome to the (terrible) Options menu.\n\n\n\n"
-				"         *Choice 1\n\n"
-				"          Choice 2\n\n"
-				"          Choice 3\n\n");
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Options menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t \t    *Choice 1\n\n"
+				"\t \t \t \t \t \t     Choice 2\n\n"
+				"\t \t \t \t \t \t     Choice 3\n\n");
 				strcpy(currentMenu,"optionsMenu1");
 				
 			}
 			
 void optionsMenu2() {
 	init_scr();
-	scr_printf("\n\n\n\n\n          Welcome to the (terrible) Options menu.\n\n\n\n"
-				"          Choice 1\n\n"
-				"         *Choice 2\n\n"
-				"          Choice 3\n\n");
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Options menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t \t     Choice 1\n\n"
+				"\t \t \t \t \t \t    *Choice 2\n\n"
+				"\t \t \t \t \t \t     Choice 3\n\n");
 				strcpy(currentMenu,"optionsMenu2");
 				
 			}
 			
 void optionsMenu3() {
 	init_scr();
-	scr_printf("\n\n\n\n\n          Welcome to the (terrible) Options menu.\n\n\n\n"
-				"          Choice 1\n\n"
-				"          Choice 2\n\n"
-				"         *Choice 3\n\n");
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Options menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t \t     Choice 1\n\n"
+				"\t \t \t \t \t \t     Choice 2\n\n"
+				"\t \t \t \t \t \t    *Choice 3\n\n");
 				strcpy(currentMenu,"optionsMenu3");
 				
 			}
