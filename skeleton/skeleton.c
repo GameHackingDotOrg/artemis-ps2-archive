@@ -47,6 +47,7 @@ void wait_vsync()
 
 
 char currentMenu[25];
+char currentLevel[25];
 
 void mainMenuS() {
 	init_scr();
@@ -55,6 +56,7 @@ void mainMenuS() {
                "\t \t \t \t \t \t    *Start Game\n\n"
                "\t \t \t \t \t \t     Options\n\n");
 				strcpy(currentMenu,"mainMenuS");
+				strcpy(currentLevel,"Main");
                
 			}
 			
@@ -66,6 +68,7 @@ void mainMenuO() {
                "\t \t \t \t \t \t     Start Game\n\n"
                "\t \t \t \t \t \t    *Options\n\n");
                strcpy(currentMenu,"mainMenuO");
+               strcpy(currentLevel,"Main");
                 
 			}
 
@@ -73,10 +76,10 @@ void startMenu1() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Start menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t \t    *Choice 1\n\n"
-				"\t \t \t \t \t \t     Choice 2\n\n"
-				"\t \t \t \t \t \t     Choice 3\n\n");
+				"\t \t \t \t \t \t    *Start Game\n\n"
+				"\t \t \t \t \t \t     Choose Codes\n\n");
 				strcpy(currentMenu,"startMenu1");
+				strcpy(currentLevel,"Start");
 						
 			}	
 			
@@ -84,21 +87,10 @@ void startMenu2() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Start menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t \t     Choice 1\n\n"
-				"\t \t \t \t \t \t    *Choice 2\n\n"
-				"\t \t \t \t \t \t     Choice 3\n\n");
+				"\t \t \t \t \t \t     Start Game\n\n"
+				"\t \t \t \t \t \t    *Choose Codes\n\n");
 				strcpy(currentMenu,"startMenu2");
-				
-			}
-			
-void startMenu3() {
-	init_scr();
-	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
-				"\t \t \t \t    Welcome to the (terrible) Start menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t \t     Choice 1\n\n"
-				"\t \t \t \t \t \t     Choice 2\n\n"
-				"\t \t \t \t \t \t    *Choice 3\n\n");
-				strcpy(currentMenu,"startMenu3");
+				strcpy(currentLevel,"Start");
 				
 			}
 			
@@ -106,10 +98,11 @@ void optionsMenu1() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Options menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t \t    *Choice 1\n\n"
-				"\t \t \t \t \t \t     Choice 2\n\n"
-				"\t \t \t \t \t \t     Choice 3\n\n");
+				"\t \t \t \t \t \t    *Option 1\n\n"
+				"\t \t \t \t \t \t     Option 2\n\n"
+				"\t \t \t \t \t \t     Option 3\n\n");
 				strcpy(currentMenu,"optionsMenu1");
+				strcpy(currentLevel,"Options");
 				
 			}
 			
@@ -117,10 +110,11 @@ void optionsMenu2() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Options menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t \t     Choice 1\n\n"
-				"\t \t \t \t \t \t    *Choice 2\n\n"
-				"\t \t \t \t \t \t     Choice 3\n\n");
+				"\t \t \t \t \t \t     Option 1\n\n"
+				"\t \t \t \t \t \t    *Option 2\n\n"
+				"\t \t \t \t \t \t     Option 3\n\n");
 				strcpy(currentMenu,"optionsMenu2");
+				strcpy(currentLevel,"Options");
 				
 			}
 			
@@ -128,10 +122,67 @@ void optionsMenu3() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Options menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t \t     Choice 1\n\n"
-				"\t \t \t \t \t \t     Choice 2\n\n"
-				"\t \t \t \t \t \t    *Choice 3\n\n");
+				"\t \t \t \t \t \t     Option 1\n\n"
+				"\t \t \t \t \t \t     Option 2\n\n"
+				"\t \t \t \t \t \t    *Option 3\n\n");
 				strcpy(currentMenu,"optionsMenu3");
+				strcpy(currentLevel,"Options");
+				
+			}
+			
+			
+void codesMenu1() {
+	init_scr();
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t    *Add Game\n\n"
+				"\t \t \t \t \t \t     DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t \t     Shang Resource ID #8\n\n");
+				strcpy(currentMenu,"codesMenu1");
+				strcpy(currentLevel,"Codes");
+				
+			}
+			
+			
+void codesMenu2() {
+	init_scr();
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t     Add Game\n\n"
+				"\t \t \t \t \t \t    *DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t \t     Shang Resource ID #8\n\n");
+				strcpy(currentMenu,"codesMenu2");
+				strcpy(currentLevel,"Codes");
+				
+			}
+			
+			
+void codesMenu3() {
+	init_scr();
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t     Add Game\n\n"
+				"\t \t \t \t \t \t     DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t \t     *Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t \t     Shang Resource ID #8\n\n");
+				strcpy(currentMenu,"codesMenu3");
+				strcpy(currentLevel,"Codes");
+				
+			}
+			
+			
+void codesMenu4() {
+	init_scr();
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t     Add Game\n\n"
+				"\t \t \t \t \t \t     DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t \t    *Shang Resource ID #8\n\n");
+				strcpy(currentMenu,"codesMenu4");
+				strcpy(currentLevel,"Codes");
 				
 			}
 
@@ -356,20 +407,12 @@ int main(int argc, char **argv)
                                          continue;
                                         }
                                         
-                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu1") == 0))   {
-                                        startMenu3();	
-                                         continue;
-                                        }
                                         
                                         if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu2") == 0))   {
                                         startMenu1();
                                          continue;
                                         }
                                         
-                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"startMenu3") == 0))   {
-                                        startMenu2();
-                                         continue;
-                                        }
                                         
                                         if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"optionsMenu1") == 0))   {
                                         optionsMenu3();
@@ -383,6 +426,26 @@ int main(int argc, char **argv)
                                         
                                         if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"optionsMenu3") == 0))   {
                                         optionsMenu2();
+                                        continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"codesMenu1") == 0))   {
+                                        codesMenu4();
+                                        continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"codesMenu2") == 0))   {
+                                        codesMenu1();
+                                        continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"codesMenu3") == 0))   {
+                                        codesMenu2();
+                                        continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_UP) && (strcmp(currentMenu,"codesMenu4") == 0))   {
+                                        codesMenu3();
                                         continue;
                                         }
                                         
@@ -401,15 +464,6 @@ int main(int argc, char **argv)
                                          continue;
                                         }
                                         
-                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"startMenu2") == 0))   {
-                                        startMenu3();
-                                         continue;
-                                        }
-                                        
-                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"startMenu3") == 0))   {
-                                        startMenu1();
-                                         continue;
-                                        }
                                         
                                         if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"optionsMenu1") == 0))   {
                                         optionsMenu2();
@@ -426,6 +480,26 @@ int main(int argc, char **argv)
                                          continue;
                                         }
                                         
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"codesMenu1") == 0))   {
+                                        codesMenu2();
+                                         continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"codesMenu2") == 0))   {
+                                        codesMenu3();
+                                         continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"codesMenu3") == 0))   {
+                                        codesMenu4();
+                                         continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_DOWN) && (strcmp(currentMenu,"codesMenu4") == 0))   {
+                                        codesMenu1();
+                                         continue;
+                                        }
+                                        
                                         if(new_pad[port] & PAD_START); 	
                                         
                                         
@@ -435,8 +509,18 @@ int main(int argc, char **argv)
                                         if(new_pad[port] & PAD_SQUARE); 		
                                         
                                         
-                                        if((new_pad[port] & PAD_TRIANGLE) && (strcmp(currentMenu,"mainMenuS") != 0) && (strcmp(currentMenu,"mainMenuO") != 0))  {
+                                        if((new_pad[port] & PAD_TRIANGLE) && (strcmp(currentLevel,"Start") == 0))  {
 	                                        mainMenuS();	
+	                                         continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_TRIANGLE) && (strcmp(currentLevel,"Options") == 0))  {
+	                                        mainMenuS();	
+	                                         continue;
+                                        }
+                                        
+                                        if((new_pad[port] & PAD_TRIANGLE) && (strcmp(currentLevel,"Codes") == 0))  {
+	                                        startMenu1();	
 	                                         continue;
                                         }
                                         
@@ -451,6 +535,12 @@ int main(int argc, char **argv)
                                         
                                         if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"mainMenuO") == 0))   {
 	                                        optionsMenu1();		
+		 									continue;
+                                        }
+                                        
+                                        
+                                        if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"startMenu2") == 0))   {
+	                                        codesMenu1();		
 		 									continue;
                                         }
                                         
