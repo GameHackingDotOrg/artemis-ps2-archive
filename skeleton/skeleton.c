@@ -185,6 +185,18 @@ void codesMenu4() {
 				strcpy(currentLevel,"Codes");
 				
 			}
+			
+void startGame() {
+	init_scr();
+	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
+				"\t \t \t    Welcome to the (terrible, fake) game loading function.\n\n\n\n\n\n\n"
+				"\t \t \t \t \t     Please insert game (if not already inserted),\n\n"
+				"\t \t \t \t \t \t   then press Start.\n\n"
+				"\t \t \t \t \t \t  Note: Doesn't really work.\n\n");
+				strcpy(currentMenu,"startGame");
+				strcpy(currentLevel,"Load");
+				
+			}
 
 
 void loadmodules(int free)
@@ -524,6 +536,11 @@ int main(int argc, char **argv)
 	                                         continue;
                                         }
                                         
+                                        if((new_pad[port] & PAD_TRIANGLE) && (strcmp(currentLevel,"Load") == 0))  {
+	                                        startMenu1();	
+	                                         continue;
+                                        }
+                                        
                                         
                                         if(new_pad[port] & PAD_CIRCLE);		
                                         
@@ -535,6 +552,12 @@ int main(int argc, char **argv)
                                         
                                         if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"mainMenuO") == 0))   {
 	                                        optionsMenu1();		
+		 									continue;
+                                        }
+                                        
+                                        
+                                        if((new_pad[port] & PAD_CROSS) && (strcmp(currentMenu,"startMenu1") == 0))   {
+	                                        startGame();		
 		 									continue;
                                         }
                                         
