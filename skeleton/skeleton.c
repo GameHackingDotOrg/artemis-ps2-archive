@@ -135,10 +135,10 @@ void codesMenu1() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t    *Add Game\n\n"
-				"\t \t \t \t \t \t     DarkSerge and the Root Bear\n\n"
-				"\t \t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
-				"\t \t \t \t \t \t     Shang Resource ID #8\n\n");
+				"\t \t \t \t    *Add Game\n\n"
+				"\t \t \t \t \t     DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t     Shang Resource ID #8\n\n");
 				strcpy(currentMenu,"codesMenu1");
 				strcpy(currentLevel,"Codes");
 				
@@ -149,10 +149,10 @@ void codesMenu2() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t     Add Game\n\n"
-				"\t \t \t \t \t \t    *DarkSerge and the Root Bear\n\n"
-				"\t \t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
-				"\t \t \t \t \t \t     Shang Resource ID #8\n\n");
+				"\t \t \t \t     Add Game\n\n"
+				"\t \t \t \t \t    *DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t     Shang Resource ID #8\n\n");
 				strcpy(currentMenu,"codesMenu2");
 				strcpy(currentLevel,"Codes");
 				
@@ -163,10 +163,10 @@ void codesMenu3() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t     Add Game\n\n"
-				"\t \t \t \t \t \t     DarkSerge and the Root Bear\n\n"
-				"\t \t \t \t \t \t     *Metal Gear Fantasy Alpha\n\n"
-				"\t \t \t \t \t \t     Shang Resource ID #8\n\n");
+				"\t \t \t \t     Add Game\n\n"
+				"\t \t \t \t \t     DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t     *Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t     Shang Resource ID #8\n\n");
 				strcpy(currentMenu,"codesMenu3");
 				strcpy(currentLevel,"Codes");
 				
@@ -177,10 +177,10 @@ void codesMenu4() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t \t    Welcome to the (terrible) Codes menu.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t     Add Game\n\n"
-				"\t \t \t \t \t \t     DarkSerge and the Root Bear\n\n"
-				"\t \t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
-				"\t \t \t \t \t \t    *Shang Resource ID #8\n\n");
+				"\t \t \t \t     Add Game\n\n"
+				"\t \t \t \t \t     DarkSerge and the Root Bear\n\n"
+				"\t \t \t \t \t     Metal Gear Fantasy Alpha\n\n"
+				"\t \t \t \t \t    *Shang Resource ID #8\n\n");
 				strcpy(currentMenu,"codesMenu4");
 				strcpy(currentLevel,"Codes");
 				
@@ -190,9 +190,9 @@ void startGame() {
 	init_scr();
 	scr_printf("\n\n \t \t \t \t \t \t Project Artemis\n\n"
 				"\t \t \t    Welcome to the (terrible, fake) game loading function.\n\n\n\n\n\n\n"
-				"\t \t \t \t \t     Please insert game (if not already inserted),\n\n"
-				"\t \t \t \t \t \t   then press Start.\n\n"
-				"\t \t \t \t \t \t  Note: Doesn't really work.\n\n");
+				"\t \t \t     Please insert game (if not already inserted),\n\n"
+				"\t \t \t \t \t \t  then press Start.\n\n\n"
+				"\t \t \t \t \t  Note: Doesn't really work.\n\n");
 				strcpy(currentMenu,"startGame");
 				strcpy(currentLevel,"Load");
 				
