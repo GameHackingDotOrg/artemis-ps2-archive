@@ -1,0 +1,4 @@
+[ntpbserver.rc]
+ntpbserverres.h
+[ntpbserver.c]
+ntpbserverres.h
