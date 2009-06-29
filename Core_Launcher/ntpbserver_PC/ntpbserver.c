@@ -16,6 +16,17 @@
 
 char pktbuffer[65536];
 char launch_path[2048];
+char dump_dir[2048];
+char eedump_dir[2048];
+char iopdump_dir[2048];
+char eedump_file[2048];
+char iopdump_file[2048];
+
+int eedump_index, iopdump_index;
+unsigned int eedump_size, iopdump_size;
+unsigned int eedump_wpos, iopdump_wpos;
+HANDLE fh_eedump, fh_iopdump;
+
 
 // NTPB header magic
 #define ntpb_MagicSize  6
@@ -44,6 +55,8 @@ HWND hwndTextBoxEEdumpStart;	// Edit control handle
 HWND hwndTextBoxEEdumpEnd;		// Edit control handle
 HWND hwndTextBoxIOPdumpStart;	// Edit control handle
 HWND hwndTextBoxIOPdumpEnd;		// Edit control handle
+HWND hwndProgressBarEEdumpState;		// Progress Bar control handle
+HWND hwndProgressBarIOPdumpState;		// Progress Bar control handle
 HWND hWndStatusbar;				// StatusBar handle
 
 WSADATA *WsaData;
@@ -236,46 +249,23 @@ int check_ntpb_header(void *buf) // sanity check to see if the packet have the f
 }
 
 /*<---------------------------------------------------------------------->*/
-int PrintDump(void *buf, int size, int ResultControlID)
+int PrintLog(void *buf, int size, int ResultControlID)
 {
-	int i, msgSize;
-	char tmp[128];
-	char *printbuf;
-	unsigned char *p = (unsigned char *)buf;
-
-	//MessageBox(GetActiveWindow(),"print dump !","NTPBserver",MB_ICONERROR | MB_OK);
-
-	msgSize = (size * 3) + (size/16 * 2);
-
-	printbuf = (char*)GlobalAlloc(GPTR, msgSize + 1);
-
-	memset(printbuf, 0, sizeof(printbuf));
-	for (i=0; i<size; i++) {
-		if (i>0) {
-			if ((i%16) == 0)
-				strcat(printbuf, "\r\n");
-		}
-		sprintf(tmp, "%02X ", (int)*p++);
-		strcat(printbuf, tmp);
-	}
-	strcat(printbuf, "\r\n");
-
 	// send messages to the edit control after preserving the already written content
 	int len = GetWindowTextLength(GetDlgItem(hwndMain, ResultControlID));
 	char *buffer;
 
-	buffer = (char*)GlobalAlloc(GPTR, len + msgSize + 256);
+	buffer = (char*)GlobalAlloc(GPTR, len + size + 256);
 	GetDlgItemText(hwndMain, ResultControlID, buffer, len + 1);
 
-	strcat(buffer, printbuf);
+	strcat(buffer, buf);
 
 	SetDlgItemText(hwndMain, ResultControlID, buffer);
 	UpdateWindow(hwndMain);
 
 	GlobalFree((HANDLE)buffer);
-	GlobalFree((HANDLE)printbuf);
 
-	return msgSize;
+	return size;
 }
 
 /*<---------------------------------------------------------------------->*/
@@ -307,9 +297,9 @@ DWORD HexaToDecimal(const char* pszHexa)
 /*<---------------------------------------------------------------------->*/
 int receivePacket(int client_socket) // retrieving a packet sent by the Client
 {
-	int rcvSize, sndSize, packetSize, ntpbpktSize, ntpbCmd, ln, recv_size;
+	int rcvSize, sndSize, packetSize, ntpbpktSize, ntpbCmd, ln, recv_size, sizeWritten;
 	char *pbuf;
-	char startbuf[128], endbuf[128], tmp[128];
+	char startbuf[128], endbuf[128], tmp[128], tmp_file[128];
 
 	pbuf = (char *)&pktbuffer[0];
 
@@ -342,39 +332,65 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 		switch(ntpbCmd) { // treat Client Request here
 
 			case NTPBCMD_PRINT_EEDUMP:
-				PrintDump(&pbuf[ntpb_hdrSize], ntpbpktSize, IDC_TEXTBOX_EEDUMP);
+
+				WriteFile(fh_eedump, &pktbuffer[ntpb_hdrSize], ntpbpktSize, &sizeWritten, NULL);
+				eedump_wpos += sizeWritten;
+
+				SendMessage(hwndProgressBarEEdumpState, PBM_STEPIT, 0, 0);
+
+				if (eedump_wpos >= eedump_size) {
+					SendMessage(hwndProgressBarEEdumpState, PBM_SETPOS, 0, 0);
+					UpdateWindow(hwndMain);
+				}
+
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				ntpbpktSize = ntpb_hdrSize + 2;
 				break;
 
 			case NTPBCMD_PRINT_IOPDUMP:
-				PrintDump(&pbuf[ntpb_hdrSize], ntpbpktSize, IDC_TEXTBOX_IOPDUMP);
+
+				WriteFile(fh_iopdump, &pktbuffer[ntpb_hdrSize], ntpbpktSize, &sizeWritten, NULL);
+				iopdump_wpos += sizeWritten;
+
+				SendMessage(hwndProgressBarIOPdumpState, PBM_STEPIT, 0, 0);
+
+				if (iopdump_wpos >= iopdump_size) {
+					SendMessage(hwndProgressBarIOPdumpState, PBM_SETPOS, 0, 0);
+					UpdateWindow(hwndMain);
+				}
+
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				ntpbpktSize = ntpb_hdrSize + 2;
 				break;
 
 			case NTPBCMD_GET_EEDUMP_START:
+
+				sprintf(tmp_file, "dump%04d.raw", eedump_index);
+				strcpy(eedump_file, eedump_dir);
+				strcat(eedump_file, "\\");
+				strcat(eedump_file, tmp_file);
+
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPSTART));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMPSTART, startbuf, ln + 1);
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPEND));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMPEND, endbuf, ln + 1);
-				sprintf(tmp, "### Dump from 0x%s to 0x%s ###\r\n", startbuf, endbuf);
-				SetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMP, tmp);
+				sprintf(tmp, "Dump from 0x%s to 0x%s to %s\r\n", startbuf, endbuf, tmp_file);
+				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_EEDUMP);
+
+				fh_eedump = CreateFile(eedump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+				eedump_index++;
+
+				eedump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+
+				SendMessage(hwndProgressBarEEdumpState, PBM_SETRANGE, 0, MAKELPARAM(0, eedump_size/8192));
+          		SendMessage(hwndProgressBarEEdumpState, PBM_SETSTEP, 1, 0);
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
-				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPSTART));
-				GetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMPSTART, startbuf, ln + 1);
 				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
 				ntpbpktSize = ntpb_hdrSize + 6;
 				break;
 
 			case NTPBCMD_GET_EEDUMP_END:
-				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPSTART));
-				GetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMPSTART, startbuf, ln + 1);
-				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPEND));
-				GetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMPEND, endbuf, ln + 1);
-				sprintf(tmp, "### EE Dump from 0x%s to 0x%s ###\r\n", startbuf, endbuf);
-				SetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMP, tmp);
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPEND));
@@ -384,27 +400,33 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 				break;
 
 			case NTPBCMD_GET_IOPDUMP_START:
+
+				sprintf(tmp_file, "dump%04d.raw", iopdump_index);
+				strcpy(iopdump_file, iopdump_dir);
+				strcat(iopdump_file, "\\");
+				strcat(iopdump_file, tmp_file);
+
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPSTART));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMPSTART, startbuf, ln + 1);
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPEND));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMPEND, endbuf, ln + 1);
-				sprintf(tmp, "### IOP Dump from 0x%s to 0x%s ###\r\n", startbuf, endbuf);
-				SetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMP, tmp);
+				sprintf(tmp, "Dump from 0x%s to 0x%s to %s\r\n", startbuf, endbuf, tmp_file);
+				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_IOPDUMP);
+
+				fh_iopdump = CreateFile(iopdump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+				iopdump_index++;
+
+				iopdump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+
+				SendMessage(hwndProgressBarIOPdumpState, PBM_SETRANGE, 0, MAKELPARAM(0, iopdump_size/8192));
+          		SendMessage(hwndProgressBarIOPdumpState, PBM_SETSTEP, 1, 0);
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
-				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPSTART));
-				GetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMPSTART, startbuf, ln + 1);
 				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
 				ntpbpktSize = ntpb_hdrSize + 6;
 				break;
 
 			case NTPBCMD_GET_IOPDUMP_END:
-				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPSTART));
-				GetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMPSTART, startbuf, ln + 1);
-				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPEND));
-				GetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMPEND, endbuf, ln + 1);
-				sprintf(tmp, "### IOP Dump from 0x%s to 0x%s ###\r\n", startbuf, endbuf);
-				SetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMP, tmp);
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPEND));
@@ -581,7 +603,7 @@ VOID CreateControls(HINSTANCE hInstance)
                                NULL);
 
 	hwndTextBoxEEdumpEnd = CreateWindow (TEXT("edit"),
-                               "00101000",
+                               "02000000",
                                WS_CHILD|WS_VISIBLE|WS_BORDER,
                                270,18,
                                70,20,
@@ -601,7 +623,7 @@ VOID CreateControls(HINSTANCE hInstance)
                                NULL);
 
 	hwndTextBoxIOPdumpStart = CreateWindow (TEXT("edit"),
-                               "00001000",
+                               "00000000",
                                WS_CHILD|WS_VISIBLE|WS_BORDER,
                                475,18,
                                70,20,
@@ -621,7 +643,7 @@ VOID CreateControls(HINSTANCE hInstance)
                                NULL);
 
 	hwndTextBoxIOPdumpEnd = CreateWindow (TEXT("edit"),
-                               "00002000",
+                               "00200000",
                                WS_CHILD|WS_VISIBLE|WS_BORDER,
                                650,18,
                                70,20,
@@ -644,7 +666,7 @@ VOID CreateControls(HINSTANCE hInstance)
                                "",
                                WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_READONLY,
                                20,70,
-                               380,362,
+                               380,342,
                                hwndMain,
                                (HMENU)IDC_TEXTBOX_EEDUMP,
                                hInstance,
@@ -664,11 +686,32 @@ VOID CreateControls(HINSTANCE hInstance)
                                "",
                                WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_READONLY,
                                400,70,
-                               380,362,
+                               380,342,
                                hwndMain,
                                (HMENU)IDC_TEXTBOX_IOPDUMP,
                                hInstance,
                                NULL);
+
+	hwndProgressBarEEdumpState = CreateWindowEx (0, PROGRESS_CLASS,
+                               NULL,
+                               WS_CHILD|WS_VISIBLE|PBS_SMOOTH,
+                               20,420,
+                               362,20,
+                               hwndMain,
+                               (HMENU)IDC_PROGRESSBAR_EEDUMPSTATE,
+                               hInstance,
+                               NULL);
+
+	hwndProgressBarIOPdumpState =  CreateWindowEx (0, PROGRESS_CLASS,
+                               NULL,
+                               WS_CHILD|WS_VISIBLE|PBS_SMOOTH,
+                               400,420,
+                               362,20,
+                               hwndMain,
+                               (HMENU)IDC_PROGRESSBAR_IOPDUMPSTATE,
+                               hInstance,
+                               NULL);
+
 }
 
 /*<---------------------------------------------------------------------->*/
@@ -709,6 +752,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	while (*p == '\"')
 	   p++;
   	strcpy(launch_path, p);
+
+	// Create needed dirs
+	strcpy(dump_dir, launch_path);
+	strcat(dump_dir, "\\dump");
+	strcpy(eedump_dir, dump_dir);
+	strcat(eedump_dir, "\\EE");
+	strcpy(iopdump_dir, dump_dir);
+	strcat(iopdump_dir, "\\IOP");
+
+	CreateDirectory(dump_dir, NULL);
+	CreateDirectory(eedump_dir, NULL);
+	CreateDirectory(iopdump_dir, NULL);
+
+	eedump_index = 0;
+	iopdump_index = 0;
 
 	// Create & start the server thread
 	HANDLE serverThid = CreateThread(NULL, 0, serverThread, NULL, 0, NULL); // no stack, 1MB by default

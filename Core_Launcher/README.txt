@@ -1,7 +1,8 @@
 //-----------------------------------------------------------------------//
 //                                                                       //
-//  Artemis Project: Task 2308                                           //
+//  Artemis Project: Task 2308/2341                                      //
 //  solution provided by jimmikaelkael                                   //
+//  rev 0.9                                                              //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -107,7 +108,7 @@
 
 //-----------------------------------------------------------------------//
 //                                                                       //
-//  revision 0.8 compatibility                                           //
+//  revision 0.9 compatibility                                           //
 //                                                                       //
 //  Note that I've not tested core_launcher_altelfload with non working  //
 //  games as my 3 original discs are working, and this one doesn't work  //
@@ -176,6 +177,6 @@
 	- Final Fantasy 12 PAL (connect to PC, seems to load a few but after that it's BSOD)
 
  NOTE: About those games which works but not responding to pad combo, 
- those games are using libpad, and I still didn't find the corresponding
+ those games are using libpad2, and I still didn't find the corresponding
  padRead function in it. 
  

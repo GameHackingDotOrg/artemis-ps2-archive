@@ -17,8 +17,7 @@ typedef struct {
 
 #define IRX_NUM 		6
 
-u8 EEmembuffer[16384];
-u8 IOPmembuffer[16384];
+u8 membuffer[65536];
 
 #define PAD_LEFT      0x0080
 #define PAD_DOWN      0x0040
@@ -631,7 +630,7 @@ int dump_mem(void *addr, int size, void *buf)
 //--------------------------------------------------------------
 int sendEEdump(void)
 {
-	int r, len, sndSize, rpos;	
+	int r, len, sndSize, dumpSize, dpos, rpos;	
 	u32 dump_start, dump_end;
 	
 	rpcNTPBsendCmd(NTPBCMD_GET_EEDUMP_START, NULL, 0);
@@ -639,31 +638,46 @@ int sendEEdump(void)
 	rpcNTPBsendCmd(NTPBCMD_GET_EEDUMP_END, NULL, 0);
 	rpcSync(0, NULL, &dump_end);
 						
-	len = dump_end - dump_start;						
-	dump_mem((void *)dump_start, len, EEmembuffer);
-			
-	// reducing send size for rpc if needed
-	if (len > 8192)
-		sndSize = 8192;
-	else		
-		sndSize = len;
-				
-	rpos = 0;
-	while (rpos < len) {
-		rpcNTPBsendCmd(NTPBCMD_PRINT_EEDUMP, &EEmembuffer[rpos], sndSize);
-		rpcSync(0, NULL, &r);										
-		rpos += sndSize;
-		if ((len - rpos) < 8192)
-			sndSize = len - rpos;				
-	}	
+	len = dump_end - dump_start;
 	
-	return rpos;
+	// reducing dump size to fit in buffer
+	if (len > sizeof(membuffer))
+		dumpSize = sizeof(membuffer);
+	else		
+		dumpSize = len;
+	
+	dpos = 0;	
+	while (dpos < len) {
+									
+		dump_mem((void *)(dump_start + dpos), dumpSize, membuffer);
+			
+		// reducing send size for rpc if needed
+		if (dumpSize > 8192)
+			sndSize = 8192;
+		else		
+			sndSize = dumpSize;
+				
+		rpos = 0;
+		while (rpos < dumpSize) {
+			rpcNTPBsendCmd(NTPBCMD_PRINT_EEDUMP, &membuffer[rpos], sndSize);
+			rpcSync(0, NULL, &r);										
+			rpos += sndSize;
+			if ((dumpSize - rpos) < 8192)
+				sndSize = dumpSize - rpos;				
+		}
+		
+		dpos += dumpSize;	
+		if ((len - dpos) < sizeof(membuffer))
+			dumpSize = len - dpos;				
+	}
+	
+	return len;
 }
 
 //--------------------------------------------------------------
 int sendIOPdump(void)
 {
-	int r, len, sndSize, rpos;	
+	int r, len, sndSize, dumpSize, dpos, rpos;	
 	u32 dump_start, dump_end;
 	
 	rpcNTPBsendCmd(NTPBCMD_GET_IOPDUMP_START, NULL, 0);
@@ -674,25 +688,40 @@ int sendIOPdump(void)
 	dump_start |= 0xbc000000;
 	dump_end   |= 0xbc000000;
 		
-	len = dump_end - dump_start;						
-	dump_mem((void *)dump_start, len, IOPmembuffer);
-						
-	// reducing send size for rpc if needed
-	if (len > 8192)
-		sndSize = 8192;
-	else		
-		sndSize = len;
-				
-	rpos = 0;
-	while (rpos < len) {			
-		rpcNTPBsendCmd(NTPBCMD_PRINT_IOPDUMP, &IOPmembuffer[rpos], sndSize);			
-		rpcSync(0, NULL, &r);
-		rpos += sndSize;
-		if ((len - rpos) < 8192)
-			sndSize = len - rpos;				
-	}				
+	len = dump_end - dump_start;
 	
-	return rpos;	
+	// reducing dump size to fit in buffer
+	if (len > sizeof(membuffer))
+		dumpSize = sizeof(membuffer);
+	else		
+		dumpSize = len;
+	
+	dpos = 0;	
+	while (dpos < len) {
+									
+		dump_mem((void *)(dump_start + dpos), dumpSize, membuffer);
+			
+		// reducing send size for rpc if needed
+		if (dumpSize > 8192)
+			sndSize = 8192;
+		else		
+			sndSize = dumpSize;
+				
+		rpos = 0;
+		while (rpos < dumpSize) {
+			rpcNTPBsendCmd(NTPBCMD_PRINT_IOPDUMP, &membuffer[rpos], sndSize);
+			rpcSync(0, NULL, &r);										
+			rpos += sndSize;
+			if ((dumpSize - rpos) < 8192)
+				sndSize = dumpSize - rpos;				
+		}
+		
+		dpos += dumpSize;	
+		if ((len - dpos) < sizeof(membuffer))
+			dumpSize = len - dpos;				
+	}
+	
+	return len;	
 }
 
 //--------------------------------------------------------------
@@ -700,9 +729,9 @@ int sendU32Value(u32 value) // for debug purpose
 {	
 	int r;
 	
-	*((u32 *)&EEmembuffer[0]) = value;						
+	*((u32 *)&membuffer[0]) = value;						
 				
-	rpcNTPBsendCmd(NTPBCMD_PRINT_EEDUMP, &EEmembuffer[0], 4);
+	rpcNTPBsendCmd(NTPBCMD_PRINT_EEDUMP, &membuffer[0], 4);
 	rpcSync(0, NULL, &r);										
 	
 	return 1;
@@ -750,8 +779,9 @@ static u8 Hook_scePadRead(int port, int slot, struct padButtonStatus *data)
 		}	
 #else          	
 		if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS))) {	
-			//data->btns = 0 ^ 0xffff;
+			//data->btns = 0 ^ 0xffff;			
 			sendEEdump();
+			
 		}
 		else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R1 | PAD_CROSS))) {
 			//data->btns = 0 ^ 0xffff;
