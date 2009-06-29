@@ -365,25 +365,28 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 
 			case NTPBCMD_GET_EEDUMP_START:
 
-				sprintf(tmp_file, "dump%04d.raw", eedump_index);
-				strcpy(eedump_file, eedump_dir);
-				strcat(eedump_file, "\\");
-				strcat(eedump_file, tmp_file);
-
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPSTART));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMPSTART, startbuf, ln + 1);
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_EEDUMPEND));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_EEDUMPEND, endbuf, ln + 1);
-				sprintf(tmp, "Dump from 0x%s to 0x%s to %s\r\n", startbuf, endbuf, tmp_file);
+
+				sprintf(tmp_file, "dump@%s-%s-%03d.raw", startbuf, endbuf, eedump_index);
+				strcpy(eedump_file, eedump_dir);
+				strcat(eedump_file, "\\");
+				strcat(eedump_file, tmp_file);
+
+				sprintf(tmp, "%s created\r\n", tmp_file);
 				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_EEDUMP);
 
 				fh_eedump = CreateFile(eedump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 				eedump_index++;
 
 				eedump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+				eedump_wpos = 0;
 
 				SendMessage(hwndProgressBarEEdumpState, PBM_SETRANGE, 0, MAKELPARAM(0, eedump_size/8192));
           		SendMessage(hwndProgressBarEEdumpState, PBM_SETSTEP, 1, 0);
+				SendMessage(hwndProgressBarEEdumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
@@ -401,25 +404,28 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 
 			case NTPBCMD_GET_IOPDUMP_START:
 
-				sprintf(tmp_file, "dump%04d.raw", iopdump_index);
-				strcpy(iopdump_file, iopdump_dir);
-				strcat(iopdump_file, "\\");
-				strcat(iopdump_file, tmp_file);
-
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPSTART));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMPSTART, startbuf, ln + 1);
 				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_IOPDUMPEND));
 				GetDlgItemText(hwndMain, IDC_TEXTBOX_IOPDUMPEND, endbuf, ln + 1);
-				sprintf(tmp, "Dump from 0x%s to 0x%s to %s\r\n", startbuf, endbuf, tmp_file);
+
+				sprintf(tmp_file, "dump@%s-%s-%03d.raw", startbuf, endbuf, iopdump_index);
+				strcpy(iopdump_file, iopdump_dir);
+				strcat(iopdump_file, "\\");
+				strcat(iopdump_file, tmp_file);
+
+				sprintf(tmp, "%s created\r\n", tmp_file);
 				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_IOPDUMP);
 
 				fh_iopdump = CreateFile(iopdump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 				iopdump_index++;
 
 				iopdump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+				iopdump_wpos = 0;
 
 				SendMessage(hwndProgressBarIOPdumpState, PBM_SETRANGE, 0, MAKELPARAM(0, iopdump_size/8192));
           		SendMessage(hwndProgressBarIOPdumpState, PBM_SETSTEP, 1, 0);
+				SendMessage(hwndProgressBarIOPdumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
