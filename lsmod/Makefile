@@ -7,9 +7,9 @@ IOP_OBJS = lsmod.o xprintf.o imports.o
 IOP_LIBS =
 
 IOP_INCS +=
-IOP_CFLAGS += -O2 -Wall
+IOP_CFLAGS += -Wall
 IOP_ASFLAGS +=
-IOP_LDFLAGS += -s
+IOP_LDFLAGS +=
 
 
 all: $(IOP_BIN)
@@ -24,19 +24,5 @@ run:
 	ps2client -t 1 execiop host:$(IOP_BIN) host:modlist
 
 
-# A rule to build imports.lst.
-%.o : %.lst
-	echo "#include \"irx_imports.h\"" > build-imports.c
-	cat $< >> build-imports.c
-	$(IOP_CC) $(IOP_CFLAGS) build-imports.c -o $@
-	-rm -f build-imports.c
-
-# A rule to build exports.tab.
-%.o : %.tab
-	echo "#include \"irx.h\"" > build-exports.c
-	cat $< >> build-exports.c
-	$(IOP_CC) $(IOP_CFLAGS) build-exports.c -o $@
-	-rm -f build-exports.c
-
-include $(PS2SDK)/samples/Makefile.pref
-include $(PS2SDK)/samples/Makefile.iopglobal
+include $(PS2SDK)/Defs.make
+include Rules.make
