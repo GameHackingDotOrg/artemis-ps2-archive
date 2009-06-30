@@ -21,43 +21,81 @@ char eedump_dir[2048];
 char iopdump_dir[2048];
 char eedump_file[2048];
 char iopdump_file[2048];
+char kerneldump_dir[2048];
+char scratchpaddump_dir[2048];
+char kerneldump_file[2048];
+char scratchpaddump_file[2048];
 
-int eedump_index, iopdump_index;
-unsigned int eedump_size, iopdump_size;
-unsigned int eedump_wpos, iopdump_wpos;
-HANDLE fh_eedump, fh_iopdump;
-
+int eedump_index, iopdump_index, kerneldump_index, scratchpaddump_index;
+unsigned int dump_size;
+unsigned int dump_wpos;
+HANDLE fh_dump;
 
 // NTPB header magic
 #define ntpb_MagicSize  6
 const unsigned char *ntpb_hdrMagic = "\xff\x00NTPB";
 #define ntpb_hdrSize  	10
 
-#define NTPBCMD_GET_EEDUMP_START 	0x100
-#define NTPBCMD_GET_EEDUMP_END 		0x101
-#define NTPBCMD_GET_IOPDUMP_START	0x102
-#define NTPBCMD_GET_IOPDUMP_END		0x103
-#define NTPBCMD_PRINT_EEDUMP 		0x200
-#define NTPBCMD_PRINT_IOPDUMP		0x201
+#define NTPBCMD_GET_EEDUMP_START 			0x101
+#define NTPBCMD_GET_IOPDUMP_START			0x102
+#define NTPBCMD_GET_KERNELDUMP_START		0x103
+#define NTPBCMD_GET_SCRATCHPADDUMP_START	0x104
+#define NTPBCMD_GET_EEDUMP_END 				0x201
+#define NTPBCMD_GET_IOPDUMP_END				0x202
+#define NTPBCMD_GET_KERNELDUMP_END			0x203
+#define NTPBCMD_GET_SCRATCHPADDUMP_END		0x204
+#define NTPBCMD_PRINT_EEDUMP 				0x301
+#define NTPBCMD_PRINT_IOPDUMP				0x302
+#define NTPBCMD_PRINT_KERNELDUMP 			0x303
+#define NTPBCMD_PRINT_SCRATCHPADDUMP		0x304
+#define NTPBCMD_GET_REMOTE_DUMPREQUEST		0x400
+
+#define REMOTE_DUMPREQUEST_NONE			0
+#define REMOTE_DUMPREQUEST_EE			1
+#define REMOTE_DUMPREQUEST_IOP			2
+#define REMOTE_DUMPREQUEST_KERNEL		3
+#define REMOTE_DUMPREQUEST_SCRATCHPAD	4
+
+static int remote_dumprequest;
 
 /*<---------------------------------------------------------------------->*/
-HINSTANCE hInst;				// Instance handle
-HWND hwndMain;					// Main window handle
-HWND hwndLabelEEdump;			// Label control handle
-HWND hwndLabelIOPdump;  		// Label control handle
-HWND hwndLabelEEdumpStart;  	// Label control handle
-HWND hwndLabelEEdumpEnd;  		// Label control handle
-HWND hwndLabelIOPdumpStart; 	// Label control handle
-HWND hwndLabelIOPdumpEnd;   	// Label control handle
-HWND hwndTextBoxEEdump;			// Edit control handle
-HWND hwndTextBoxIOPdump;		// Edit control handle
-HWND hwndTextBoxEEdumpStart;	// Edit control handle
-HWND hwndTextBoxEEdumpEnd;		// Edit control handle
-HWND hwndTextBoxIOPdumpStart;	// Edit control handle
-HWND hwndTextBoxIOPdumpEnd;		// Edit control handle
-HWND hwndProgressBarEEdumpState;		// Progress Bar control handle
-HWND hwndProgressBarIOPdumpState;		// Progress Bar control handle
-HWND hWndStatusbar;				// StatusBar handle
+HINSTANCE hInst;					// Instance handle
+HWND hwndMain;						// Main window handle
+HWND hwndLabelEEdump;				// Label control handle
+HWND hwndLabelIOPdump;  			// Label control handle
+HWND hwndLabelEEdumpStart;  		// Label control handle
+HWND hwndLabelEEdumpEnd;  			// Label control handle
+HWND hwndLabelIOPdumpStart; 		// Label control handle
+HWND hwndLabelIOPdumpEnd;   		// Label control handle
+
+HWND hwndLabelKerneldump;			// Label control handle
+HWND hwndLabelScratchpaddump;  		// Label control handle
+HWND hwndLabelKerneldumpStart;  	// Label control handle
+HWND hwndLabelKerneldumpEnd;  		// Label control handle
+HWND hwndLabelScratchpaddumpStart; 	// Label control handle
+HWND hwndLabelScratchpaddumpEnd;   	// Label control handle
+
+HWND hwndTextBoxEEdump;				// Edit control handle
+HWND hwndTextBoxIOPdump;			// Edit control handle
+HWND hwndTextBoxEEdumpStart;		// Edit control handle
+HWND hwndTextBoxEEdumpEnd;			// Edit control handle
+HWND hwndTextBoxIOPdumpStart;		// Edit control handle
+HWND hwndTextBoxIOPdumpEnd;			// Edit control handle
+
+HWND hwndTextBoxKerneldump;			// Edit control handle
+HWND hwndTextBoxScratchpaddump;		// Edit control handle
+HWND hwndTextBoxKerneldumpStart;	// Edit control handle
+HWND hwndTextBoxKerneldumpEnd;		// Edit control handle
+HWND hwndTextBoxScratchpaddumpStart;// Edit control handle
+HWND hwndTextBoxScratchpaddumpEnd;	// Edit control handle
+
+HWND hwndButtonEEdump;				// Button control handle
+HWND hwndButtonIOPdump;				// Button control handle
+HWND hwndButtonKerneldump;			// Button control handle
+HWND hwndButtonScratchpaddump;		// Button control handle
+
+HWND hwndProgressBardumpState;		// Progress Bar control handle
+HWND hWndStatusbar;					// StatusBar handle
 
 WSADATA *WsaData;
 LRESULT CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
@@ -157,8 +195,28 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 		// ---TODO--- Add new menu commands here
 		/*@@NEWCOMMANDS@@*/
 		case IDM_EXIT:
-		PostMessage(hwnd,WM_CLOSE,0,0);
-		break;
+			PostMessage(hwnd,WM_CLOSE,0,0);
+			break;
+
+		case IDC_BUTTON_EEDUMP:
+			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
+				remote_dumprequest = REMOTE_DUMPREQUEST_EE;
+			break;
+
+		case IDC_BUTTON_IOPDUMP:
+			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
+				remote_dumprequest = REMOTE_DUMPREQUEST_IOP;
+			break;
+
+		case IDC_BUTTON_KERNELDUMP:
+			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
+				remote_dumprequest = REMOTE_DUMPREQUEST_KERNEL;
+			break;
+
+		case IDC_BUTTON_SCRATCHPADDUMP:
+			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
+				remote_dumprequest = REMOTE_DUMPREQUEST_SCRATCHPAD;
+			break;
 	}
 }
 
@@ -331,32 +389,30 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 
 		switch(ntpbCmd) { // treat Client Request here
 
-			case NTPBCMD_PRINT_EEDUMP:
-
-				WriteFile(fh_eedump, &pktbuffer[ntpb_hdrSize], ntpbpktSize, &sizeWritten, NULL);
-				eedump_wpos += sizeWritten;
-
-				SendMessage(hwndProgressBarEEdumpState, PBM_STEPIT, 0, 0);
-
-				if (eedump_wpos >= eedump_size) {
-					SendMessage(hwndProgressBarEEdumpState, PBM_SETPOS, 0, 0);
-					UpdateWindow(hwndMain);
-				}
+			case NTPBCMD_GET_REMOTE_DUMPREQUEST:
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
-				ntpbpktSize = ntpb_hdrSize + 2;
+				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)remote_dumprequest;
+				ntpbpktSize = ntpb_hdrSize + 6;
 				break;
 
+			case NTPBCMD_PRINT_EEDUMP:
 			case NTPBCMD_PRINT_IOPDUMP:
+			case NTPBCMD_PRINT_KERNELDUMP:
+			case NTPBCMD_PRINT_SCRATCHPADDUMP:
 
-				WriteFile(fh_iopdump, &pktbuffer[ntpb_hdrSize], ntpbpktSize, &sizeWritten, NULL);
-				iopdump_wpos += sizeWritten;
+				WriteFile(fh_dump, &pktbuffer[ntpb_hdrSize], ntpbpktSize, &sizeWritten, NULL);
+				dump_wpos += sizeWritten;
 
-				SendMessage(hwndProgressBarIOPdumpState, PBM_STEPIT, 0, 0);
+				SendMessage(hwndProgressBardumpState, PBM_STEPIT, 0, 0);
+				UpdateWindow(hwndMain);
 
-				if (iopdump_wpos >= iopdump_size) {
-					SendMessage(hwndProgressBarIOPdumpState, PBM_SETPOS, 0, 0);
+				if (dump_wpos >= dump_size) {
+					Sleep(100);
+					SendMessage(hwndProgressBardumpState, PBM_SETPOS, 0, 0);
 					UpdateWindow(hwndMain);
+
+					remote_dumprequest = REMOTE_DUMPREQUEST_NONE;
 				}
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
@@ -378,15 +434,15 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 				sprintf(tmp, "%s created\r\n", tmp_file);
 				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_EEDUMP);
 
-				fh_eedump = CreateFile(eedump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+				fh_dump = CreateFile(eedump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 				eedump_index++;
 
-				eedump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
-				eedump_wpos = 0;
+				dump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+				dump_wpos = 0;
 
-				SendMessage(hwndProgressBarEEdumpState, PBM_SETRANGE, 0, MAKELPARAM(0, eedump_size/8192));
-          		SendMessage(hwndProgressBarEEdumpState, PBM_SETSTEP, 1, 0);
-				SendMessage(hwndProgressBarEEdumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
+				SendMessage(hwndProgressBardumpState, PBM_SETRANGE, 0, MAKELPARAM(0, dump_size/8192));
+          		SendMessage(hwndProgressBardumpState, PBM_SETSTEP, 1, 0);
+				SendMessage(hwndProgressBardumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
@@ -417,15 +473,15 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 				sprintf(tmp, "%s created\r\n", tmp_file);
 				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_IOPDUMP);
 
-				fh_iopdump = CreateFile(iopdump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+				fh_dump = CreateFile(iopdump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
 				iopdump_index++;
 
-				iopdump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
-				iopdump_wpos = 0;
+				dump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+				dump_wpos = 0;
 
-				SendMessage(hwndProgressBarIOPdumpState, PBM_SETRANGE, 0, MAKELPARAM(0, iopdump_size/8192));
-          		SendMessage(hwndProgressBarIOPdumpState, PBM_SETSTEP, 1, 0);
-				SendMessage(hwndProgressBarIOPdumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
+				SendMessage(hwndProgressBardumpState, PBM_SETRANGE, 0, MAKELPARAM(0, dump_size/8192));
+          		SendMessage(hwndProgressBardumpState, PBM_SETSTEP, 1, 0);
+				SendMessage(hwndProgressBardumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
 				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
@@ -440,6 +496,85 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
 				ntpbpktSize = ntpb_hdrSize + 6;
 				break;
+
+			case NTPBCMD_GET_KERNELDUMP_START:
+
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_KERNELDUMPSTART));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_KERNELDUMPSTART, startbuf, ln + 1);
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_KERNELDUMPEND));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_KERNELDUMPEND, endbuf, ln + 1);
+
+				sprintf(tmp_file, "dump@%s-%s-%03d.raw", startbuf, endbuf, kerneldump_index);
+				strcpy(kerneldump_file, kerneldump_dir);
+				strcat(kerneldump_file, "\\");
+				strcat(kerneldump_file, tmp_file);
+
+				sprintf(tmp, "%s created\r\n", tmp_file);
+				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_KERNELDUMP);
+
+				fh_dump = CreateFile(kerneldump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+				kerneldump_index++;
+
+				dump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+				dump_wpos = 0;
+
+				SendMessage(hwndProgressBardumpState, PBM_SETRANGE, 0, MAKELPARAM(0, dump_size/8192));
+          		SendMessage(hwndProgressBardumpState, PBM_SETSTEP, 1, 0);
+				SendMessage(hwndProgressBardumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
+
+				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
+				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
+				ntpbpktSize = ntpb_hdrSize + 6;
+				break;
+
+			case NTPBCMD_GET_KERNELDUMP_END:
+
+				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_KERNELDUMPEND));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_KERNELDUMPEND, startbuf, ln + 1);
+				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
+				ntpbpktSize = ntpb_hdrSize + 6;
+				break;
+
+			case NTPBCMD_GET_SCRATCHPADDUMP_START:
+
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_SCRATCHPADDUMPSTART));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_SCRATCHPADDUMPSTART, startbuf, ln + 1);
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_SCRATCHPADDUMPEND));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_SCRATCHPADDUMPEND, endbuf, ln + 1);
+
+				sprintf(tmp_file, "dump@%s-%s-%03d.raw", startbuf, endbuf, scratchpaddump_index);
+				strcpy(scratchpaddump_file, scratchpaddump_dir);
+				strcat(scratchpaddump_file, "\\");
+				strcat(scratchpaddump_file, tmp_file);
+
+				sprintf(tmp, "%s created\r\n", tmp_file);
+				PrintLog(tmp, strlen(tmp), IDC_TEXTBOX_SCRATCHPADDUMP);
+
+				fh_dump = CreateFile(scratchpaddump_file, GENERIC_READ|GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+				scratchpaddump_index++;
+
+				dump_size = (unsigned int)HexaToDecimal(endbuf) - (unsigned int)HexaToDecimal(startbuf);
+				dump_wpos = 0;
+
+				SendMessage(hwndProgressBardumpState, PBM_SETRANGE, 0, MAKELPARAM(0, dump_size/8192));
+          		SendMessage(hwndProgressBardumpState, PBM_SETSTEP, 1, 0);
+				SendMessage(hwndProgressBardumpState, PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
+
+				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
+				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
+				ntpbpktSize = ntpb_hdrSize + 6;
+				break;
+
+			case NTPBCMD_GET_SCRATCHPADDUMP_END:
+
+				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_SCRATCHPADDUMPEND));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_SCRATCHPADDUMPEND, startbuf, ln + 1);
+				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)HexaToDecimal(startbuf);
+				ntpbpktSize = ntpb_hdrSize + 6;
+				break;
+
 		}
 
 		// send the response packet
@@ -672,9 +807,19 @@ VOID CreateControls(HINSTANCE hInstance)
                                "",
                                WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_READONLY,
                                20,70,
-                               380,342,
+                               380,82,
                                hwndMain,
                                (HMENU)IDC_TEXTBOX_EEDUMP,
+                               hInstance,
+                               NULL);
+
+	hwndButtonEEdump = CreateWindow (TEXT("button"),
+                               "Dump EE",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               20,156,
+                               362,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_EEDUMP,
                                hInstance,
                                NULL);
 
@@ -684,7 +829,7 @@ VOID CreateControls(HINSTANCE hInstance)
                                400,52,
                                380,20,
                                hwndMain,
-                               (HMENU)IDC_LABEL_EEDUMP,
+                               (HMENU)IDC_LABEL_IOPDUMP,
                                hInstance,
                                NULL);
 
@@ -692,29 +837,169 @@ VOID CreateControls(HINSTANCE hInstance)
                                "",
                                WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_READONLY,
                                400,70,
-                               380,342,
+                               380,82,
                                hwndMain,
                                (HMENU)IDC_TEXTBOX_IOPDUMP,
                                hInstance,
                                NULL);
 
-	hwndProgressBarEEdumpState = CreateWindowEx (0, PROGRESS_CLASS,
-                               NULL,
-                               WS_CHILD|WS_VISIBLE|PBS_SMOOTH,
-                               20,420,
-                               362,20,
+	hwndButtonIOPdump = CreateWindow (TEXT("button"),
+                               "Dump IOP",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               400,156,
+                               362,24,
                                hwndMain,
-                               (HMENU)IDC_PROGRESSBAR_EEDUMPSTATE,
+                               (HMENU)IDC_BUTTON_IOPDUMP,
                                hInstance,
                                NULL);
 
-	hwndProgressBarIOPdumpState =  CreateWindowEx (0, PROGRESS_CLASS,
+	hwndLabelKerneldumpStart = CreateWindow (TEXT("static"),
+                               "start(HEX):",
+                               WS_CHILD|WS_VISIBLE,
+                               20,220,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_KERNELDUMPSTART,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxKerneldumpStart = CreateWindow (TEXT("edit"),
+                               "80000000",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               95,218,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_KERNELDUMPSTART,
+                               hInstance,
+                               NULL);
+
+	hwndLabelKerneldumpEnd = CreateWindow (TEXT("static"),
+                               "end(HEX):",
+                               WS_CHILD|WS_VISIBLE,
+                               200,220,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_KERNELDUMPEND,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxKerneldumpEnd = CreateWindow (TEXT("edit"),
+                               "82000000",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               270,218,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_KERNELDUMPEND,
+                               hInstance,
+                               NULL);
+
+	hwndLabelScratchpaddumpStart = CreateWindow (TEXT("static"),
+                               "start(HEX):",
+                               WS_CHILD|WS_VISIBLE,
+                               400,220,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_SCRATCHPADDUMPSTART,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxScratchpaddumpStart = CreateWindow (TEXT("edit"),
+                               "70000000",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               475,218,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_SCRATCHPADDUMPSTART,
+                               hInstance,
+                               NULL);
+
+	hwndLabelScratchpaddumpEnd = CreateWindow (TEXT("static"),
+                               "end(HEX):",
+                               WS_CHILD|WS_VISIBLE,
+                               580,220,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_SCRATCHPADDUMPEND,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxScratchpaddumpEnd = CreateWindow (TEXT("edit"),
+                               "70004000",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               650,218,
+                               70,20,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_SCRATCHPADDUMPEND,
+                               hInstance,
+                               NULL);
+
+	hwndLabelKerneldump = CreateWindow (TEXT("static"),
+                               "Kernel dump:",
+                               WS_CHILD|WS_VISIBLE,
+                               20,252,
+                               380,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_KERNELDUMP,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxKerneldump = CreateWindow (TEXT("edit"),
+                               "",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_READONLY,
+                               20,270,
+                               380,82,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_KERNELDUMP,
+                               hInstance,
+                               NULL);
+
+	hwndButtonKerneldump = CreateWindow (TEXT("button"),
+                               "Dump Kernel",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               20,356,
+                               362,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_KERNELDUMP,
+                               hInstance,
+                               NULL);
+
+	hwndLabelScratchpaddump = CreateWindow (TEXT("static"),
+                               "ScratchPad dump:",
+                               WS_CHILD|WS_VISIBLE,
+                               400,252,
+                               380,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_SCRATCHPADDUMP,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxScratchpaddump = CreateWindow (TEXT("edit"),
+                               "",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_READONLY,
+                               400,270,
+                               380,82,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_SCRATCHPADDUMP,
+                               hInstance,
+                               NULL);
+
+	hwndButtonScratchpaddump = CreateWindow (TEXT("button"),
+                               "Dump ScratchPad",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               400,356,
+                               362,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_SCRATCHPADDUMP,
+                               hInstance,
+                               NULL);
+
+	hwndProgressBardumpState = CreateWindowEx (0, PROGRESS_CLASS,
                                NULL,
                                WS_CHILD|WS_VISIBLE|PBS_SMOOTH,
-                               400,420,
-                               362,20,
+                               20,410,
+                               754,20,
                                hwndMain,
-                               (HMENU)IDC_PROGRESSBAR_IOPDUMPSTATE,
+                               (HMENU)IDC_PROGRESSBAR_DUMPSTATE,
                                hInstance,
                                NULL);
 
@@ -766,13 +1051,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	strcat(eedump_dir, "\\EE");
 	strcpy(iopdump_dir, dump_dir);
 	strcat(iopdump_dir, "\\IOP");
+	strcpy(kerneldump_dir, dump_dir);
+	strcat(kerneldump_dir, "\\Kernel");
+	strcpy(scratchpaddump_dir, dump_dir);
+	strcat(scratchpaddump_dir, "\\ScratchPad");
 
 	CreateDirectory(dump_dir, NULL);
 	CreateDirectory(eedump_dir, NULL);
 	CreateDirectory(iopdump_dir, NULL);
+	CreateDirectory(kerneldump_dir, NULL);
+	CreateDirectory(scratchpaddump_dir, NULL);
 
 	eedump_index = 0;
 	iopdump_index = 0;
+	kerneldump_index = 0;
+	scratchpaddump_index = 0;
+
+	remote_dumprequest = REMOTE_DUMPREQUEST_NONE;
 
 	// Create & start the server thread
 	HANDLE serverThid = CreateThread(NULL, 0, serverThread, NULL, 0, NULL); // no stack, 1MB by default

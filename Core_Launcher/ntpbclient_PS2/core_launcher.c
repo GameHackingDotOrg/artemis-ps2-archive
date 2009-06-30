@@ -281,7 +281,7 @@ int main(int argc, char *argv[])
 {	
 	init_scr();
 	scr_clear();
-	scr_printf("\t CORE LAUNCHER - v0.9\n\n");
+	scr_printf("\t CORE LAUNCHER - v0.92\n\n");
 	
 	SifInitRpc(0);
 	

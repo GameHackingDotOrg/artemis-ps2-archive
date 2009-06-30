@@ -2,7 +2,7 @@
 //                                                                       //
 //  Artemis Project: Task 2308/2341                                      //
 //  solution provided by jimmikaelkael                                   //
-//  rev 0.9                                                              //
+//  rev 0.92                                                             //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -63,10 +63,13 @@
  checks or save) and hit UP+CROSS+R1.
  To trigger IOP mem dump, wait the pad is listened (avoid dumps in memcards
  checks or save) and hit DOWN+CROSS+R1.
+ To trigger Kernel mem dump, wait the pad is listened (avoid dumps in memcards
+ checks or save) and hit UP+CROSS+R2.
+ To trigger ScratchPad mem dump, wait the pad is listened (avoid dumps in memcards
+ checks or save) and hit DOWN+CROSS+R2.
 
  This is just a solution and can be enhanced, like performing all dumps on 
- one combo shot, and for example dump more places like ScratchPad etc... Or
- add combos to trigger some mem values changes...
+ one combo shot, or add combos to trigger some mem values changes...
 
  The protocol used for communication with the Win32 is fairly simple, here's
  a pseudo code (invalid as data block is of undefined size) to help you to
@@ -80,35 +83,51 @@
  };
 
  At the moment only a few commands are implemented:
-	- 0x100: Send request to get EE dump start address.
-	- 0x101: Send request to get EE dump end address.
+	- 0x101: Send request to get EE dump start address.
 	- 0x102: Send request to get IOP dump start address.
-	- 0x103: Send request to get IOP dump end address.
-	- 0x200: Send request for printing EE dump.
-	- 0x201: Send request for printing IOP dump.
+	- 0x103: Send request to get Kernel dump start address.
+	- 0x104: Send request to get ScratchPad dump start address.
+	- 0x201: Send request to get EE dump end address.
+	- 0x202: Send request to get IOP dump end address.
+	- 0x203: Send request to get Kernel dump end address.
+	- 0x204: Send request to get ScratchPad dump end address.
+	- 0x301: Send request for printing EE dump.
+	- 0x302: Send request for printing IOP dump.
+	- 0x301: Send request for printing Kernel dump.
+	- 0x302: Send request for printing ScratchPad dump.
+	- 0x400: Send request to get remote dump request.
 
- The data block is only used for these 2 requests:   
-	- 0x200: must be filled with raw EE dump datas.
-	- 0x201: must be filled with raw IOP dump datas.
+ The data block is only used for these 4 requests:   
+	- 0x301: must be filled with raw EE dump datas.
+	- 0x302: must be filled with raw IOP dump datas.
+	- 0x303: must be filled with raw Kernel dump datas.
+	- 0x304: must be filled with raw ScratchPad dump datas.
+
  For others commands it stay empty with a data block size to 0.
 
  For responses, the Win32 app fills the data block depending on the
  commands.
 
- Commands 0x200 and 0x201 use this data block struct:  	
+ Commands 0x301 to 0x304 use this data block struct:  	
  struct data_block_t {  
 	unsigned short reply; 	 // always 1
  };
 
- Commands 0x100 to 0x103 use this data block struct:  	
+ Commands 0x101 to 0x104 and 0x201 to 0x204 use this data block struct:  	
  struct data_block_t {  
 	unsigned short reply; 	 // always 1
 	unsigned int   address;	 // address given 
  };
 
+ Commands 0x400 use this data block struct:  	
+ struct data_block_t {  
+	unsigned short reply; 	  // always 1
+	unsigned int   dump_type; // 0 = no dump request, 1 = EE dump, 2 = IOP dump, 3 = Kernel dump, 4 = ScratchPad dump
+ };
+
 //-----------------------------------------------------------------------//
 //                                                                       //
-//  revision 0.9 compatibility                                           //
+//  current revision compatibility                                       //
 //                                                                       //
 //  Note that I've not tested core_launcher_altelfload with non working  //
 //  games as my 3 original discs are working, and this one doesn't work  //

@@ -8,6 +8,7 @@
 
 int set_reg_hook;
 static int first_hook = 1;
+static int iopreset_done = 0;
 
 // for IRX from ram
 typedef struct {
@@ -36,7 +37,8 @@ u8 membuffer[65536];
 #define PAD_R2        0x0200
 #define PAD_L2        0x0100
 
-u32 old_pad;
+static u32 padRead_cnt = 0;
+static u32 old_pad;
 
 static u32 padReadpattern0[] = {
   0x0080382d,			// daddu a3, a0, zero
@@ -545,6 +547,7 @@ int HookIopReset(const char *arg, int flag)
 	}
  
 	set_reg_hook = 4;
+	iopreset_done =1;
 	
 	return 1;
 }
@@ -628,16 +631,21 @@ int dump_mem(void *addr, int size, void *buf)
 }
 
 //--------------------------------------------------------------
-int sendEEdump(void)
+int sendDump(int dump_type)
 {
 	int r, len, sndSize, dumpSize, dpos, rpos;	
 	u32 dump_start, dump_end;
 	
-	rpcNTPBsendCmd(NTPBCMD_GET_EEDUMP_START, NULL, 0);
+	rpcNTPBsendCmd(GET_DUMP_START + dump_type, NULL, 0);
 	rpcSync(0, NULL, &dump_start);
-	rpcNTPBsendCmd(NTPBCMD_GET_EEDUMP_END, NULL, 0);
+	rpcNTPBsendCmd(GET_DUMP_END + dump_type, NULL, 0);
 	rpcSync(0, NULL, &dump_end);
 						
+	if (dump_type == IOP_DUMP) {
+		dump_start |= 0xbc000000;
+		dump_end   |= 0xbc000000;
+	}
+	
 	len = dump_end - dump_start;
 	
 	// reducing dump size to fit in buffer
@@ -659,7 +667,7 @@ int sendEEdump(void)
 				
 		rpos = 0;
 		while (rpos < dumpSize) {
-			rpcNTPBsendCmd(NTPBCMD_PRINT_EEDUMP, &membuffer[rpos], sndSize);
+			rpcNTPBsendCmd(PRINT_DUMP + dump_type, &membuffer[rpos], sndSize);
 			rpcSync(0, NULL, &r);										
 			rpos += sndSize;
 			if ((dumpSize - rpos) < 8192)
@@ -675,53 +683,17 @@ int sendEEdump(void)
 }
 
 //--------------------------------------------------------------
-int sendIOPdump(void)
+int getRemoteDumpRequest(void)
 {
-	int r, len, sndSize, dumpSize, dpos, rpos;	
-	u32 dump_start, dump_end;
+	int remote_dumprequest; 
 	
-	rpcNTPBsendCmd(NTPBCMD_GET_IOPDUMP_START, NULL, 0);
-	rpcSync(0, NULL, &dump_start);
-	rpcNTPBsendCmd(NTPBCMD_GET_IOPDUMP_END, NULL, 0);
-	rpcSync(0, NULL, &dump_end);
-					
-	dump_start |= 0xbc000000;
-	dump_end   |= 0xbc000000;
-		
-	len = dump_end - dump_start;
+	rpcNTPBsendCmd(NTPBCMD_GET_REMOTE_DUMPREQUEST, NULL, 0);
+	rpcSync(0, NULL, &remote_dumprequest);
 	
-	// reducing dump size to fit in buffer
-	if (len > sizeof(membuffer))
-		dumpSize = sizeof(membuffer);
-	else		
-		dumpSize = len;
+	if (remote_dumprequest != REMOTE_DUMPREQUEST_NONE)
+		sendDump(remote_dumprequest);
 	
-	dpos = 0;	
-	while (dpos < len) {
-									
-		dump_mem((void *)(dump_start + dpos), dumpSize, membuffer);
-			
-		// reducing send size for rpc if needed
-		if (dumpSize > 8192)
-			sndSize = 8192;
-		else		
-			sndSize = dumpSize;
-				
-		rpos = 0;
-		while (rpos < dumpSize) {
-			rpcNTPBsendCmd(NTPBCMD_PRINT_IOPDUMP, &membuffer[rpos], sndSize);
-			rpcSync(0, NULL, &r);										
-			rpos += sndSize;
-			if ((dumpSize - rpos) < 8192)
-				sndSize = dumpSize - rpos;				
-		}
-		
-		dpos += dumpSize;	
-		if ((len - dpos) < sizeof(membuffer))
-			dumpSize = len - dpos;				
-	}
-	
-	return len;	
+	return 1;
 }
 
 //--------------------------------------------------------------
@@ -761,6 +733,7 @@ static u8 Hook_scePadRead(int port, int slot, struct padButtonStatus *data)
 	ret = scePadRead(port, slot, data);
 	
 	if (ret != 0) {
+		padRead_cnt++;
 		paddata = 0xffff ^ data->btns;
         new_pad = paddata & ~old_pad;
         old_pad = paddata;
@@ -768,6 +741,13 @@ static u8 Hook_scePadRead(int port, int slot, struct padButtonStatus *data)
         //if (new_pad)
         //	sendU32Value(new_pad);
       
+        if (padRead_cnt > 5) {
+	        padRead_cnt = 0;
+#ifndef NOADDITIONAL_IRX	        
+			getRemoteDumpRequest();
+#endif			
+        }
+        
 #ifdef NOADDITIONAL_IRX
 		if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS))) {	
 			//data->btns = 0 ^ 0xffff;
@@ -780,13 +760,20 @@ static u8 Hook_scePadRead(int port, int slot, struct padButtonStatus *data)
 #else          	
 		if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS))) {	
 			//data->btns = 0 ^ 0xffff;			
-			sendEEdump();
-			
+			sendDump(EE_DUMP);		
 		}
 		else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R1 | PAD_CROSS))) {
 			//data->btns = 0 ^ 0xffff;
-			sendIOPdump();
+			sendDump(IOP_DUMP);
 		}	
+		else if ((new_pad) && (new_pad == (PAD_UP | PAD_R2 | PAD_CROSS))) {
+			//data->btns = 0 ^ 0xffff;
+			sendDump(KERNEL_DUMP);
+		}	
+		else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R2 | PAD_CROSS))) {
+			//data->btns = 0 ^ 0xffff;
+			sendDump(SCRATCHPAD_DUMP);
+		}			
 #endif		
 	}
 				
@@ -899,7 +886,7 @@ void GetIrxRAM(void)
 	u32 *total_irxsize = (u32 *)0x01a00000;
 	void *irx_tab = (void *)0x01a00010;
 	irxptr_t irxptr_tab[IRX_NUM];
-	
+
 	memcpy(&irxptr_tab[0], irx_tab, sizeof(irxptr_tab));
 	
 	size_memdisk_irx = irxptr_tab[0].irxsize; 
@@ -908,24 +895,24 @@ void GetIrxRAM(void)
 	size_ps2dev9_irx = irxptr_tab[3].irxsize; 
 	size_ps2ip_irx = irxptr_tab[4].irxsize; 
 	size_ps2smap_irx = irxptr_tab[5].irxsize; 
-	
+		
 	memdisk_irx = malloc(size_memdisk_irx);
 	eesync_irx = malloc(size_eesync_irx);
 	ntpbclient_irx = malloc(size_ntpbclient_irx);	
 	ps2dev9_irx = malloc(size_ps2dev9_irx);
 	ps2ip_irx = malloc(size_ps2ip_irx);
 	ps2smap_irx = malloc(size_ps2smap_irx);
-	
+			
 	memcpy(memdisk_irx, irxptr_tab[0].irxaddr, size_memdisk_irx);
 	memcpy(eesync_irx, irxptr_tab[1].irxaddr, size_eesync_irx);
 	memcpy(ntpbclient_irx, irxptr_tab[2].irxaddr, size_ntpbclient_irx);	
 	memcpy(ps2dev9_irx, irxptr_tab[3].irxaddr, size_ps2dev9_irx);
 	memcpy(ps2ip_irx, irxptr_tab[4].irxaddr, size_ps2ip_irx);
 	memcpy(ps2smap_irx, irxptr_tab[5].irxaddr, size_ps2smap_irx);
-		
+			
 #ifdef DEBUG
 	scr_printf("\t total IRX size = %d\n", *total_irxsize); 
-#endif	
+#endif
 }	
 
 //--------------------------------------------------------------
