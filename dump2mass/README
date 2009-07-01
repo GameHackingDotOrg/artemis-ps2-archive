@@ -1,0 +1,41 @@
+
+dump2mass 0.2 - Copyright (C) 2008-2009 misfire <misfire@xploderfreax.de>
+
+
+DESCRIPTION
+
+dump2mass is a simple application that allows you to dump memory to an USB flash
+drive attached to your PS2 console.
+
+It is primarily a solution for Project Artemis' BountySource task #2267:
+https://artemis.bountysource.com/task/show/2267
+
+The solution's page can be found here:
+https://artemis.bountysource.com/solution/show/1074
+
+Be aware that the write speed is very slow.
+
+dump2mass was tested with:
+- PS2 console SCPH-90004 CB
+- FreeUsbd v0.1.2
+- usb_mass v0.40 wr
+- Hama FlashPen 1GB (FAT16/32)
+
+
+USAGE
+
+Make sure that there's a FAT16 or FAT32 formatted USB flash drive connected to
+your PS2.
+
+Use ps2client to run dump2mass. Specify the name of the memory region(s) to dump
+as argument(s).  Valid region names are "ram", "rom0", or "iop".  See source
+code for the complete list.
+
+$ ps2client execee host:dump2mass.elf <region1> <region2> <...>
+
+Finally, memory should be dumped to one or more files on the USB drive.
+
+
+LICENSE
+
+dump2mass is licensed under the AFL v2.0.  See file LICENSE.
