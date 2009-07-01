@@ -7,6 +7,7 @@
 #include <sifrpc.h>
 #include <string.h>
 #include <sbv_patches.h>
+#include <syscallnr.h>
 #include <libcdvd.h>
 #include <debug.h>
 

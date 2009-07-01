@@ -1,14 +1,12 @@
-
 #include "core.h"
 
 #define DEBUG
 #define MANUAL_ELF_LOAD
 //#define NOADDITIONAL_IRX
-//#define NOSYSCALL_HOOK
+//#define NOSYSCALL_HOOKS
+//#define DISABLE_AFTER_IOPRESET
 
 int set_reg_hook;
-static int first_hook = 1;
-static int iopreset_done = 0;
 
 // for IRX from ram
 typedef struct {
@@ -40,259 +38,470 @@ u8 membuffer[65536];
 static u32 padRead_cnt = 0;
 static u32 old_pad;
 
-static u32 padReadpattern0[] = {
-  0x0080382d,			// daddu a3, a0, zero
-  0x24030070,			// li 	 v1, $00000070
-  0x2404001c,			// li  	 a0, $0000001c
-  0x70e31818,			// mult1 v1, a3, v1
-  0x00a42018,			// mult	 a0, a1, a0
-  0x27bdff00,			// addiu sp, sp, $ffXX
-  0x3c020000,			// lui 	 v0, $XXXX
-  0xff000000,			// sd 	 XX, $XXXX(XX)
-  0xffbf0000,			// sd  	 ra, $XXXX(sp)
-  0x24420000,			// addiu v0, v0, $XXXX 
-  0x00000000,			// ...
-  0x00000000,			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x0c000000			// jal   scePadGetDmaStr
+
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad		2.1.1.0
+// libpad		2.1.3.0
+// libpad		2.2.0.0
+// libpad		2.3.0.0
+// libpad		2.4.0.0
+// libpad		2.4.1.0
+// libpad		2.5.0.0
+// libpad		2.6.0.0
+// libpad		2.7.0.0
+//
+static u32 padReadpattern0[] = { // type 4
+	0x0080382d,			// daddu a3, a0, zero
+	0x24030070,			// li 	 v1, $00000070
+	0x2404001c,			// li  	 a0, $0000001c
+	0x70e31818,			// mult1 v1, a3, v1
+	0x00a42018,			// mult	 a0, a1, a0
+	0x27bdff00,			// addiu sp, sp, $ffXX
+	0x3c020000,			// lui 	 v0, $XXXX
+	0xff000000,			// sd 	 XX, $XXXX(XX)
+	0xffbf0000,			// sd  	 ra, $XXXX(sp)
+	0x24420000,			// addiu v0, v0, $XXXX 
+	0x00000000,			// ...
+	0x00000000,			// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x0c000000			// jal   scePadGetDmaStr
 };
 static u32 padReadpattern0_mask[] = {
-  0xffffffff,
-  0xffffffff,
-  0xffffffff,
-  0xffffffff,
-  0xffffffff,
-  0xffffff00,
-  0xffff0000,
-  0xff000000,
-  0xffff0000,
-  0xffff0000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0xfc000000	   
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffff00,
+	0xffff0000,
+	0xff000000,
+	0xffff0000,
+	0xffff0000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0xfc000000	   
 };
 
-static u32 padReadpattern1[] = {
-  0x0080382d,			// daddu a3, a0, zero
-  0x24020060,			// li 	 v0, $00000060
-  0x24040180,			// li  	 a0, $00000180
-  0x00a21018,			// mult  v0, a1, v0
-  0x70e42018,			// mult1 a0, a3, a0
-  0x27bdff00,			// addiu sp, sp, $ffXX
-  0x3c030000,			// lui 	 v1, $XXXX
-  0xff000000,			// sd 	 XX, $XXXX(XX)
-  0xffbf0000,			// sd  	 ra, $XXXX(sp)
-  0x24630000,			// addiu v1, v1, $XXXX 
-  0x00000000,			// ...
-  0x00000000,			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x00000000, 			// ...
-  0x0c000000			// jal   scePadGetDmaStr
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad		2.1.0.0
+//
+static u32 padReadpattern1[] = { // type 3
+	0x0080382d,			// daddu a3, a0, zero
+	0x24020060,			// li 	 v0, $00000060
+	0x24040180,			// li  	 a0, $00000180
+	0x00a21018,			// mult  v0, a1, v0
+	0x70e42018,			// mult1 a0, a3, a0
+	0x27bdff00,			// addiu sp, sp, $ffXX
+	0x3c030000,			// lui 	 v1, $XXXX
+	0xff000000,			// sd 	 XX, $XXXX(XX)
+	0xffbf0000,			// sd  	 ra, $XXXX(sp)
+	0x24630000,			// addiu v1, v1, $XXXX 
+	0x00000000,			// ...
+	0x00000000,			// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x00000000, 		// ...
+	0x0c000000			// jal   scePadGetDmaStr
 };
 static u32 padReadpattern1_mask[] = {
-  0xffffffff,
-  0xffffffff,
-  0xffffffff,
-  0xffffffff,
-  0xffffffff,
-  0xffffff00,
-  0xffff0000,
-  0xff000000,
-  0xffff0000,
-  0xffff0000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0x00000000,
-  0xfc000000	   
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffff00,
+	0xffff0000,
+	0xff000000,
+	0xffff0000,
+	0xffff0000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0xfc000000	   
 };
 
-static u32 padReadpattern2[] = {
-  0x27bdff00,			// addiu sp, sp, $ffXX
-  0x24030070,			// li 	 v1, $00000070
-  0xffb10000,			// sd 	 s1, $XXXX(sp)
-  0x3c020000,			// lui	 v0, $XXXX
-  0xffb20000,			// sd 	 s2, $XXXX(sp)
-  0x0080882d,			// daddu s1, a0, zero 
-  0x00a0902d,			// daddu s2, a1, zero
-  0x2404001c,			// li 	 a0, $0000001c
-  0x72231818,			// mult1 v1, s1, v1	
-  0x02442018,			// mult  a0, s2, a0	
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x0c000000			// jal   DIntr
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad		2.7.1.0
+// libpad		2.8.0.0
+//
+static u32 padReadpattern2[] = { // type 5
+	0x27bdff00,			// addiu sp, sp, $ffXX
+	0x24030070,			// li 	 v1, $00000070
+	0xffb10000,			// sd 	 s1, $XXXX(sp)
+	0x3c020000,			// lui	 v0, $XXXX
+	0xffb20000,			// sd 	 s2, $XXXX(sp)
+	0x0080882d,			// daddu s1, a0, zero 
+	0x00a0902d,			// daddu s2, a1, zero
+	0x2404001c,			// li 	 a0, $0000001c
+	0x72231818,			// mult1 v1, s1, v1	
+	0x02442018,			// mult  a0, s2, a0	
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x0c000000			// jal   DIntr
 };
 static u32 padReadpattern2_mask[] = {
-  0xffffff00,
-  0xffffffff,
-  0xffff0000,
-  0xffff0000,
-  0xffff0000,
-  0xffffffff,
-  0xffffffff,  
-  0xffffffff,  
-  0xffffffff,  
-  0xffffffff,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,
-  0x00000000,
-  0x00000000,    
-  0xfc000000	   
+	0xffffff00,
+	0xffffffff,
+	0xffff0000,
+	0xffff0000,
+	0xffff0000,
+	0xffffffff,
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,
+	0x00000000,
+	0x00000000,    
+	0xfc000000	   
 };
 
-static u32 padReadpattern3[] = {
-  0x27bdff00,			// addiu sp, sp, $ffXX
-  0x24030070,			// li 	 v1, $00000070
-  0xffb10000,			// sd 	 s1, $XXXX(sp)
-  0x3c020000,			// lui	 v0, $XXXX
-  0xffb20000,			// sd 	 s2, $XXXX(sp)
-  0x0080882d,			// daddu s1, a0, zero 
-  0x00a0902d,			// daddu s2, a1, zero
-  0x2404001c,			// li 	 a0, $0000001c
-  0x72231818,			// mult1 v1, s1, v1	
-  0x02442018,			// mult  a0, s2, a0	
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x00000000,			// ...  
-  0x0c000000			// jal   DIntr
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad      3.0.0.0
+//
+static u32 padReadpattern3[] = { //type 6
+	0x27bdff00,			// addiu sp, sp, $ffXX
+	0x24030070,			// li 	 v1, $00000070
+	0xffb10000,			// sd 	 s1, $XXXX(sp)
+	0x3c020000,			// lui	 v0, $XXXX
+	0xffb20000,			// sd 	 s2, $XXXX(sp)
+	0x0080882d,			// daddu s1, a0, zero 
+	0x00a0902d,			// daddu s2, a1, zero
+	0x2404001c,			// li 	 a0, $0000001c
+	0x72231818,			// mult1 v1, s1, v1	
+	0x02442018,			// mult  a0, s2, a0	
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x00000000,			// ...  
+	0x0c000000			// jal   DIntr
 };
 static u32 padReadpattern3_mask[] = {
-  0xffffff00,
-  0xffffffff,
-  0xffff0000,
-  0xffff0000,
-  0xffff0000,
-  0xffffffff,
-  0xffffffff,  
-  0xffffffff,  
-  0xffffffff,  
-  0xffffffff,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,  
-  0x00000000,
-  0x00000000,
-  0x00000000,    
-  0xfc000000	   
+	0xffffff00,
+	0xffffffff,
+	0xffff0000,
+	0xffff0000,
+	0xffff0000,
+	0xffffffff,
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,  
+	0x00000000,
+	0x00000000,
+	0x00000000,    
+	0xfc000000	   
 };
 
-static u32 padReadpattern4[] = { // for libpad2: this one just doesn't work, probably not the padRead function!!!
+// ------------------------------------------------------------------------
+// For libpad2 support
+// 
+// libpad2		2.4.0.0
+// libpad2		2.5.0.0
+// libpad2		2.7.0.0
+// libpad2		2.7.1.0
+// libpad2		2.8.0.0
+// libpad2      3.0.0.0
+// libpad2      3.0.2.0
+// 
+static u32 pad2Readpattern0[] = {
 	0x27bdffc0,			// addiu sp, sp, $ffc0
+	0x24020000, 		// li 	 v0, $XXXX
 	0xffb10010,			// sd 	 s1, $0010(sp)
-	0xffb20020,			// sd 	 s2, $0020(sp)
+	0x3c030000, 		// lui 	 v1, $XXXX
 	0x0080882d,			// daddu s1, a0, zero
+	0xffb20020,			// sd 	 s2, $0020(sp)
+	0x02222018,			// mult  a0, s1, v0
+	0x24660000, 		// addiu a2, v1, $XXXX	
 	0xffbf0030,			// sd 	 ra, $0030(sp)
-	0x00a0902d,			// daddu s2, a1, zero
-	0x0c000000,			// jal   ...
-	0xffb00000,			// sd 	 s0, $0000(sp)
-	0x24030334, 		// li 	 v1, $00000334
-	0x3c020000, 		// lui 	 v0, $XXXX
-	0x02231818,			// mult  v1, s1, v1
-	0x24420000, 		// addiu v0, v0, $XXXX
+	0x00a0902d,			// daddu s2, a1, zero		
 	0x00000000,			// ...
 	0x00000000,			// ...
 	0x00000000,			// ...
 	0x00000000,			// ...
-	0x0c000000			// jal   ...	
+	0x00000000,			// ...
+	0x00000000,			// ...
+	0x00000000,			// ...
+	0x00000000,			// ...
+	0x00000000,			// ...	
+	0x0c000000			// jal   scePad2LinkDriver	
+};
+static u32 pad2Readpattern0_mask[] = {
+	0xffffffff,
+	0xffff0000,
+	0xffffffff,
+	0xffff0000,	
+	0xffffffff,	
+	0xffffffff,	
+	0xffffffff,
+	0xffff0000,	
+	0xffffffff,
+	0xffffffff,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,
+	0x00000000,	
+	0xfc000000
+};
+
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad		1.5.0.0
+//
+static u32 padReadpattern4[] = { //type 0
+	0x27bdffc0,			// addiu	sp, sp, $ffc0
+	0x00052900,			// sll		a1, a1, 4
+	0x000421c0,			// sll		a0, a0, 7
+	0x3c020000,			// lui		v0, PadDataAddrHi
+	0x00a42821,			// addu		a1, a1, a0
+	0xffb20020,			// sd		s2, $0020(sp)
+	0xffb10010,			// sd		s1, $0010(sp)
+	0x24420000,			// addiu	v0, v0, PadDataAddrLo
+	0xffbf0030,			// sd		ra, $0030(sp)
+	0x00451021,			// addu		v0, v0, a1
+	0xffb00000,			// sd		s0, $0000(sp)
+	0x00c0902d,			// daddu	s2, a2, zero
+	0x8c50000c,			// lw		s0, $000c(v0)
+	0x24050100,			// li		a1, $00000100
+	0x0c000000			// jal		sceSifWriteBackDCache
 };
 static u32 padReadpattern4_mask[] = {
 	0xffffffff,
 	0xffffffff,
 	0xffffffff,
+	0xffff0000,
+	0xffffffff,	
+	0xffffffff,
+	0xffffffff,  
+	0xffff0000,	  
+	0xffffffff,  
+	0xffffffff,
+	0xffffffff,  
+	0xffffffff,
+	0xffffffff,  
+	0xffffffff,
+	0xfc000000	   
+};
+
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad		1.6.2.0
+// libpad		1.6.3.0
+//
+static u32 padReadpattern5[] = { //type 1	
+	0x24020060,			// li		v0, $00000060
+	0x24070300,			// li		a3, $00000300
+	0x00a21818,			// mult		v1, a1, v0
+	0x70872018,			// mult1	a0, a0, a3
+	0x27bdffc0,			// addiu	sp, sp, $ffc0
+	0x3c020000,			// lui		v0, PadDataAddrHi
+	0xffb20020,			// sd		s2, $0020(sp)
+	0x24420000,			// addiu	v0, v0, PadDataAddrLo
+	0xffb10010,			// sd		s1, $0010(sp)
+	0x00c0902d,			// daddu	s2, a2, zero
+	0x00641821,			// addu		v1, v1, a0
+	0xffbf0030,			// sd		ra, $0030(sp)
+	0xffb00000,			// sd		s0, $0000(sp)
+	0x00621821,			// addu		v1, v1, v0
+	0x8c70000c,			// lw		s0, $000c(v1)
+	0x24050100,			// li		a1, $00000100
+	0x0c000000,			// jal		sceSifWriteBackDCache
+};
+static u32 padReadpattern5_mask[] = {
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffff0000,
+	0xffffffff,  
+	0xffff0000,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xfc000000	   
+};
+
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad		2.0.0.0
+// libpad		2.0.5.0
+//
+static u32 padReadpattern6[] = { //type 2		
+	0x24020060,			// li		v0, $00000060
+	0x24030180,			// li		v1, $00000180
+	0x00a22818,			// mult		a1, a1, v0
+	0x70832018,			// mult1	a0, a0, v1
+	0x27bdffe0,			// addiu	sp, sp, $ffe0
+	0x3c020000,			// lui		v0, PadDataAddrHi
+	0xffbf0010,			// sd		ra, $0010(sp)
+	0x24420000,			// addiu	v0, v0, PadDataAddrLo
+	0xffb00000,			// sd		s0, $0000(sp)
+	0x00a42821,			// addu		a1, a1, a0
+	0x00a22821,			// addu		a1, a1, v0
+	0x8cb0000c,			// lw		s0, $000c(a1)
+	0x0200202d,			// daddu	a0, s0, zero
+	0x0c000000,			// jal		SyncDCache
+};
+static u32 padReadpattern6_mask[] = {
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffff0000,
+	0xffffffff,  
+	0xffff0000,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xffffffff,  
+	0xfc000000	   
+};
+
+// ------------------------------------------------------------------------
+// For libpad support
+// 
+// libpad          3.0.1.0
+// libpad          3.0.2.0
+//
+static u32 padReadpattern7[] = { //type 7			
+	0x27bdffb0,		// addiu	sp, sp, $ffb0
+	0xffb20020,		// sd		s2, $0020(sp)
+	0xffb10010,		// sd		s1, $0010(sp)
+	0x00c0902d,		// daddu	s2, a2, zero
+	0xffb00000,		// sd		s0, $0000(sp)
+	0x0080882d,		// daddu	s1, a0, zero
+	0xffb30030,		// sd		s3, $0030(sp)
+	0xffbf0040,		// sd		ra, $0040(sp)
+	0x0c000000,		// jal		DI
+	0x00a0802d,		// daddu	s0, a1, zero
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x00000000,		// ...
+	0x0c000000,		// jal		scePadGetDmaStr
+};
+static u32 padReadpattern7_mask[] = {
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffffffff,
+	0xffff0000,
 	0xffffffff,
 	0xffffffff,
 	0xffffffff,
 	0xfc000000,
 	0xffffffff,
-	0xffffffff,
-	0xffff0000,
-	0xffffffff,
-	0xffff0000,
-	0x00000000,
-	0x00000000,
-	0x00000000,
-	0x00000000,
-	0xfc000000
+	0x00000000,  	
+	0x00000000,  
+	0x00000000,  	
+	0x00000000,  
+	0x00000000,  	
+	0x00000000,  
+	0x00000000,  	
+	0x00000000,  
+	0x00000000,  	
+	0x00000000,  
+	0x00000000,  	
+	0xfc000000	   
 };
 
-struct padButtonStatus
-{
-    unsigned char ok;
-    unsigned char mode;
-    unsigned short btns;
-    // joysticks
-    unsigned char rjoy_h;
-    unsigned char rjoy_v;
-    unsigned char ljoy_h;
-    unsigned char ljoy_v;
-    // pressure mode
-    unsigned char right_p;
-    unsigned char left_p;
-    unsigned char up_p;
-    unsigned char down_p;
-    unsigned char triangle_p;
-    unsigned char circle_p;
-    unsigned char cross_p;
-    unsigned char square_p;
-    unsigned char l1_p;
-    unsigned char r1_p;
-    unsigned char l2_p;
-    unsigned char r2_p;
-    unsigned char unkn16[12];
+// ------------------------------------------------------------------------
+struct padButtonStat {
+    u8 ok;
+    u8 mode;
+    u16 btns;
 } __attribute__((packed));
 
-static u8 (*scePadRead)(int port, int slot, struct padButtonStatus *data);
-static u8 (*scePadRead2)(int port, struct padButtonStatus *data);
+struct pad2ButtonStat {
+    u16 btns;
+} __attribute__((packed));
+
+static int (*scePadRead)(int port, int slot, struct padButtonStat *data);
+static int (*scePad2Read)(int socket, struct pad2ButtonStat *data);
 static int scePadRead_style = 1;
 
 
@@ -334,6 +543,17 @@ int HookSifSetReg(u32 register_num, int register_value)
 {
 	if (set_reg_hook) {
 		set_reg_hook--;
+		
+#ifdef DISABLE_AFTER_IOPRESET		
+		if (set_reg_hook == 0) {
+			__asm__(
+				"la $v1, UnHook_Syscalls\n\t"
+				"sw $v1, 8($sp)\n\t"
+				"jr $ra\n\t"
+				"nop\n\t"
+			);
+		}
+#endif		
 		return 1;
 	}
 
@@ -344,6 +564,27 @@ int HookSifSetReg(u32 register_num, int register_value)
 		::"r"((u32)Old_SifSetReg), "r"((u32)register_num), "r"((u32)register_value)
 	);
 
+	return 1;
+}
+
+// ------------------------------------------------------------------------
+int Hook_Syscalls(void)
+{
+	Old_SifSetDma = GetSyscall(__NR_SifSetDma);
+	SetSyscall(__NR_SifSetDma, &HookSifSetDma);
+
+	Old_SifSetReg = GetSyscall(__NR_SifSetReg);
+	SetSyscall(__NR_SifSetReg, &HookSifSetReg);
+	
+	return 1;
+}
+
+// ------------------------------------------------------------------------
+int UnHook_Syscalls(void)
+{
+	SetSyscall(__NR_SifSetDma, Old_SifSetDma);
+	SetSyscall(__NR_SifSetReg, Old_SifSetReg);	 
+	
 	return 1;
 }
 
@@ -517,9 +758,6 @@ int HookIopReset(const char *arg, int flag)
 			scr_printf("connection OK\n");
 #endif		    	
 #endif				
-		// Check it's the first IOP reset hook	
-		if (first_hook)			
-			first_hook = 0;
 /*
 #ifdef DEBUG
     	for (i=0; i<100; i++)
@@ -547,7 +785,6 @@ int HookIopReset(const char *arg, int flag)
 	}
  
 	set_reg_hook = 4;
-	iopreset_done =1;
 	
 	return 1;
 }
@@ -725,69 +962,68 @@ void start_screen(void)
 }
 
 //--------------------------------------------------------------
-static u8 Hook_scePadRead(int port, int slot, struct padButtonStatus *data)
+void padReadHook_job(void *data)
 {
-	u8 ret;
-	u32 paddata, new_pad;
-
-	ret = scePadRead(port, slot, data);
+	u32 paddata, new_pad, buttons;
 	
-	if (ret != 0) {
-		padRead_cnt++;
-		paddata = 0xffff ^ data->btns;
-        new_pad = paddata & ~old_pad;
-        old_pad = paddata;
-        
-        //if (new_pad)
-        //	sendU32Value(new_pad);
-      
-        if (padRead_cnt > 5) {
-	        padRead_cnt = 0;
+	padRead_cnt++;
+	
+	if (scePadRead_style == 2)
+		buttons = (u32)(((struct pad2ButtonStat *)data)->btns);
+	else
+		buttons = (u32)(((struct padButtonStat *)data)->btns);
+	
+	paddata = 0xffff ^ buttons;
+    new_pad = paddata & ~old_pad;
+    old_pad = paddata;
+              
+	if (padRead_cnt > 5) {
+		padRead_cnt = 0;
 #ifndef NOADDITIONAL_IRX	        
-			getRemoteDumpRequest();
+		getRemoteDumpRequest();
 #endif			
-        }
+	}
         
 #ifdef NOADDITIONAL_IRX
-		if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS))) {	
-			//data->btns = 0 ^ 0xffff;
-			start_screen();
-		}
-		else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R1 | PAD_CROSS))) {
-			//data->btns = 0 ^ 0xffff;
-			start_screen();
-		}	
+	if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS)))
+		start_screen();
+	else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R1 | PAD_CROSS)))
+		start_screen();
+	else if ((new_pad) && (new_pad == (PAD_UP | PAD_R2 | PAD_CROSS)))
+		start_screen();	
+	else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R2 | PAD_CROSS)))
+		start_screen();		
 #else          	
-		if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS))) {	
-			//data->btns = 0 ^ 0xffff;			
-			sendDump(EE_DUMP);		
-		}
-		else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R1 | PAD_CROSS))) {
-			//data->btns = 0 ^ 0xffff;
-			sendDump(IOP_DUMP);
-		}	
-		else if ((new_pad) && (new_pad == (PAD_UP | PAD_R2 | PAD_CROSS))) {
-			//data->btns = 0 ^ 0xffff;
-			sendDump(KERNEL_DUMP);
-		}	
-		else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R2 | PAD_CROSS))) {
-			//data->btns = 0 ^ 0xffff;
-			sendDump(SCRATCHPAD_DUMP);
-		}			
-#endif		
-	}
+	if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS)))
+		sendDump(EE_DUMP);		
+	else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R1 | PAD_CROSS)))
+		sendDump(IOP_DUMP);	
+	else if ((new_pad) && (new_pad == (PAD_UP | PAD_R2 | PAD_CROSS)))
+		sendDump(KERNEL_DUMP);
+	else if ((new_pad) && (new_pad == (PAD_DOWN | PAD_R2 | PAD_CROSS)))
+		sendDump(SCRATCHPAD_DUMP);
+#endif			
+}
+
+//--------------------------------------------------------------
+static int Hook_scePadRead(int port, int slot, struct padButtonStat *data)
+{
+	int ret;
+
+	ret = scePadRead(port, slot, data);
+	padReadHook_job(data);
 				
 	return ret;
 }
 
 //--------------------------------------------------------------
-static u8 Hook_scePadRead2(int port, struct padButtonStatus *data)
+static int Hook_scePad2Read(int socket, struct pad2ButtonStat *data)
 {
-	u8 ret;
-	u32 paddata, new_pad;
+	int ret;
 
-	ret = scePadRead2(port, data);
-		
+	ret = scePad2Read(socket, data);
+	padReadHook_job(data);	
+				
 	return ret;
 }
 
@@ -802,7 +1038,7 @@ int patch_padRead(void *epc)
     scr_printf("\t patch_padRead start!\n");
 #endif    		
 		
-	memscope = 0x01fe0000 - (u32)epc;
+	memscope = 0x01f00000 - (u32)epc;
 	
 	// First try to locate the orginal libpad's scePadRead function
     ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern0, (u8 *)padReadpattern0_mask, sizeof(padReadpattern0));	
@@ -813,16 +1049,28 @@ int patch_padRead(void *epc)
 	    	if (!ptr) {
 		    	ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern3, (u8 *)padReadpattern3_mask, sizeof(padReadpattern3));
 		    	if (!ptr) {
-		    		//ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern4, (u8 *)padReadpattern4_mask, sizeof(padReadpattern4));
-		    		//if (!ptr) {
+		    		ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)pad2Readpattern0, (u8 *)pad2Readpattern0_mask, sizeof(pad2Readpattern0));
+		    		if (!ptr) {
+		    			ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern4, (u8 *)padReadpattern4_mask, sizeof(padReadpattern4));
+		    			if (!ptr) {
+		    				ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern5, (u8 *)padReadpattern5_mask, sizeof(padReadpattern5));
+		    				if (!ptr) {
+		    					ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern6, (u8 *)padReadpattern6_mask, sizeof(padReadpattern6));
+		    					if (!ptr) {
+		    						ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern7, (u8 *)padReadpattern7_mask, sizeof(padReadpattern7));
+		    						if (!ptr) {
 #ifdef DEBUG			    		    	
-    					scr_printf("\t padReadpattern not found...\n");
+    									scr_printf("\t padReadpattern not found...\n");
 #endif    		
-    					return 0;
+    									return 0;
+									}
+								}
+							}
+						}
 					}
-					//else
-					//	scePadRead_style = 2;
-				//}		    	
+					else // If found scePad2Read pattern
+						scePadRead_style = 2;
+				}		    	
 	    	}
     	}
     }
@@ -832,7 +1080,7 @@ int patch_padRead(void *epc)
 
 	// Save original scePadRead ptr
 	if (scePadRead_style == 2)
-		scePadRead2 = (void *)ptr;
+		scePad2Read = (void *)ptr;
 	else
 		scePadRead = (void *)ptr;
 
@@ -851,7 +1099,7 @@ int patch_padRead(void *epc)
 	// Get Hook_scePadRead call Instruction code
 	if (scePadRead_style == 2) {
 		inst = 0x0c000000;
-		inst |= 0x03ffffff & ((u32)Hook_scePadRead2 >> 2);		
+		inst |= 0x03ffffff & ((u32)Hook_scePad2Read >> 2);		
 	}
 	else {	
 		inst = 0x0c000000;
@@ -861,7 +1109,7 @@ int patch_padRead(void *epc)
 	// Search & patch for calls to scePadRead
 	ptr = (u8 *)epc;
 	while (ptr) {
-		memscope = 0x01fe0000 - (u32)ptr;	
+		memscope = 0x01f00000 - (u32)ptr;	
 		ptr = find_bytes_with_mask(ptr, memscope, (u8 *)pattern, (u8 *)mask, sizeof(pattern));
 		if (ptr) {
 			fncall = (u32)ptr;
@@ -936,7 +1184,7 @@ int main(int argc, char *argv[1])
 	
 	// Get back needed modules pointers from EE ram				
 	GetIrxRAM();
-				
+					
 	// Clearing user mem, so better not to have anything valuable on stack
 	for (i = 0x100000; i < 0x2000000; i += 64) {
 		asm (
@@ -1003,15 +1251,13 @@ int main(int argc, char *argv[1])
 	
 #ifdef DEBUG		
 	scr_printf("done \n");		
-#endif			
-#ifndef NOSYSCALL_HOOK		
+#endif
+			
+#ifndef NOSYSCALL_HOOKS
 	// Hooking SifSetDma & SifSetReg Syscalls
-	Old_SifSetDma  = GetSyscall(119);
-	SetSyscall(119, &HookSifSetDma);
-
-	Old_SifSetReg  = GetSyscall(121);
-	SetSyscall(121, &HookSifSetReg);
-#endif		
+	Hook_Syscalls();
+#endif
+	
 	fioExit();
 	LoadFileExit();
 	SifExitRpc();
@@ -1019,9 +1265,8 @@ int main(int argc, char *argv[1])
 	FlushCache(0);
 	FlushCache(2);
 
-	//if (!patch_padRead((void *)elf_header.entry))
-	//	goto error;	    		
-	patch_padRead((void *)elf_header.entry);
+	if (!patch_padRead((void *)elf_header.entry))
+		goto error;	    		
 
 #ifdef DEBUG			
     scr_printf("\t Executing...\n");
@@ -1048,23 +1293,20 @@ int main(int argc, char *argv[1])
 #ifdef DEBUG		
 		scr_printf("done \n");		
 #endif			
-#ifndef NOSYSCALL_HOOK		
-		// Hooking SifSetDma & SifSetReg Syscalls
-		Old_SifSetDma  = GetSyscall(119);
-		SetSyscall(119, &HookSifSetDma);
 
-		Old_SifSetReg  = GetSyscall(121);
-		SetSyscall(121, &HookSifSetReg);
+#ifndef NOSYSCALL_HOOKS
+		// Hooking SifSetDma & SifSetReg Syscalls
+		Hook_Syscalls();
 #endif
+	
 		fioExit();
 		SifExitRpc();
 
 		FlushCache(0);
 		FlushCache(2);
 
-		//if (!patch_padRead((void *)exec.epc))
-		//	goto error;
-		patch_padRead((void *)exec.epc);	    		
+		if (!patch_padRead((void *)exec.epc))
+			goto error;
 				
 #ifdef DEBUG			
     	scr_printf("\t Executing...\n");

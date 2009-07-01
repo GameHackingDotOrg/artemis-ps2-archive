@@ -2,7 +2,7 @@
 //                                                                       //
 //  Artemis Project: Task 2308/2341                                      //
 //  solution provided by jimmikaelkael                                   //
-//  rev 0.92                                                             //
+//  rev 0.93                                                             //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -14,14 +14,17 @@
 	I don't take any credits for the dev9 driver, this is just the 
  original Marcus R. Brown dev9 driver shrinked off from poweroff support.
 
- 	A lot of credits goes to Polo and maybe indirectly to ffgriever
- for the all part of code in the EE core that hooks IOP reset and allow to
- rewrite some IRX from the Game IOP replacement image, or/and reload
- additional modules after that (code borrowed to HDProject).
+ 	A lot of credits goes to Polo and to ffgriever for the all part of
+ code in the EE core that hooks IOP reset and allow to rewrite some IRX 
+ from the Game IOP replacement image, or/and reload additional modules 
+ after that (code borrowed to HDProject).
  
  	Credits goes to dlanor & EP for the function the parses the .CNF
  files reliably (code borrowed to uLaunchElf).
- 
+	
+	Many thanks to ffgriever & misfire for sharing sources and
+ knowledge. 
+
  	A lot of thanks to LBGSHI for meticulous tests. 
 
 //-----------------------------------------------------------------------//
@@ -161,8 +164,10 @@
 	- Narnia Chronicles PAL
 	- SpongeBob Squarepants: Battle for Volcano Island PAL
 	- George of the Jungle PAL
+	- Burnout Dominator PAL
 
  Tested working with core_launcher_silentcore:
+	- Spiderwick Chronicles PAL
 	- Sonic Riders Zero Gravity PAL
 	- Lego Star Wars PAL
 	- Lego Star Wars 2 PAL
@@ -183,10 +188,6 @@
  Tested working with core_launcher_nosyscallhook:
 	- The Golden Compass PAL
 	- Sims: Pets PAL
-
- Tested working but not responding to pad combo:
-	- Spiderwick Chronicles PAL (Needs to be launched with silent core)
-	- Burnout Dominator PAL
 
  Not working (I'm unable to start those game backups with CogSwap as well, there having the same symptoms):
 	- Spyro: The Eternal Knight PAL (pass loading screen, you can select language, sounds are garbage in video and freezes)
