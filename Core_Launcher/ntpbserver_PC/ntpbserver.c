@@ -26,6 +26,9 @@ char scratchpaddump_dir[2048];
 char kerneldump_file[2048];
 char scratchpaddump_file[2048];
 
+static int ClientConnected = 0;
+static int haltState = 0;
+
 int eedump_index, iopdump_index, kerneldump_index, scratchpaddump_index;
 unsigned int dump_size;
 unsigned int dump_wpos;
@@ -48,15 +51,17 @@ const unsigned char *ntpb_hdrMagic = "\xff\x00NTPB";
 #define NTPBCMD_PRINT_IOPDUMP				0x302
 #define NTPBCMD_PRINT_KERNELDUMP 			0x303
 #define NTPBCMD_PRINT_SCRATCHPADDUMP		0x304
-#define NTPBCMD_GET_REMOTE_DUMPREQUEST		0x400
+#define NTPBCMD_GET_REMOTE_CMD				0x400
 
-#define REMOTE_DUMPREQUEST_NONE			0
-#define REMOTE_DUMPREQUEST_EE			1
-#define REMOTE_DUMPREQUEST_IOP			2
-#define REMOTE_DUMPREQUEST_KERNEL		3
-#define REMOTE_DUMPREQUEST_SCRATCHPAD	4
+#define REMOTE_CMD_NONE						0x000
+#define REMOTE_CMD_DUMPEE					0x101
+#define REMOTE_CMD_DUMPIOP					0x102
+#define REMOTE_CMD_DUMPKERNEL				0x103
+#define REMOTE_CMD_DUMPSCRATCHPAD			0x104
+#define REMOTE_CMD_HALT						0x201
+#define REMOTE_CMD_RESUME					0x202
 
-static int remote_dumprequest;
+static int remote_cmd;
 
 /*<---------------------------------------------------------------------->*/
 HINSTANCE hInst;					// Instance handle
@@ -74,6 +79,8 @@ HWND hwndLabelKerneldumpStart;  	// Label control handle
 HWND hwndLabelKerneldumpEnd;  		// Label control handle
 HWND hwndLabelScratchpaddumpStart; 	// Label control handle
 HWND hwndLabelScratchpaddumpEnd;   	// Label control handle
+
+HWND hwndLabeldumpState;		   	// Label control handle
 
 HWND hwndTextBoxEEdump;				// Edit control handle
 HWND hwndTextBoxIOPdump;			// Edit control handle
@@ -93,6 +100,8 @@ HWND hwndButtonEEdump;				// Button control handle
 HWND hwndButtonIOPdump;				// Button control handle
 HWND hwndButtonKerneldump;			// Button control handle
 HWND hwndButtonScratchpaddump;		// Button control handle
+
+HWND hwndButtonHaltResume;			// Button control handle
 
 HWND hwndProgressBardumpState;		// Progress Bar control handle
 HWND hWndStatusbar;					// StatusBar handle
@@ -180,7 +189,7 @@ HWND CreatentpbserverWndClassWnd(void)
 {
 	return CreateWindow("ntpbserverWndClass","ntpbserver - jimmikaelkael",
 		WS_MINIMIZEBOX|WS_VISIBLE|WS_CLIPSIBLINGS|WS_CLIPCHILDREN|WS_CAPTION|WS_BORDER|WS_SYSMENU,
-		CW_USEDEFAULT,CW_USEDEFAULT,800,512,
+		CW_USEDEFAULT,CW_USEDEFAULT,800,585,
 		NULL,
 		NULL,
 		hInst,
@@ -199,23 +208,39 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 			break;
 
 		case IDC_BUTTON_EEDUMP:
-			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
-				remote_dumprequest = REMOTE_DUMPREQUEST_EE;
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE))
+				remote_cmd = REMOTE_CMD_DUMPEE;
 			break;
 
 		case IDC_BUTTON_IOPDUMP:
-			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
-				remote_dumprequest = REMOTE_DUMPREQUEST_IOP;
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE))
+				remote_cmd = REMOTE_CMD_DUMPIOP;
 			break;
 
 		case IDC_BUTTON_KERNELDUMP:
-			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
-				remote_dumprequest = REMOTE_DUMPREQUEST_KERNEL;
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE))
+				remote_cmd = REMOTE_CMD_DUMPKERNEL;
 			break;
 
 		case IDC_BUTTON_SCRATCHPADDUMP:
-			if (remote_dumprequest == REMOTE_DUMPREQUEST_NONE)
-				remote_dumprequest = REMOTE_DUMPREQUEST_SCRATCHPAD;
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE))
+				remote_cmd = REMOTE_CMD_DUMPSCRATCHPAD;
+			break;
+		case IDC_BUTTON_HALTRESUME:
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
+				if (haltState) {
+					haltState = 0;
+					remote_cmd = REMOTE_CMD_RESUME;
+					SetDlgItemText(hwndMain, IDC_BUTTON_HALTRESUME, "Halt");
+					UpdateWindow(hwndMain);
+				}
+				else {
+					haltState = 1;
+					remote_cmd = REMOTE_CMD_HALT;
+					SetDlgItemText(hwndMain, IDC_BUTTON_HALTRESUME, "Resume");
+					UpdateWindow(hwndMain);
+				}
+			}
 			break;
 	}
 }
@@ -389,11 +414,14 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 
 		switch(ntpbCmd) { // treat Client Request here
 
-			case NTPBCMD_GET_REMOTE_DUMPREQUEST:
+			case NTPBCMD_GET_REMOTE_CMD:
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
-				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)remote_dumprequest;
+				*((unsigned int *)&pktbuffer[ntpb_hdrSize + 2]) = (unsigned int)remote_cmd;
 				ntpbpktSize = ntpb_hdrSize + 6;
+
+				if ((remote_cmd == REMOTE_CMD_HALT) || (remote_cmd == REMOTE_CMD_RESUME))
+						remote_cmd = REMOTE_CMD_NONE;
 				break;
 
 			case NTPBCMD_PRINT_EEDUMP:
@@ -412,7 +440,7 @@ int receivePacket(int client_socket) // retrieving a packet sent by the Client
 					SendMessage(hwndProgressBardumpState, PBM_SETPOS, 0, 0);
 					UpdateWindow(hwndMain);
 
-					remote_dumprequest = REMOTE_DUMPREQUEST_NONE;
+					remote_cmd = REMOTE_CMD_NONE;
 				}
 
 				*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
@@ -682,6 +710,7 @@ DWORD WINAPI serverThread(LPVOID lpParam) // Server thread: Handle Client & pack
 	}
 
 	UpdateStatusBar("Listening PS2 Client...", 0, 0);
+	ClientConnected = 1;
 
 	while (1) {
 		tv.tv_sec = 3;
@@ -993,16 +1022,35 @@ VOID CreateControls(HINSTANCE hInstance)
                                hInstance,
                                NULL);
 
+	hwndLabeldumpState = CreateWindow (TEXT("static"),
+                               "Dump Status:",
+                               WS_CHILD|WS_VISIBLE,
+                               355,400,
+                               100,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_DUMPSTATE,
+                               hInstance,
+                               NULL);
+
 	hwndProgressBardumpState = CreateWindowEx (0, PROGRESS_CLASS,
                                NULL,
                                WS_CHILD|WS_VISIBLE|PBS_SMOOTH,
-                               20,410,
+                               20,420,
                                754,20,
                                hwndMain,
                                (HMENU)IDC_PROGRESSBAR_DUMPSTATE,
                                hInstance,
                                NULL);
 
+	hwndButtonHaltResume = CreateWindow (TEXT("button"),
+                               "Halt",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               20,470,
+                               754,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_HALTRESUME,
+                               hInstance,
+                               NULL);
 }
 
 /*<---------------------------------------------------------------------->*/
@@ -1067,7 +1115,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	kerneldump_index = 0;
 	scratchpaddump_index = 0;
 
-	remote_dumprequest = REMOTE_DUMPREQUEST_NONE;
+	remote_cmd = REMOTE_CMD_NONE;
 
 	// Create & start the server thread
 	HANDLE serverThid = CreateThread(NULL, 0, serverThread, NULL, 0, NULL); // no stack, 1MB by default

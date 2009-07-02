@@ -504,6 +504,7 @@ static int (*scePadRead)(int port, int slot, struct padButtonStat *data);
 static int (*scePad2Read)(int socket, struct pad2ButtonStat *data);
 static int scePadRead_style = 1;
 
+static int haltState = 0;
 
 // ------------------------------------------------------------------------
 u32 NewSifSetDma(SifDmaTransfer_t *sdd, s32 len)
@@ -920,15 +921,44 @@ int sendDump(int dump_type)
 }
 
 //--------------------------------------------------------------
-int getRemoteDumpRequest(void)
+int getRemoteCmd(void)
 {
-	int remote_dumprequest; 
+	int remote_cmd; 
 	
-	rpcNTPBsendCmd(NTPBCMD_GET_REMOTE_DUMPREQUEST, NULL, 0);
-	rpcSync(0, NULL, &remote_dumprequest);
+	rpcNTPBsendCmd(NTPBCMD_GET_REMOTE_CMD, NULL, 0);
+	rpcSync(0, NULL, &remote_cmd);
 	
-	if (remote_dumprequest != REMOTE_DUMPREQUEST_NONE)
-		sendDump(remote_dumprequest);
+	if (remote_cmd != REMOTE_CMD_NONE) {
+		
+		switch (remote_cmd) {
+			
+			case REMOTE_CMD_DUMPEE:
+				sendDump(EE_DUMP);
+				break;
+
+			case REMOTE_CMD_DUMPIOP:
+				sendDump(IOP_DUMP);
+				break;
+				
+			case REMOTE_CMD_DUMPKERNEL:
+				sendDump(KERNEL_DUMP);
+				break;
+				
+			case REMOTE_CMD_DUMPSCRATCHPAD:
+				sendDump(SCRATCHPAD_DUMP);
+				break;
+		
+			case REMOTE_CMD_HALT:
+				haltState = 1;
+				while (haltState)
+					getRemoteCmd();
+				break;			
+				
+			case REMOTE_CMD_RESUME:
+				haltState = 0;			
+				break;			
+		}
+	}
 	
 	return 1;
 }
@@ -980,7 +1010,7 @@ void padReadHook_job(void *data)
 	if (padRead_cnt > 5) {
 		padRead_cnt = 0;
 #ifndef NOADDITIONAL_IRX	        
-		getRemoteDumpRequest();
+		getRemoteCmd();
 #endif			
 	}
         
