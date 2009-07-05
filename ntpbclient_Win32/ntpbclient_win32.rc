@@ -1,0 +1,18 @@
+#include <windows.h>
+#include "ntpbclient_win32res.h"
+/* --- The following code comes from c:\lcc\lib\wizard\default.rc. */
+IDMAINICON ICON "mainicon.ico"
+IDMAINMENU MENU
+BEGIN
+	POPUP "&File"
+	BEGIN
+		MENUITEM "&Reconnect",IDM_RECONNECT
+		MENUITEM "&Exit",IDM_EXIT
+	END
+END
+IDACCEL ACCELERATORS
+BEGIN
+	"Q",	IDM_EXIT,VIRTKEY,CONTROL
+END
+END
+

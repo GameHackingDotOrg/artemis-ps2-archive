@@ -1,0 +1,4 @@
+[ntpbclient_win32.rc]
+ntpbclient_win32res.h
+[ntpbclient_win32.c]
+ntpbclient_win32res.h
