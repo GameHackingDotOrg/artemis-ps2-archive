@@ -1,6 +1,6 @@
 AGUI v1.0 [04-26-09] - by Lazy Bastard
 
-This is a skeleton GUI for Artemis. Menu items can be selected by using the directional pad, and rollover is implemented (if you select the top item in a row, then press UP, the bottom item in that row will then be selected, etc). Press X to accept a menu item, and press Triangle to step back one level. If X doesn't do anything, it's because whatever that item is hasn't been implemented yet  :p
+This is a skeleton GUI for Artemis. Menu items can be selected by using the directional pad, and rollover is implemented (if you select the top item in a row, then press UP, the bottom item in that row will then be selected, etc). Press X to accept a menu item, and press Triangle to step back one level. If X doesn't do anything, it's because whatever that item is hasn't been implemented yet :p
 
 
 
