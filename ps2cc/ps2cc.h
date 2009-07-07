@@ -1,0 +1,249 @@
+/****************************************************************************
+Artemis - PS2 Code Creator (for lack of a better title) - Main Header
+-PS2 dumping/communication functions by Jimmikaelkael
+-Code searching by Viper187
+*****************************************************************************/
+
+#include <w32api.h>
+#define WINVER WindowsNT4
+#define _WIN32_IE IE6
+
+#include <windows.h>
+#include <windowsx.h>
+#include <commctrl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <shlobj.h>
+#include <winsock2.h>
+
+#include "_types.h"
+
+#define String2Hex(s,v) sscanf((s),"%x",(v))
+
+/****************************************************************************
+Global Constants
+*****************************************************************************/
+#define NUM_TABS 5
+#define MAX_SEARCHES 100
+
+//Jimmi's
+#define REMOTE_CMD_NONE						0x000
+#define NTPBCMD_GET_EEDUMP_START 			0x101
+#define REMOTE_CMD_ERROR					0x666
+
+//Tab IDs
+#define CODE_SEARCH_TAB 0
+#define SEARCH_RESULTS_TAB 1
+#define MEMORY_EDITOR_TAB 2
+#define CHEAT_TAB 3
+//Search types
+#define SEARCH_INIT 0x0
+#define SEARCH_KNOWN 0x1
+#define SEARCH_KNOWN_WILD 0x2
+#define SEARCH_GREATER 0x4
+#define SEARCH_GREATER_BY 0x8
+#define SEARCH_GREATER_LEAST 0x10
+#define SEARCH_GREATER_MOST 0x20
+#define SEARCH_LESS 0x40
+#define SEARCH_LESS_BY 0x80
+#define SEARCH_LESS_LEAST 0x100
+#define SEARCH_LESS_MOST 0x200
+#define SEARCH_EQUAL 0x400
+#define SEARCH_EQUAL_NUM_BITS 0x800
+#define SEARCH_NEQUAL 0x1000
+#define SEARCH_NEQUAL_TO 0x2000
+#define SEARCH_NEQUAL_BY 0x4000
+#define SEARCH_NEQUAL_LEAST 0x8000
+#define SEARCH_NEQUAL_MOST 0x10000
+#define SEARCH_NEQUAL_TO_BITS 0x20000
+#define SEARCH_NEQUAL_BY_BITS 0x40000
+#define SEARCH_IN_RANGE 0x80000
+#define SEARCH_NOT_RANGE 0x100000
+#define SEARCH_BITS_ANY 0x200000
+#define SEARCH_BITS_ALL 0x400000
+#define SEARCH_FORGOT 0x800000
+//Number Bases (for input)
+#define BASE_DEC 0
+#define BASE_HEX 1
+#define BASE_FLOAT 2
+#define BASE_ASCII 0x100 //for certain custom window/control printing functions
+
+
+/****************************************************************************
+Struct Definitions
+*****************************************************************************/
+
+//Code Search Vars - This type holds all the input gathered for a search.
+typedef struct _CODE_SEARCH_VARS {
+    int Count;
+    int CompareTo;
+    int Size;
+    u32 Type;
+    u32 TypeEx;
+    u64 Values[10];
+    u64 ValuesEx1[64];
+    u64 ValuesEx2[64];
+} CODE_SEARCH_VARS;
+
+//These are the vars included in the header of the binary results files.
+typedef struct CODE_SEARCH_RESULTS_INFO {
+    char sdFileName[MAX_PATH];
+    char MapFileName[MAX_PATH];
+    char Mapped;
+    int Endian;
+    int SearchSize;
+    u32 DumpSize;
+    u32 ResCount;
+} CODE_SEARCH_RESULTS_INFO;
+
+/*Results list with previous values (loaded from each of the previous RAM files for
+showing results)*/
+typedef struct _SEARCH_RESULTS_LIST {
+    char Size;
+    u32 Address;
+    u64 Values[MAX_SEARCHES];
+} SEARCH_RESULTS_LIST;
+
+//dump data and results during searches
+typedef struct _RAM_AND_RES_DATA {
+    int Access;
+    u8 *NewRAM;
+    u8 *OldRAM;
+    FILE *NewFile;
+    FILE *OldFile;
+    u8 *Results;
+    u8 *AddressMap;
+    u32 MapSize;
+    CODE_SEARCH_RESULTS_INFO OldResultsInfo;
+    CODE_SEARCH_RESULTS_INFO NewResultsInfo;
+} RAM_AND_RES_DATA;
+
+//Sub-Structures for settings (typically 1 per tab)
+typedef struct _CODE_SEARCH_SETTINGS {
+    char DumpDir[MAX_PATH];
+    int NumBase;
+    int NumBaseId;
+} CODE_SEARCH_SETTINGS;
+
+typedef struct _SEARCH_RESULTS_SETTINGS {
+    int DisplayFmt;
+    int ExportFmt;
+    int ResWriteRate;
+    int ResWriteRateId;
+    int RamView;
+} SEARCH_RESULTS_SETTINGS;
+
+//assuming there's a memory editor/viewer
+typedef struct _MEMORY_EDITOR_SETTINGS {
+    int RefreshRate;
+    int ByteSwap;
+} MEMORY_EDITOR_SETTINGS;
+
+//Main Settings Structure
+typedef struct _MAIN_CFG {
+    int VersionNum; //to prevent loading shit from a previous version if struct has changed.
+    LOGFONT ValueFontInfo;
+    HFONT ValueHFont;
+    CODE_SEARCH_SETTINGS CS;
+    SEARCH_RESULTS_SETTINGS Results;
+    MEMORY_EDITOR_SETTINGS MemEdit;
+} MAIN_CFG;
+
+//NTPB server (Jimi's work) shared vars
+typedef struct _NTPB_VARS {
+	unsigned int DumpAreaStart;
+	unsigned int DumpAreaEnd;
+	char FileName[MAX_PATH];
+} NTPB_VARS;
+
+/****************************************************************************
+Externs (Global Vars) - possibly change to #ifndef shit later rather than
+declaring elsewhere and externing.
+*****************************************************************************/
+
+extern HINSTANCE hInst;
+extern HWND hwndMain;
+extern HWND hTabDlgs[NUM_TABS];
+extern char ErrTxt[1000];
+extern WNDPROC wpHexEditBoxes;
+
+//structs
+extern MAIN_CFG Settings;
+extern RAM_AND_RES_DATA RamInfo;
+extern NTPB_VARS ntpbVars;
+
+//from lib_memory
+extern HWND hwndProgressBardumpState;		// Progress Bar control handle
+extern HWND hWndStatusbar;					// StatusBar handle
+extern char launch_path[2048];
+extern WSADATA *WsaData;
+extern char dump_dir[2048];
+extern char eedump_dir[2048];
+extern char iopdump_dir[2048];
+extern char eedump_file[2048];
+extern char iopdump_file[2048];
+extern char kerneldump_dir[2048];
+extern char scratchpaddump_dir[2048];
+extern char kerneldump_file[2048];
+extern char scratchpaddump_file[2048];
+extern int eedump_index, iopdump_index, kerneldump_index, scratchpaddump_index;
+extern int remote_cmd;
+extern int ClientConnected;
+
+/****************************************************************************
+Function Declarations -should also be a guidline to help people find where
+any function is locatated.
+*****************************************************************************/
+
+//ps2cc.c
+BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
+int InitTabControl(HWND hwnd, LPARAM lParam);
+int FreeShit();
+int FreeRamInfo();
+
+//Tab Procedures
+BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+//lib_api
+LRESULT CALLBACK HexEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+int ComboAddItem(HWND hCombo, const char* combostring, DWORD value);
+int isHexWindow(HWND txtbox);
+u64 GetHexWindow(HWND txtbox);
+int SetHexWindow(HWND txtbox, u64 value);
+u64 isDecWindow(HWND txtbox);
+u64 GetDecWindow(HWND txtbox);
+int SetDecWindowU(HWND txtbox, u64 value);
+u64 IsFloatWindow(HWND txtbox);
+u64 GetFloatWindow(HWND txtbox, int fsize);
+int DoFileOpen(HWND hwnd, char* filename);
+int BrowseForFolder(HWND hwnd, char* filename);
+
+//lib_fileio
+int FileExists(char *filename);
+int LoadFile(u8 **buffer, char* filename, int headerlen, u8 **headerdata, BOOL loadheader);
+int LoadStruct(VOID *buffer, u32 filesize, char* filename);
+int SaveStruct(VOID *buffer, u32 filesize, char* filename);
+
+//lib_memory
+DWORD WINAPI serverThread(LPVOID lpParam); // Server thread: Handle Client & packets
+
+//lib_misc
+int FilterHexChar(int lvalue);
+int isHex(char* text);
+int isDec(char* text);
+int isFloat(char* text);
+u64 Float2Hex(float floatval);
+u64 Double2Hex(double dblval);
+int str_lcase(char *str);
+int StringCompareCI(char* string1, char* string2);
+int SetBitFlag(u8 *flags, int num, int val);
+int GetBitFlag(u8 *flags, int num);
+int BitCount(u64 countval);
+u64 SignExtend64(u64 signval, int sbytes);
+u64 ByteFromU64(u64 dword, int valpart);
+u64 ShortFromU64(u64 dword, int valpart);
+u64 WordFromU64(u64 dword, int valpart);
+int Hex2ASCII(u64 value, int bytes, char *string);
+u64 FlipBytes(u64 value, int size);
+
