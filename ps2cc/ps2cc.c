@@ -34,7 +34,7 @@ WNDPROC wpHexEditBoxes;
 //Global structs
 MAIN_CFG Settings, Defaults;
 RAM_AND_RES_DATA RamInfo;
-NTPB_VARS ntpbVars;
+//NTPB_VARS ntpbVars;
 
 
 
@@ -120,8 +120,6 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
         } break;
 		case WM_SIZE:
 		{
-			SendMessage(hWndStatusbar,msg,wParam,lParam);
-			InitializeStatusBar(hWndStatusbar,1);
 		} break;
 		case WM_CLOSE:
 		{
@@ -129,8 +127,9 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
             DestroyWindow(hwnd);
 		} break;
 		case WM_DESTROY:
+		{
 			PostQuitMessage(0);
-			break;
+		} break;
 		default:
 			return FALSE;
 	}
@@ -144,12 +143,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	unsigned char *p;
 
 	hInst = hInstance;
-//	if (!InitApplication())
-//		return 0;
 
-
-//	if ((hwndMain = CreatentpbserverWndClassWnd()) == (HWND)0)
-//		return 0;
    hwndMain = CreateDialog(hInst,MAKEINTRESOURCE(PS2CC_DLG),HWND_DESKTOP, MainWndProc);
    sprintf(ErrTxt, "%u", GetLastError());
    if (!hwndMain) { MessageBox(NULL,ErrTxt, "debug",MB_OK); }
@@ -161,59 +155,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     blah.dwICC = -1;
     InitCommonControlsEx(&blah);
 
-	hwndProgressBardumpState = GetDlgItem(hwndMain, DUMPSTATE_PRB);
-//	CreateControls(hInst); //fix
-//	CreateSBar(hwndMain,"",1);
-	hWndStatusbar = GetDlgItem(hwndMain, NTPB_STATUS_BAR);
-    InitializeStatusBar(hwndMain,1);
-
 	ShowWindow(hwndMain,SW_SHOW);
 
-	// Init WSA
-	WsaData = (WSADATA*)InitWS2();
-	if (WsaData == NULL)
-		return 0;
-
-	// Get the launch_path from command line
-	strcpy(launch_path, GetCommandLine());
-	p = strrchr(launch_path, '\"');
-	*p = 0;
-	if ((!(p = strrchr(launch_path, '/'))) && (!(p = strrchr(launch_path, '\\'))))
-		p = strrchr(launch_path, ':');
-	if (p)
-		*(p+1) = 0;
-	p = (unsigned char *)launch_path;
-	while (*p == '\"')
-	   p++;
-  	strcpy(launch_path, p);
-
-// Create needed dirs
-	strcpy(dump_dir, launch_path);
-	strcat(dump_dir, "\\dump");
-	strcpy(eedump_dir, dump_dir);
-//	strcat(eedump_dir, "\\EE");
-	strcpy(iopdump_dir, dump_dir);
-	strcat(iopdump_dir, "\\IOP");
-	strcpy(kerneldump_dir, dump_dir);
-	strcat(kerneldump_dir, "\\Kernel");
-	strcpy(scratchpaddump_dir, dump_dir);
-	strcat(scratchpaddump_dir, "\\ScratchPad");
-
-	CreateDirectory(dump_dir, NULL);
-	CreateDirectory(eedump_dir, NULL);
-	CreateDirectory(iopdump_dir, NULL);
-	CreateDirectory(kerneldump_dir, NULL);
-	CreateDirectory(scratchpaddump_dir, NULL);
-
-	eedump_index = 0;
-	iopdump_index = 0;
-	kerneldump_index = 0;
-	scratchpaddump_index = 0;
-
-	remote_cmd = REMOTE_CMD_NONE;
-
-	// Create & start the server thread
-	HANDLE serverThid = CreateThread(NULL, 0, serverThread, NULL, 0, NULL); // no stack, 1MB by default
 
 	// API message loop
 	while (GetMessage(&msg,NULL,0,0)) {
@@ -221,8 +164,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		DispatchMessage(&msg);
 	}
 
-	// shutdown WSA
-	WSACleanup();
 
 	return msg.wParam;
 }
