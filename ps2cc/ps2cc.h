@@ -27,11 +27,6 @@ Global Constants
 #define NUM_TABS 5
 #define MAX_SEARCHES 100
 
-//Jimmi's
-#define REMOTE_CMD_NONE						0x000
-#define NTPBCMD_GET_EEDUMP_START 			0x101
-#define REMOTE_CMD_ERROR					0x666
-
 //Tab IDs
 #define CODE_SEARCH_TAB 0
 #define SEARCH_RESULTS_TAB 1
@@ -171,25 +166,7 @@ extern WNDPROC wpHexEditBoxes;
 //structs
 extern MAIN_CFG Settings;
 extern RAM_AND_RES_DATA RamInfo;
-extern NTPB_VARS ntpbVars;
 
-//from lib_memory
-extern HWND hwndProgressBardumpState;		// Progress Bar control handle
-extern HWND hWndStatusbar;					// StatusBar handle
-extern char launch_path[2048];
-extern WSADATA *WsaData;
-extern char dump_dir[2048];
-extern char eedump_dir[2048];
-extern char iopdump_dir[2048];
-extern char eedump_file[2048];
-extern char iopdump_file[2048];
-extern char kerneldump_dir[2048];
-extern char scratchpaddump_dir[2048];
-extern char kerneldump_file[2048];
-extern char scratchpaddump_file[2048];
-extern int eedump_index, iopdump_index, kerneldump_index, scratchpaddump_index;
-extern int remote_cmd;
-extern int ClientConnected;
 
 /****************************************************************************
 Function Declarations -should also be a guidline to help people find where
@@ -226,7 +203,7 @@ int LoadStruct(VOID *buffer, u32 filesize, char* filename);
 int SaveStruct(VOID *buffer, u32 filesize, char* filename);
 
 //lib_memory
-DWORD WINAPI serverThread(LPVOID lpParam); // Server thread: Handle Client & packets
+//DWORD WINAPI serverThread(LPVOID lpParam); // Server thread: Handle Client & packets
 
 //lib_misc
 int FilterHexChar(int lvalue);

@@ -227,29 +227,17 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                 } break;
                 case TAKE_DUMP_CMD: //Dump button
                 {
-					ntpbVars.DumpAreaStart = GetHexWindow(hwndSearchAreaLow);
-					ntpbVars.DumpAreaEnd = GetHexWindow(hwndSearchAreaHigh);
-
-					if (ntpbVars.DumpAreaStart > ntpbVars.DumpAreaEnd) { MessageBox(NULL, "You can't start dumping memory higher than the end address.", "Error", MB_OK); break; }
-					if (!( ((ntpbVars.DumpAreaStart >= 0) && (ntpbVars.DumpAreaEnd <= 0x02000000)) ||
-						   ((ntpbVars.DumpAreaStart >= 0x80000000) && (ntpbVars.DumpAreaEnd <= 0x82000000)) ||
-						   ((ntpbVars.DumpAreaStart >= 0x70000000) && (ntpbVars.DumpAreaEnd <= 0x70004000)) )) {
-							   MessageBox(NULL, "Search Area is invalid.", "Error", MB_OK); break;
-						   }
-
-                    if (!DoFileSave(hwnd, ntpbVars.FileName)) { break; }
-
-					//Get Jimmi's thread to dump memory
-                    if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
-						remote_cmd = NTPBCMD_GET_EEDUMP_START;
-					} else { MessageBox(NULL, "Client not connected or NTPB server thread is busy.", "Error", MB_OK); break; }
-
-                    //There is probably a better way than this
-                    while ((remote_cmd != REMOTE_CMD_NONE) && (remote_cmd != REMOTE_CMD_ERROR)) { }
-                    if (remote_cmd == REMOTE_CMD_ERROR) { MessageBox(NULL, "Unknown NTPB Server error.", "Error", MB_OK); break; }
-
+					//get start and end address
+					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
+					u32 DumpAreaHigh = GetHexWindow(hwndSearchAreaHigh);
+					//get filename
+					char dmpFileName[MAX_PATH];
+                    if (!DoFileSave(hwnd, dmpFileName)) { break; }
+                    //Dump the RAM
+                    if (!(DumpRAM(dmpFileName, DumpAreaLow, DumpAreaHigh))) {
+						MessageBox(NULL, ErrTxt, "Error", MB_OK); break;
+					}
 					MessageBox(NULL, "Did it work? You shouldn't see this until dumping is complete.", "Debug", MB_OK);
-
 				} break;
 			    case DO_SEARCH_CMD: //Search button click
 			    {
@@ -317,7 +305,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         } break;
                     }
                     if (Search.Count > MAX_SEARCHES) { MessageBox(NULL,"Holy shit! 100 searches? If you didn't find the code by now, give it up.","Error",MB_OK); break; }
-
+/*
                     //check search area range
 					ntpbVars.DumpAreaStart = GetHexWindow(hwndSearchAreaLow);
 					ntpbVars.DumpAreaEnd = GetHexWindow(hwndSearchAreaHigh);
@@ -327,7 +315,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 						   ((ntpbVars.DumpAreaStart >= 0x70000000) && (ntpbVars.DumpAreaEnd <= 0x70004000)) )) {
 							   MessageBox(NULL, "Search Area is invalid.", "Error", MB_OK); break;
 						   }
-
+*/
 
                     char sdFileName[MAX_PATH];
                     if (Search.CompareTo) {
