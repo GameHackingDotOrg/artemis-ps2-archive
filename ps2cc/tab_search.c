@@ -305,24 +305,19 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         } break;
                     }
                     if (Search.Count > MAX_SEARCHES) { MessageBox(NULL,"Holy shit! 100 searches? If you didn't find the code by now, give it up.","Error",MB_OK); break; }
-/*
-                    //check search area range
-					ntpbVars.DumpAreaStart = GetHexWindow(hwndSearchAreaLow);
-					ntpbVars.DumpAreaEnd = GetHexWindow(hwndSearchAreaHigh);
-					if (ntpbVars.DumpAreaStart > ntpbVars.DumpAreaEnd) { MessageBox(NULL, "You can't start dumping memory higher than the end address.", "Error", MB_OK); break; }
-					if (!( ((ntpbVars.DumpAreaStart >= 0) && (ntpbVars.DumpAreaEnd <= 0x02000000)) ||
-						   ((ntpbVars.DumpAreaStart >= 0x80000000) && (ntpbVars.DumpAreaEnd <= 0x82000000)) ||
-						   ((ntpbVars.DumpAreaStart >= 0x70000000) && (ntpbVars.DumpAreaEnd <= 0x70004000)) )) {
-							   MessageBox(NULL, "Search Area is invalid.", "Error", MB_OK); break;
-						   }
-*/
+
 
                     char sdFileName[MAX_PATH];
+                    //Load previous results if this continuing a search.
                     if (Search.CompareTo) {
-                        sprintf(sdFileName, "dump@%s-%s-%03d.raw", Settings.CS.DumpDir, Search.CompareTo);
+                        sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.CompareTo);
                         if (!(LoadStruct(&RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), sdFileName))) { break; }
                         if (!(LoadFile(&RamInfo.Results, sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), NULL, FALSE))) { break; }
                     }
+
+                    sprintf(RamInfo.NewResultsInfo.sdFileName, "%sdump%u.raw", Settings.CS.DumpDir, Search.Count);
+//                    RamInfo.NewResultsInfo.Endian = ;
+                    RamInfo.NewResultsInfo.SearchSize = Search.Size;
 
 				} break;
 			}

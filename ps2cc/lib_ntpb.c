@@ -5,11 +5,8 @@ This is where the all important PC-PS2 comms code should reside. It's almost
 an exact copy of Jimmi's command line ntpb client, just without main(). My
 function to manage things is at the bottom.
 *****************************************************************************/
-//#include "ps2cc.h"
-//#include "ps2cc_gui.h"
 
-
-
+#define _WIN32 1 //?
 #ifdef _WIN32
 #include <windows.h>
 #include <winsock2.h>
