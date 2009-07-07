@@ -6,7 +6,6 @@ an exact copy of Jimmi's command line ntpb client, just without main(). My
 function to manage things is at the bottom.
 *****************************************************************************/
 
-#define _WIN32 1 //?
 #ifdef _WIN32
 #include <windows.h>
 #include <winsock2.h>
