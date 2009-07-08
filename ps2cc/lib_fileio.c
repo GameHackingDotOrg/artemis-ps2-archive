@@ -12,7 +12,7 @@ NO GLOBALS
 File Exsistance check - return 0 if file does NOT exist, >0 if exists.
 --To Do: Update so filesize is returned on exist using ftell.
 *****************************************************************************/
-int FileExists(char *filename)
+u32 FileExists(char *filename)
 {
     FILE *f = fopen(filename,"rb");
     if (!(f)) { return 0; }
@@ -25,7 +25,8 @@ Load File
 Loads a file (filename), cuts the header (headerlen) and reads the data into
 buffer. if loadheader is true, it also reads the header into the headerdata.
 I might attempt to revise this later so the data arrays don't need to be
-globals. Dealing with these pointers has always been a bitch though.
+globals. Dealing with these pointers has always been a bitch though. I think
+the main problem with locals has been in trying to malloc from here.
 *****************************************************************************/
 int LoadFile(u8 **buffer, char* filename, int headerlen, u8 **headerdata, BOOL loadheader)
 {
@@ -65,6 +66,25 @@ int LoadFile(u8 **buffer, char* filename, int headerlen, u8 **headerdata, BOOL l
         fseek(f,headerlen,SEEK_SET);
     }
 	fread(*buffer,1,filesize,f);
+	fclose(f);
+	return filesize;
+}
+
+/****************************************************************************
+SaveFile
+*****************************************************************************/
+int SaveFile(u8 *buffer, u32 filesize, char* filename, int headerlen, VOID *headerdata)
+{
+    FILE *f;
+    int i;
+	f = fopen(filename,"wb");
+	if (!(f)) {
+        sprintf(ErrTxt, "Unable to open/create file (SaveFile,1) -- Error %u", GetLastError());
+        MessageBox(NULL,ErrTxt,"Error",MB_OK); return 0;
+    }
+	fseek(f,0,SEEK_SET);
+	if (headerlen) { fwrite(headerdata,1,headerlen,f); }
+	fwrite(buffer,1,filesize,f);
 	fclose(f);
 	return filesize;
 }

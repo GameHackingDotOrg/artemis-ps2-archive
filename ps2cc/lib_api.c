@@ -192,3 +192,51 @@ int BrowseForFolder(HWND hwnd, char* filename) {
     if (!SHGetPathFromIDList(pFolder, filename)) { return 0; }
     return 1;
 }
+
+/****************************************************************************
+Set Menu State - checked/disabled/etc (fState) of a menu item
+*****************************************************************************/
+int SetMenuState(HMENU hMenu, UINT id, UINT state)
+{
+    MENUITEMINFO mnuItem; memset(&mnuItem,0,sizeof(mnuItem));
+    mnuItem.cbSize = sizeof(MENUITEMINFO);
+    mnuItem.fMask = MIIM_STATE;
+    mnuItem.fState = state;
+    return SetMenuItemInfo(hMenu, id, FALSE, &mnuItem);
+}
+
+/****************************************************************************
+Set Menu Item Text
+*****************************************************************************/
+int SetMenuItemText(HMENU hMenu, UINT id, const char* MenuText)
+{
+    MENUITEMINFO mnuItem; memset(&mnuItem,0,sizeof(MENUITEMINFO));
+    mnuItem.cbSize = sizeof(MENUITEMINFO);
+    mnuItem.fMask = MIIM_STRING;
+    mnuItem.dwTypeData = (char*)MenuText;
+    return SetMenuItemInfo(hMenu, id, FALSE, &mnuItem);
+}
+
+/****************************************************************************
+Set Menu Item Data
+*****************************************************************************/
+int SetMenuItemData(HMENU hMenu, UINT id, UINT data)
+{
+    MENUITEMINFO mnuItem; memset(&mnuItem,0,sizeof(MENUITEMINFO));
+    mnuItem.cbSize = sizeof(MENUITEMINFO);
+    mnuItem.fMask = MIIM_DATA;
+    mnuItem.dwItemData = data;
+    return SetMenuItemInfo(hMenu, id, FALSE, &mnuItem);
+}
+
+/****************************************************************************
+Get Menu Item Data
+*****************************************************************************/
+int GetMenuItemData(HMENU hMenu, UINT id)
+{
+    MENUITEMINFO mnuItem; memset(&mnuItem,0,sizeof(MENUITEMINFO));
+    mnuItem.cbSize = sizeof(MENUITEMINFO);
+    mnuItem.fMask = MIIM_DATA;
+    GetMenuItemInfo(hMenu, id, FALSE, &mnuItem);
+    return mnuItem.dwItemData;
+}

@@ -20,6 +20,7 @@ Artemis - PS2 Code Creator (for lack of a better title) - Main Header
 #include "_types.h"
 
 #define String2Hex(s,v) sscanf((s),"%x",(v))
+#define MAKEU64(l,h) (u64)(l)|((u64)(h)<<32)
 
 /****************************************************************************
 Global Constants
@@ -32,6 +33,7 @@ Global Constants
 #define SEARCH_RESULTS_TAB 1
 #define MEMORY_EDITOR_TAB 2
 #define CHEAT_TAB 3
+
 //Search types
 #define SEARCH_INIT 0x0
 #define SEARCH_KNOWN 0x1
@@ -58,12 +60,45 @@ Global Constants
 #define SEARCH_BITS_ANY 0x200000
 #define SEARCH_BITS_ALL 0x400000
 #define SEARCH_FORGOT 0x800000
+
+//Extended Search Types
+#define EXCS_SIGNED 0x1
+#define EXCS_OR_EQUAL 0x2
+#define EXCS_IGNORE_0 0x4
+#define EXCS_IGNORE_FF 0x8
+#define EXCS_IGNORE_VALUE 0x10
+#define EXCS_IGNORE_IN_RANGE 0x20
+#define EXCS_IGNORE_NOT_RANGE 0x40
+#define EXCS_IGNORE_N64_POINTERS 0x80
+#define EXCS_IGNORE_BYTE_VALUE 0x100
+#define EXCS_IGNORE_SHORT_VALUE 0x200
+#define EXCS_IGNORE_WORD_VALUE 0x400
+#define EXCS_IGNORE_DWORD_VALUE 0x800
+#define EXCS_IGNORE_BYTE_RANGE 0x1000
+#define EXCS_IGNORE_SHORT_RANGE 0x2000
+#define EXCS_IGNORE_WORD_RANGE 0x4000
+#define EXCS_IGNORE_DWORD_RANGE 0x8000
+#define EXCS_EXCLUDE_CONSEC 0x10000
+#define EXCS_EXCLUDE_CONSEC_MATCH_VALUES 0x20000
+#define EXCS_INCLUDE_CONSEC 0x40000
+#define EXCS_INCLUDE_CONSEC_MATCH_VALUES 0x80000
+#define EXCS_INCLUDE_ADDRESS_RANGE 0x100000
+#define EXCS_EXCLUDE_UPPER16 0x200000
+#define EXCS_EXCLUDE_LOWER16 0x400000
+
 //Number Bases (for input)
 #define BASE_DEC 0
 #define BASE_HEX 1
 #define BASE_FLOAT 2
 #define BASE_ASCII 0x100 //for certain custom window/control printing functions
 
+//Endian
+#define LITTLE_ENDIAN_SYS 0
+
+/*Search Access - this determines how values are access from dumps. Either by
+loading them fully, or opening and reading a value at a time*/
+#define SEARCH_ACCESS_ARRAY 1
+#define SEARCH_ACCESS_FILE 2
 
 /****************************************************************************
 Struct Definitions
@@ -83,13 +118,13 @@ typedef struct _CODE_SEARCH_VARS {
 
 //These are the vars included in the header of the binary results files.
 typedef struct CODE_SEARCH_RESULTS_INFO {
-    char sdFileName[MAX_PATH];
-    char MapFileName[MAX_PATH];
-    char Mapped;
+    char dmpFileName[MAX_PATH];
     int Endian;
     int SearchSize;
     u32 DumpSize;
     u32 ResCount;
+    u32 MapFileAddy; //file address
+    u32 MapMemAddy; //memory address
 } CODE_SEARCH_RESULTS_INFO;
 
 /*Results list with previous values (loaded from each of the previous RAM files for
@@ -108,8 +143,6 @@ typedef struct _RAM_AND_RES_DATA {
     FILE *NewFile;
     FILE *OldFile;
     u8 *Results;
-    u8 *AddressMap;
-    u32 MapSize;
     CODE_SEARCH_RESULTS_INFO OldResultsInfo;
     CODE_SEARCH_RESULTS_INFO NewResultsInfo;
 } RAM_AND_RES_DATA;
@@ -137,20 +170,14 @@ typedef struct _MEMORY_EDITOR_SETTINGS {
 
 //Main Settings Structure
 typedef struct _MAIN_CFG {
-    int VersionNum; //to prevent loading shit from a previous version if struct has changed.
+    int CFGVersion; //to prevent loading shit from a previous version if struct has changed.
+    char ServerIp[16];
     LOGFONT ValueFontInfo;
     HFONT ValueHFont;
     CODE_SEARCH_SETTINGS CS;
     SEARCH_RESULTS_SETTINGS Results;
     MEMORY_EDITOR_SETTINGS MemEdit;
 } MAIN_CFG;
-
-//NTPB server (Jimi's work) shared vars
-typedef struct _NTPB_VARS {
-	unsigned int DumpAreaStart;
-	unsigned int DumpAreaEnd;
-	char FileName[MAX_PATH];
-} NTPB_VARS;
 
 /****************************************************************************
 Externs (Global Vars) - possibly change to #ifndef shit later rather than
@@ -174,10 +201,12 @@ any function is locatated.
 *****************************************************************************/
 
 //ps2cc.c
-BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
 int InitTabControl(HWND hwnd, LPARAM lParam);
+BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
 int FreeShit();
 int FreeRamInfo();
+int LoadSettings();
+int SaveSettings();
 
 //Tab Procedures
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -195,15 +224,20 @@ u64 IsFloatWindow(HWND txtbox);
 u64 GetFloatWindow(HWND txtbox, int fsize);
 int DoFileOpen(HWND hwnd, char* filename);
 int BrowseForFolder(HWND hwnd, char* filename);
+int SetMenuState(HMENU hMenu, UINT id, UINT state);
+int SetMenuItemText(HMENU hMenu, UINT id, const char* MenuText);
+int SetMenuItemData(HMENU hMenu, UINT id, UINT data);
+int GetMenuItemData(HMENU hMenu, UINT id);
+
+//lib_dialog
+BOOL CALLBACK IpConfigDlg(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 //lib_fileio
-int FileExists(char *filename);
+u32 FileExists(char *filename);
 int LoadFile(u8 **buffer, char* filename, int headerlen, u8 **headerdata, BOOL loadheader);
+int SaveFile(u8 *buffer, u32 filesize, char* filename, int headerlen, VOID *headerdata);
 int LoadStruct(VOID *buffer, u32 filesize, char* filename);
 int SaveStruct(VOID *buffer, u32 filesize, char* filename);
-
-//lib_memory
-//DWORD WINAPI serverThread(LPVOID lpParam); // Server thread: Handle Client & packets
 
 //lib_misc
 int FilterHexChar(int lvalue);
@@ -223,4 +257,8 @@ u64 ShortFromU64(u64 dword, int valpart);
 u64 WordFromU64(u64 dword, int valpart);
 int Hex2ASCII(u64 value, int bytes, char *string);
 u64 FlipBytes(u64 value, int size);
+int isIPAddr(char *text);
 
+//lib_search
+int CodeSearch(CODE_SEARCH_VARS Search, HWND hProgressBar);
+u64 GetSearchValues(u64 *NewVal, u64 *OldVal, int index, int size, int endian);

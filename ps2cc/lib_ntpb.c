@@ -5,6 +5,7 @@ This is where the all important PC-PS2 comms code should reside. It's almost
 an exact copy of Jimmi's command line ntpb client, just without main(). My
 function to manage things is at the bottom.
 *****************************************************************************/
+#include "ps2cc.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -24,7 +25,8 @@ function to manage things is at the bottom.
 WSADATA *WsaData;
 
 #define SERVER_PORT  		4234
-#define SERVER_IP			"192.168.0.80"
+//IP determined by Settings.ServerIp now
+//#define SERVER_IP			"192.168.0.80"
 
 char pktbuffer[65536];
 
@@ -106,7 +108,7 @@ int clientConnect(void)
 
 	peer.sin_family = AF_INET;
 	peer.sin_port = htons(SERVER_PORT);
-	peer.sin_addr.s_addr = inet_addr(SERVER_IP);
+	peer.sin_addr.s_addr = inet_addr(Settings.ServerIp);
 
 	tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (tcp_socket < 0)

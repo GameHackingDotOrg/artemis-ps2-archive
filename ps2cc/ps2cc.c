@@ -4,17 +4,15 @@ Artemis - PS2 Code Creator (for lack of a better title)
 -Code searching by Viper187
 
 This is a bit of a rough start, especially without the PS2 network adaptor to
-test on right now. I'll attempt to code this in a way that'll be easy to
-implement Jimmikaelkael's communications stuff to either as is or a little
-more tailored to fit the task later. I'm just not sure what anyone expects in
-terms of GUI or features yet. My inital thought is to preserve as much of
-Jimmi's source as is so he can easily update his end if/when he finds issues.
-I'm going to dedicate lib_memory.c for the main comms/dump functions. FYI
-I just have to butcher the GUI stuff. I'm also a little uneasy about messing
-around in the important part of the source without being able to test it.
-Getting the whole thing working is the main thing. I can tweak and clean later
-as I go. I'll try to keep things somewhat commented. I'm usually around to
-answer questions though.
+test on right now. I've implemented the source from Jimmikaelkael's core
+dumper v2. I used the command line build because it's linear, easier to call
+on demand, and doesn't have a bunch of unneeded GUI stuff to cut out. I still
+need to add status/progress monitoring while dumping. I'm a little uneasy
+about messing around in the important part of that source without being able
+to test it, but comparing to the GUI source should make it easy enough. I'll
+try to keep things somewhat commented everywhere so the whole app can be
+followed in case anyone feels the need to mess with it later. I'm usually
+around to answer questions though.
 
 p.s. Please don't screw up my source with Visual Stupid 6.0/.net/2008 or any
 other random dev environment. MinGW and Textpad for the win! ...even though
@@ -27,6 +25,7 @@ MakeFiles are a little annoying to work on.
 HINSTANCE hInst;					// Instance handle
 HWND hwndMain;						// Main window handle
 
+char CFGFile[MAX_PATH];
 HWND hTabDlgs[NUM_TABS]; //an array of handles for the dialogs on each tab.
 char ErrTxt[1000];
 WNDPROC wpHexEditBoxes;
@@ -34,8 +33,6 @@ WNDPROC wpHexEditBoxes;
 //Global structs
 MAIN_CFG Settings, Defaults;
 RAM_AND_RES_DATA RamInfo;
-//NTPB_VARS ntpbVars;
-
 
 
 /****************************************************************************
@@ -103,11 +100,14 @@ Menu handlers might go here later as well.
 
 BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 {
+	HMENU hMenu = GetMenu(hwnd);
 	switch (msg) {
-		case WM_INITDIALOG:
+ 		case WM_INITDIALOG:
         {
-//			LoadSettings();
+			LoadSettings();
 		    InitTabControl(hwnd, lParam);
+		    //To Do: set fonts here later
+            SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
 		} break;
         case WM_NOTIFY:
         {
@@ -118,12 +118,30 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                 if (index >= 0 && index < NUM_TABS) ShowWindow(hTabDlgs[index], (hdr->code == TCN_SELCHANGE) ? SW_SHOW : SW_HIDE);
             }
         } break;
+		case WM_COMMAND:
+        {
+			switch(LOWORD(wParam))
+            {
+			    case MNU_DUMP_DIR:
+			    {
+                    char DumpPath[MAX_PATH];
+                    if (BrowseForFolder(hwnd, DumpPath)) {
+                        strcpy(Settings.CS.DumpDir, DumpPath);
+                        SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
+                    }
+			    } break;
+			    case MNU_IP_CONFIG:
+			    {
+					DialogBox(hInst, MAKEINTRESOURCE(IP_CONFIG_DLG), hwnd, IpConfigDlg);
+				} break;
+			}
+		} break;
 		case WM_SIZE:
 		{
 		} break;
 		case WM_CLOSE:
 		{
-//            SaveSettings();
+            SaveSettings();
             DestroyWindow(hwnd);
 		} break;
 		case WM_DESTROY:
@@ -189,10 +207,54 @@ int FreeRamInfo()
     if (RamInfo.OldRAM) { free(RamInfo.OldRAM); RamInfo.OldRAM = NULL; }
     if (RamInfo.NewFile) { fclose(RamInfo.NewFile); RamInfo.NewFile = NULL; }
     if (RamInfo.OldFile) { fclose(RamInfo.OldFile); RamInfo.OldFile = NULL; }
-    if (RamInfo.AddressMap) { free(RamInfo.AddressMap); RamInfo.AddressMap = NULL; }
     if (RamInfo.Results) { free(RamInfo.Results); RamInfo.Results = NULL; }
-    RamInfo.MapSize = 0;
     memset(&RamInfo.OldResultsInfo, 0, sizeof(CODE_SEARCH_RESULTS_INFO));
     memset(&RamInfo.NewResultsInfo, 0, sizeof(CODE_SEARCH_RESULTS_INFO));
+    return 0;
+}
+
+/****************************************************************************
+LoadSettings
+*****************************************************************************/
+int LoadSettings()
+{
+    memset(&Defaults,0,sizeof(Defaults));
+    memset(&Settings,0,sizeof(Settings));
+    if (GetModuleFileName(NULL,CFGFile,sizeof(CFGFile)) ) {
+        char *fndchr = strrchr(CFGFile,'\\');
+        *(fndchr + 1) = '\0';
+        strcpy(Defaults.CS.DumpDir, CFGFile);
+        strcat(Defaults.CS.DumpDir, "Searches\\");
+        strcat(CFGFile,"ps2cc.cfg");
+    } else {
+        sprintf(CFGFile,"ps2cc.cfg");
+        strcpy(Defaults.CS.DumpDir, "Searches\\");
+    }
+    Defaults.CFGVersion = 1; //increment this if settings struct or sub-struct definitions in ps2cc.h change
+    sprintf(Defaults.ServerIp, "192.168.0.80");
+    Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
+    Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
+    Defaults.CS.NumBase = BASE_HEX;
+//    Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
+/*results options
+    Defaults.Results.ResWriteRate = 100;
+    Defaults.Results.ResWriteRateId = MNU_RES_WRITE_100MS;
+    Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
+*/
+	if (FileExists(CFGFile)) { LoadStruct(&Settings, sizeof(MAIN_CFG), CFGFile); }
+    if (Settings.CFGVersion != Defaults.CFGVersion) {
+		memset(&Settings,0,sizeof(Settings));
+        memcpy(&Settings,&Defaults,sizeof(Defaults));
+	}
+    mkdir(Settings.CS.DumpDir);
+    return 0;
+}
+
+/****************************************************************************
+SaveSettings
+*****************************************************************************/
+int SaveSettings()
+{
+    SaveStruct(&Settings, sizeof(Settings), CFGFile);
     return 0;
 }

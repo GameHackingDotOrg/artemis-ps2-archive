@@ -4,7 +4,7 @@ NAME  = ps2cc
 CC = gcc.exe
 WINDRES = windres
 RES  = ps2cc.res
-OBJ  = ps2cc.o tab_search.o lib_api.o lib_fileio.o lib_ntpb.o lib_misc.o $(RES)
+OBJ  = ps2cc.o tab_search.o lib_api.o lib_fileio.o lib_ntpb.o lib_misc.o lib_search.o lib_dialog.o $(RES)
 LDFLAGS = -s -mwindows -lwsock32 -lcomctl32
 CFLAGS = -O2 -s
 
@@ -22,11 +22,14 @@ $(NAME): $(OBJ)
 ps2cc.o: ps2cc.c ps2cc.h ps2cc_gui.h _types.h
 	$(CC) -c ps2cc.c -o ps2cc.o $(CFLAGS)
 
-tab_search.o: tab_search.c ps2cc.h _types.h
+tab_search.o: tab_search.c ps2cc.h _types.h ps2cc_gui.h
 	$(CC) -c tab_search.c -o tab_search.o $(CFLAGS)
 
 lib_api.o: lib_api.c _types.h
 	$(CC) -c lib_api.c -o lib_api.o $(CFLAGS)	
+
+lib_dialog.o: lib_dialog.c _types.h ps2cc_gui.h
+	$(CC) -c lib_dialog.c -o lib_dialog.o $(CFLAGS)	
 
 lib_fileio.o: lib_fileio.c _types.h
 	$(CC) -c lib_fileio.c -o lib_fileio.o $(CFLAGS)	
@@ -36,6 +39,9 @@ lib_misc.o: lib_misc.c _types.h
 
 lib_ntpb.o: lib_ntpb.c _types.h
 	$(CC) -c lib_ntpb.c -o lib_ntpb.o $(CFLAGS)	
+
+lib_search.o: lib_search.c ps2cc.h _types.h
+	$(CC) -c lib_search.c -o lib_search.o $(CFLAGS)
 
 ps2cc.res: ps2cc.rc ps2cc_gui.h
 	$(WINDRES) -i ps2cc.rc -J rc -o ps2cc.res -O coff

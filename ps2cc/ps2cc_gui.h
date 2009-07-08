@@ -10,6 +10,8 @@
 #define PS2CC_MNU 500
 #define MNU_LOAD_SEARCH 501
 #define MNU_EXIT 502
+#define MNU_DUMP_DIR 503
+#define MNU_IP_CONFIG 504
 //search tab
 #define SEARCH_DLG 1100
 #define SEARCH_GRP1 1101
@@ -36,3 +38,9 @@
 #define SEARCH_AREA_LBL 1122
 #define DO_SEARCH_CMD 1123
 #define TAKE_DUMP_CMD 1124
+//IP config dialog
+#define IP_CONFIG_DLG 1200
+#define IP_ADDR_LBL 1201
+#define IP_ADDR_TXT 1202
+#define SET_IP_CMD 1203
+#define TEST_IP_CMD 1204

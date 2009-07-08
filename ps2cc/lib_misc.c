@@ -207,3 +207,24 @@ u64 FlipBytes(u64 value, int size)
     }
     return newvalue;
 }
+/****************************************************************************
+IsIPAddr - check if string is a valid IP address
+*****************************************************************************/
+int isIPAddr(char *text)
+{
+	int octcount = 0, octval = 0;
+	if (strlen(text) <= 0) { return 0; }
+	char tempIP[16];
+	strcpy(tempIP, text);
+    char *octet = strtok(tempIP, ".");
+    while (octet != NULL)
+    {
+    	if (!isDec(octet)) { return 0; }
+    	sscanf(octet, "%d", &octval);
+    	if ((octval < 0) || (octval > 255)) { return 0; }
+        octet = strtok(NULL, ".");
+        octcount++;
+    }
+    if (octcount != 4) { return 0; }
+    return 1;
+}
