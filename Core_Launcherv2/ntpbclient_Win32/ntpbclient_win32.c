@@ -1,6 +1,6 @@
-/*@@ Wedit generated application. Written Sun Jul 05 22:17:00 2009
- @@header: d:\msys\1.0\local\ps2dev\corelauncher_v2\ntpbclient_win32\ntpbclient_win32res.h
- @@resources: d:\msys\1.0\local\ps2dev\corelauncher_v2\ntpbclient_win32\ntpbclient_win32.rc
+/*@@ Wedit generated application. Written Wed Jul 08 16:30:58 2009
+ @@header: d:\msys\1.0\local\ps2dev\core_launcherv2\ntpbclient_win32\ntpbclient_win32res.h
+ @@resources: d:\msys\1.0\local\ps2dev\core_launcherv2\ntpbclient_win32\ntpbclient_win32.rc
  Do not edit outside the indicated areas */
 /*<---------------------------------------------------------------------->*/
 /*<---------------------------------------------------------------------->*/
@@ -13,12 +13,14 @@
 #include "ntpbclient_win32res.h"
 
 
-#define SERVER_PORT  	4234
+#define SERVER_TCP_PORT 4234
+#define SERVER_UDP_PORT 4244
 #define SERVER_IP		"192.168.0.80"
 
 static int main_socket = -1;
 
 char pktbuffer[65536];
+char netlogbuffer[1024];
 char launch_path[2048];
 char dump_dir[2048];
 char eedump_dir[2048];
@@ -71,15 +73,14 @@ HWND hwndLabelEEdumpStart;  		// Label control handle
 HWND hwndLabelEEdumpEnd;  			// Label control handle
 HWND hwndLabelIOPdumpStart; 		// Label control handle
 HWND hwndLabelIOPdumpEnd;   		// Label control handle
-
 HWND hwndLabelKerneldump;			// Label control handle
 HWND hwndLabelScratchpaddump;  		// Label control handle
 HWND hwndLabelKerneldumpStart;  	// Label control handle
 HWND hwndLabelKerneldumpEnd;  		// Label control handle
 HWND hwndLabelScratchpaddumpStart; 	// Label control handle
 HWND hwndLabelScratchpaddumpEnd;   	// Label control handle
-
 HWND hwndLabeldumpState;		   	// Label control handle
+HWND hwndLabelServerLog;		   	// Label control handle
 
 HWND hwndTextBoxEEdump;				// Edit control handle
 HWND hwndTextBoxIOPdump;			// Edit control handle
@@ -94,6 +95,7 @@ HWND hwndTextBoxKerneldumpStart;	// Edit control handle
 HWND hwndTextBoxKerneldumpEnd;		// Edit control handle
 HWND hwndTextBoxScratchpaddumpStart;// Edit control handle
 HWND hwndTextBoxScratchpaddumpEnd;	// Edit control handle
+HWND hwndTextBoxServerLog;			// Edit control handle
 
 HWND hwndButtonEEdump;				// Button control handle
 HWND hwndButtonIOPdump;				// Button control handle
@@ -195,7 +197,7 @@ HWND Createntpbclient_win32WndClassWnd(void)
 {
 	return CreateWindow("ntpbclient_win32WndClass","ntpbclient_win32",
 		WS_MINIMIZEBOX|WS_VISIBLE|WS_CLIPSIBLINGS|WS_CLIPCHILDREN|WS_CAPTION|WS_BORDER|WS_SYSMENU,
-		CW_USEDEFAULT,CW_USEDEFAULT,800,585,
+		CW_USEDEFAULT,CW_USEDEFAULT,1024,585,
 		NULL,
 		NULL,
 		hInst,
@@ -615,6 +617,52 @@ DWORD HexaToDecimal(const char* pszHexa)
 }
 
 /*<---------------------------------------------------------------------->*/
+DWORD WINAPI netlogThread(LPVOID lpParam)
+{
+	int udp_socket;
+	struct sockaddr_in peer;
+	int r, peerlen, retval;
+	fd_set fd;
+
+	peer.sin_family = AF_INET;
+	peer.sin_port = htons(SERVER_UDP_PORT);
+	peer.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (udp_socket < 0) {
+		MessageBox(GetActiveWindow(),"Error: failed to create UDP socket !","ntpbclient",MB_ICONERROR | MB_OK);
+		return 0;
+	}
+
+  	if (bind(udp_socket, (struct sockaddr *)&peer, sizeof(struct sockaddr)) < 0) {
+		MessageBox(GetActiveWindow(),"Error: failed to bind UDP socket !","ntpbclient",MB_ICONERROR | MB_OK);
+		return 0;
+	}
+
+	FD_ZERO(&fd);
+
+	peerlen = sizeof(peer);
+
+	while (1) {
+		FD_SET(udp_socket, &fd);
+
+  		select(FD_SETSIZE, &fd, NULL, NULL, NULL);
+
+		memset(netlogbuffer, 0, sizeof(netlogbuffer));
+
+		recvfrom(udp_socket, netlogbuffer, sizeof(netlogbuffer), 0, (struct sockaddr *)&peer, &peerlen);
+
+		strcat(netlogbuffer, "\r\n");
+
+		PrintLog(netlogbuffer, strlen(netlogbuffer), IDC_TEXTBOX_SERVERLOG);
+	}
+
+	closesocket(udp_socket);
+
+	return 0;
+}
+
+/*<---------------------------------------------------------------------->*/
 DWORD WINAPI rcvDataThread(LPVOID lpParam) // retrieving datas sent by server
 {
 	int rcvSize, sndSize, packetSize, ntpbpktSize, ntpbCmd, ln, recv_size, sizeWritten;
@@ -682,6 +730,7 @@ DWORD WINAPI rcvDataThread(LPVOID lpParam) // retrieving datas sent by server
 
 				case NTPBCMD_END_TRANSMIT:
 					Sleep(100);
+					CloseHandle(fh_dump);
 					endTransmit = 1;
 					break;
 			}
@@ -760,7 +809,7 @@ DWORD WINAPI clientThread(LPVOID lpParam)
 	UpdateStatusBar("Contacting PS2 Server...", 0, 0);
 
 	peer.sin_family = AF_INET;
-	peer.sin_port = htons(SERVER_PORT);
+	peer.sin_port = htons(SERVER_TCP_PORT);
 	peer.sin_addr.s_addr = inet_addr(SERVER_IP);
 
 	while (1) {
@@ -1104,6 +1153,27 @@ VOID CreateControls(HINSTANCE hInstance)
                                (HMENU)IDC_BUTTON_HALTRESUME,
                                hInstance,
                                NULL);
+
+	hwndLabelServerLog = CreateWindow (TEXT("static"),
+                               "Server Log:",
+                               WS_CHILD|WS_VISIBLE,
+                               790,20,
+                               120,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_SERVERLOG,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxServerLog = CreateWindow (TEXT("edit"),
+                               "",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE|ES_READONLY,
+                               790,40,
+                               210,456,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_SERVERLOG,
+                               hInstance,
+                               NULL);
+
 }
 
 /*<---------------------------------------------------------------------->*/
@@ -1170,6 +1240,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	remote_cmd = REMOTE_CMD_NONE;
 
+	// Create & start the netlog thread
+	HANDLE netlogThid = CreateThread(NULL, 0, netlogThread, NULL, 0, NULL); // no stack, 1MB by default
+
 	// Create & start the client thread
 	clientThid = CreateThread(NULL, 0, clientThread, NULL, 0, NULL); // no stack, 1MB by default
 
@@ -1185,3 +1258,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	return msg.wParam;
 }
+

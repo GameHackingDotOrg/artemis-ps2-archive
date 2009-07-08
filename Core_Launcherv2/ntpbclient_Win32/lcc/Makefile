@@ -1,5 +1,5 @@
 # Wedit Makefile for project ntpbclient_win32
-SRCDIR=d:\msys\1.0\local\ps2dev\corelauncher_v2\ntpbclient_win32
+SRCDIR=d:\msys\1.0\local\ps2dev\core_launcherv2\ntpbclient_win32
 CFLAGS=-I"c:\lcc\include"  -g2 
 CC=$(LCCROOT)\bin\lcc.exe
 LINKER=$(LCCROOT)\bin\lcclnk.exe

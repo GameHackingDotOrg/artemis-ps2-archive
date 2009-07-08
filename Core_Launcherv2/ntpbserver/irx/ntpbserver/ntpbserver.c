@@ -13,10 +13,13 @@
 #include <io_common.h>
 #include <ps2ip.h>
 
-#define MODNAME "NTPB_Server"
+#include "netlog.h"
+
+#define MODNAME "NTPBServer"
 IRX_ID(MODNAME, 1, 0);
 
-#define SERVER_PORT  	4234
+#define SERVER_TCP_PORT  	4234
+#define SERVER_UDP_PORT  	4244
 
 #define ntpb_MagicSize  6
 #define ntpb_hdrSize  	10
@@ -180,7 +183,7 @@ int ntpbserverEndReply(void)
 	// check client reply	
 	if (*((u16 *)&ntpb_buf[ntpb_hdrSize]) != 1)
 		return -2;	
-	
+
 	// Posting semaphore for server Thread so it's able to wait for requests again
 	SignalSema(ntpbserver_cmd_sema);
 	
@@ -260,6 +263,8 @@ int handleClient(int client_socket) // retrieving a packet sent by the Client
 	int rcvSize, sndSize, packetSize, ntpbpktSize, recv_size, sent_size;
 	u8 *pbuf;
 
+	netlog_send("%s: Client Connection OK\n", MODNAME);
+	
 	pbuf = (u8 *)&ntpb_buf[0];
 
 	while (1) {
@@ -289,7 +294,10 @@ int handleClient(int client_socket) // retrieving a packet sent by the Client
 			// Get Remote Command, data size, and cmd datas
 			remote_cmd = *((u16 *)&pbuf[8]);
 			cmdsize = ntpbpktSize;
-			memcpy(cmdbuf, &pbuf[ntpb_hdrSize], cmdsize);
+			if (cmdsize)
+				memcpy(cmdbuf, &pbuf[ntpb_hdrSize], cmdsize);
+			
+			netlog_send("%s: server received command 0x%04x size=%d\n", MODNAME, remote_cmd, cmdsize);
 			
 			// prepare a response
 			*((u16 *)&pbuf[6]) = 0;
@@ -320,42 +328,61 @@ void serverThread(void *args) // Server thread: Handle Client & packets
 {
 	int tcp_socket;
 	struct sockaddr_in peer;
-	int peerlen, r;
+	int peerlen, r, err;
 
 conn_retry:
 	
 	peer.sin_family = AF_INET;
-	peer.sin_port = htons(SERVER_PORT);
+	peer.sin_port = htons(SERVER_TCP_PORT);
 	peer.sin_addr.s_addr = htonl(INADDR_ANY);
 
+	netlog_send("%s: server init starting...\n", MODNAME);
+		
 	// create the socket
 	tcp_socket = lwip_socket(AF_INET, SOCK_STREAM, 0);
-	if (tcp_socket < 0)
-		goto error;
+	if (tcp_socket < 0) {
+		err = -1;
+		goto error;		
+	}
 
+	netlog_send("%s: server socket created.\n", MODNAME);
+				
 	r = lwip_bind(tcp_socket,(struct sockaddr *)&peer,sizeof(peer));
-	if (r < 0) 
+	if (r < 0) {
+		err = -2;
 		goto error;
+	}
 
-	r = lwip_listen(tcp_socket, 3);
-	if (r < 0)
-		goto error;
+	netlog_send("%s: bind OK.\n", MODNAME);
 		
+	r = lwip_listen(tcp_socket, 3);
+	if (r < 0) {
+		err = -3;
+		goto error;
+	}
+
+	netlog_send("%s: server ready!\n", MODNAME);
+	
 	while(1) {
 		peerlen = sizeof(peer);
 		r = lwip_accept(tcp_socket,(struct sockaddr *)&peer, &peerlen);
-		if (r < 0)
+		if (r < 0) {
+			err = -4;
 			goto error;
+		}
 
 		client_socket = r;
  
 		r = handleClient(client_socket);
-		if (r < 0)
+		if (r < 0) {
 			lwip_close(client_socket);
+			netlog_send("%s: Client Connection closed - error %d\n", MODNAME, r);
+		}
 	}
 	 
 error:
 	lwip_close(client_socket);
+	netlog_send("%s: Client Connection closed - error %d\n", MODNAME, err);
 	goto conn_retry;
 }
 
@@ -489,8 +516,11 @@ int _start(int argc, char** argv)
 	iop_sema_t smp;
 			
 	SifInitRpc(0);
-	
-	// Starting Remote Procedure Call server	
+
+	// init netlog
+	netlog_init(INADDR_ANY, SERVER_UDP_PORT);		
+		
+	// Starting ntpbserver Remote Procedure Call server	
 	start_RPC_server();
 	
 	// Starting server thread
@@ -503,7 +533,7 @@ int _start(int argc, char** argv)
 	ntpbserver_io_sema = CreateSema(&smp);	
 
 	smp.attr = 1;
-	smp.initial = 1;
+	smp.initial = 0; // this sema is initialised to 0 !
 	smp.max = 1;
 	smp.option = 0;
 	ntpbserver_cmd_sema = CreateSema(&smp);	

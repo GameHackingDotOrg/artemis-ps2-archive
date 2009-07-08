@@ -8,18 +8,28 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <pthread.h>
 
+#ifdef _WIN32
 WSADATA *WsaData;
+#define _closesocket	closesocket
+#else
+#define _closesocket	close
+#endif
 
-#define SERVER_PORT  		4234
+#define SERVER_TCP_PORT  		4234
+#define SERVER_UDP_PORT  		4244
 #define SERVER_IP			"192.168.0.80"
 
-char pktbuffer[65536];
+unsigned char pktbuffer[65536];
+char netlogbuffer[1024];
 
 // NTPB header magic
 #define ntpb_MagicSize  6
@@ -29,19 +39,18 @@ const unsigned char ntpb_hdrMagic[6] = {'\xff', '\x00', 'N', 'T', 'P', 'B'};
 static int main_socket = -1;
 
 // command line commands stuff
-#define CMD_UNKNOWN			0
-#define CMD_EEDUMP			1
-#define CMD_IOPDUMP			2
-#define CMD_KERNELDUMP		3
-#define CMD_SCRATCHPADDUMP	4
+#define CMD_NONE			0
+#define CMD_EXIT			1
+#define CMD_CONNECT			2
+#define CMD_DISCONNECT		3
+#define CMD_DUMP			4
+#define CMD_LOG				5
+#define CMD_HELP			6
 
-const char *id_ram[5] = {
-	(const char *)"dummy",
-	(const char *)"EE RAM",
-	(const char *)"IOP RAM",
-	(const char *)"Kernel RAM",
-	(const char *)"ScratchPad RAM"	
-};
+#define MEMZONE_EE 			"EE"
+#define MEMZONE_IOP 		"IOP"
+#define MEMZONE_KERNEL 		"Kernel"
+#define MEMZONE_SCRATCHPAD 	"ScratchPad"
 
 // Remote commands to be sent to server
 #define REMOTE_CMD_NONE						0x000
@@ -57,20 +66,26 @@ const char *id_ram[5] = {
 #define NTPBCMD_PRINT_SCRATCHPADDUMP		0x304
 #define NTPBCMD_END_TRANSMIT				0xffff
 
-FILE *fh_dump;
+static int clientConnected = 0;
+
+pthread_t netlog_thread_id;
 
 
 //-------------------------------------------------------------- 
-void PrintUsage(void) {
+void printUsage(void) {
 	
-	printf("usage: ntpbclient <command> [args]\n");
+	printf("usage: <command> [args]\n");
 	printf("ntpbclient command-line version.\n");
 	printf("\n");
 	printf("Available commands:\n");
-	printf("\t ee_dump <start_address> <end_address> <outfile>\n");
-	printf("\t iop_dump <start_address> <end_address> <outfile>\n");
-	printf("\t kernel_dump <start_address> <end_address> <outfile>\n");
-	printf("\t scratchpad_dump <start_address> <end_address> <outfile>\n");
+	printf("\t connect\n");
+	printf("\t disconnect\n");		
+	printf("\t dump <memzone> <start_address> <end_address> <outfile>\n");
+	printf("\t \t memzone = 'EE', 'IOP', 'Kernel', 'ScrathPad'\n");
+	printf("\t log\n");				
+	printf("\t help\n");			
+	printf("\t quit, exit\n");
+	
 }
 
 //-------------------------------------------------------------- 
@@ -109,38 +124,41 @@ WSADATA *InitWS2(void) {
 //-------------------------------------------------------------- 
 int clientConnect(void)
 {
-	int r, tcp_socket;
+	int r, tcp_socket, err;
 	struct sockaddr_in peer;
 
 	peer.sin_family = AF_INET;
-	peer.sin_port = htons(SERVER_PORT);
+	peer.sin_port = htons(SERVER_TCP_PORT);
 	peer.sin_addr.s_addr = inet_addr(SERVER_IP);
 
 	tcp_socket = socket(AF_INET, SOCK_STREAM, 0);
-	if (tcp_socket < 0) 
+	if (tcp_socket < 0) {
+		err = -1; 
 		goto error;
+	}
 
 	r = connect(tcp_socket, (struct sockaddr*)&peer, sizeof(peer));
-	if (r < 0)
+	if (r < 0) {
+		err = -2;
 		goto error;
+	}
 
 	main_socket = tcp_socket;
 
-	return 1;
+	return 0;
 
 error:
-	printf("error: failed to connect to server...\n");
-	closesocket(tcp_socket);
+	_closesocket(tcp_socket);
 
-	return 0;
+	return err;
 }
 
 //-------------------------------------------------------------- 
 int clientDisconnect(void)
 {
-	closesocket(main_socket);	
+	_closesocket(main_socket);
 	
-	return 1;
+	return 0;
 }
 
 //-------------------------------------------------------------- 
@@ -202,11 +220,11 @@ int SendRemoteCmd(int cmd, unsigned char *buf, int size)
 	ntpbpktSize = ntpb_hdrSize + size;
 
 	// send the ntpb packet
-	sndSize = send(main_socket, &pktbuffer[0], ntpbpktSize, 0);
+	sndSize = send(main_socket, (char *)&pktbuffer[0], ntpbpktSize, 0);
 	if (sndSize <= 0)
 		return -1;
 
-	rcvSize = recv(main_socket, &pktbuffer[0], sizeof(pktbuffer), 0);
+	rcvSize = recv(main_socket, (char *)&pktbuffer[0], sizeof(pktbuffer), 0);
 	if (rcvSize <= 0)
 		return -2;
 		
@@ -222,16 +240,22 @@ int SendRemoteCmd(int cmd, unsigned char *buf, int size)
 }
 
 //-------------------------------------------------------------- 
-int receiveDump(unsigned int dump_size) // retrieving datas sent by server
+int receiveDump(char *dumpfile, unsigned int dump_size) // retrieving datas sent by server
 {
 	int rcvSize, sndSize, packetSize, ntpbpktSize, ntpbCmd, recv_size, sizeWritten;
 	unsigned int dump_wpos = 0;
 	int endTransmit = 0;
+	FILE *fh_dump;
 
+	// create the dump file
+	fh_dump = fopen(dumpfile, "wb");
+	if (!fh_dump)
+		return -100;
+	
 	while (1) {
 		
 		// receive the first packet
-		rcvSize = recv(main_socket, &pktbuffer[0], sizeof(pktbuffer), 0);
+		rcvSize = recv(main_socket, (char *)&pktbuffer[0], sizeof(pktbuffer), 0);
 		if (rcvSize < 0)
 			return -1;
 			
@@ -246,7 +270,7 @@ int receiveDump(unsigned int dump_size) // retrieving datas sent by server
 
 		// fragmented packet handling
 		while (recv_size < packetSize) {
-			rcvSize = recv(main_socket, &pktbuffer[recv_size], sizeof(pktbuffer) - recv_size, 0);
+			rcvSize = recv(main_socket, (char *)&pktbuffer[recv_size], sizeof(pktbuffer) - recv_size, 0);
 			if (rcvSize < 0)
 				return -1;
 			else
@@ -284,7 +308,7 @@ int receiveDump(unsigned int dump_size) // retrieving datas sent by server
 			packetSize = ntpb_hdrSize + 2;
 
 			// send the response packet
-			sndSize = send(main_socket, &pktbuffer[0], packetSize, 0);
+			sndSize = send(main_socket, (char *)&pktbuffer[0], packetSize, 0);
 			if (sndSize <= 0)
 				return -5;
 				
@@ -294,136 +318,317 @@ int receiveDump(unsigned int dump_size) // retrieving datas sent by server
 		}
 	}
 
+	fclose(fh_dump);
+	
 	return 1;
+}
+
+//-------------------------------------------------------------- 
+void *netlogThread(void *thread_id)
+{
+	int udp_socket;
+	struct sockaddr_in peer;
+	int peerlen, r;
+	fd_set fd;
+	FILE *fh_log;
+
+	fh_log = fopen("netlog.log", "w");
+	if (fh_log) {
+		fclose(fh_log);
+	}
+	
+	peer.sin_family = AF_INET;
+	peer.sin_port = htons(SERVER_UDP_PORT);
+	peer.sin_addr.s_addr = htonl(INADDR_ANY);
+
+	udp_socket = socket(AF_INET, SOCK_DGRAM, 0);
+	if (udp_socket < 0) {
+		goto error;
+	}
+
+  	if (bind(udp_socket, (struct sockaddr *)&peer, sizeof(struct sockaddr)) < 0) {
+		goto error;
+	}
+	
+	FD_ZERO(&fd);
+
+	peerlen = sizeof(peer);
+
+	while (1) {
+		FD_SET(udp_socket, &fd);
+
+  		select(FD_SETSIZE, &fd, NULL, NULL, NULL);
+
+		memset(netlogbuffer, 0, sizeof(netlogbuffer));
+
+		r = recvfrom(udp_socket, netlogbuffer, sizeof(netlogbuffer), 0, (struct sockaddr *)&peer, &peerlen);
+
+		fh_log = fopen("netlog.log", "a");
+		if (fh_log) {
+			fwrite(netlogbuffer, 1, r, fh_log);
+			fclose(fh_log);
+		}
+	}
+
+error:	
+	closesocket(udp_socket);
+	pthread_exit(thread_id);
+	
+	return 0;
+}
+
+//-------------------------------------------------------------- 
+int printLog(void)
+{
+	FILE *fh_log;
+	int logsize, r;
+	char *buf;
+	
+	fh_log = fopen("netlog.log", "r");
+	if (fh_log) {
+		fseek(fh_log, 0, SEEK_END);
+		logsize = ftell(fh_log);
+		fseek(fh_log, 0, SEEK_SET);		
+		if (logsize) {
+			buf = malloc(logsize);
+			r = fread(buf, 1, logsize, fh_log);
+			printf(buf);
+			free(buf);
+		}
+		fclose(fh_log);
+	}
+	
+	return 0;
+}
+
+//-------------------------------------------------------------- 
+int getUserInput(char *buf, int size)
+{	
+	printf("ntpb:>");	
+	fgets(buf, size, stdin);
+	
+	buf[strlen(buf) - 1] = 0; // cutting newline
+	
+	if ((!strcmp(buf, "exit")) || (!strcmp(buf, "quit"))) {
+		return CMD_EXIT;
+	}
+	
+	if (!strcmp(buf, "connect")) {
+		return CMD_CONNECT;
+	}
+
+	if (!strcmp(buf, "disconnect")) {
+		return CMD_DISCONNECT;
+	}
+		
+	if (!strncmp(buf, "dump", 4)) {
+		return CMD_DUMP;
+	}
+	
+	if (!strcmp(buf, "log")) {
+		return CMD_LOG;
+	}			
+		
+	if (!strcmp(buf, "help")) {
+		return CMD_HELP;
+	}			
+			
+	return CMD_NONE;
 }
 
 //-------------------------------------------------------------- 
 int main(int argc, char **argv, char **env) {
 
-	int i, r, cmd, remote_cmd;
+	int r, cmd, remote_cmd;
 	unsigned int dump_start, dump_end, dump_size;
 	char dump_file[1024];
 	unsigned char cmdBuf[16];
-	
-	// check number of args
-	if (argc < 2) {
-		PrintUsage();
-		return 0;
-	}
-	
-	// get typed command
-	cmd = CMD_UNKNOWN;
-	
-	for (i=0; argv[i]; i++) {
-		if ((!strcmp(argv[i], "help")) || (!strcmp(argv[i], "-help")) || (!strcmp(argv[i], "--help"))) {
-			PrintUsage();
-			return 0;
-		}
-		else if (!strcmp(argv[i], "ee_dump")) {
-			if (argc < 5) {
-				PrintUsage();
-				return 0;		
-			}
-			cmd = CMD_EEDUMP;
-			remote_cmd = REMOTE_CMD_DUMPEE;
-			dump_start = HexaToDecimal(argv[i+1]);
-			dump_end = HexaToDecimal(argv[i+2]);
-			strcpy(dump_file, argv[i+3]);			
-		}
-		else if (!strcmp(argv[i], "iop_dump")) {
-			if (argc < 5) {
-				PrintUsage();
-				return 0;		
-			}						
-			cmd = CMD_IOPDUMP;			
-			remote_cmd = REMOTE_CMD_DUMPIOP;			
-			dump_start = HexaToDecimal(argv[i+1]);
-			dump_end = HexaToDecimal(argv[i+2]);
-			strcpy(dump_file, argv[i+3]);						
-		}
-		else if (!strcmp(argv[i], "kernel_dump")) {
-			if (argc < 5) {
-				PrintUsage();
-				return 0;		
-			}			
-			cmd = CMD_KERNELDUMP;
-			remote_cmd = REMOTE_CMD_DUMPKERNEL;			
-			dump_start = HexaToDecimal(argv[i+1]);
-			dump_end = HexaToDecimal(argv[i+2]);
-			strcpy(dump_file, argv[i+3]);												
-		}
-		else if (!strcmp(argv[i], "scratchpad_dump")) {
-			if (argc < 5) {
-				PrintUsage();
-				return 0;		
-			}			
-			cmd = CMD_SCRATCHPADDUMP;
-			remote_cmd = REMOTE_CMD_DUMPSCRATCHPAD;			
-			dump_start = HexaToDecimal(argv[i+1]);
-			dump_end = HexaToDecimal(argv[i+2]);
-			strcpy(dump_file, argv[i+3]);												
-		}
- 	}	
+	char userInput[256];
+	char *p = (char *)userInput;
+	char *p_end;
+	char str_memzone[256], str_dumpstart[256], str_dumpend[256];
 
- 	// check typed command
-	if (cmd == CMD_UNKNOWN) {
-		PrintUsage();
-		return 0;
-	}
- 		
 #ifdef _WIN32
 	// Init WSA
 	WsaData = InitWS2();
 	if (WsaData == NULL)
 		return 0;	
 #endif
-		
-	// Connect client to PS2 server
-	if (!clientConnect())
-		return 0;	
 
-	printf("Please wait while dumping %s @0x%08x-0x%08x to %s... ", id_ram[cmd], dump_start, dump_end, dump_file);
+	// Create netlog thread		
+	pthread_create(&netlog_thread_id, NULL, netlogThread, (void *)&netlog_thread_id);
 	
-	// create the dump file
-	fh_dump = fopen(dump_file, "wb");
-	if (!fh_dump) {
-		printf("failed to create file!\n");
-		goto disconnect;
-	}
-	
-	// fill remote cmd buffer
-	*((unsigned int *)&cmdBuf[0]) = dump_start;
-	*((unsigned int *)&cmdBuf[4]) = dump_end;
-	
-	// send remote cmd
-	r = SendRemoteCmd(remote_cmd, cmdBuf, 8);
-	if (r < 0) {
-		printf("failed to send remote command - error %d\n", r);
-		goto close_dump;
-	}
-	
-	dump_size = dump_end - dump_start;
+	// User Input loop		
+	while (1) {
 		
-	// receive dump	
-	r = receiveDump(dump_size);
-	if (r < 0) {
-		printf("failed to receive dump datas - error %d\n", r);		
-		goto close_dump;
-	}
-	
-	printf("done\n");
-		
-close_dump:			
-	fclose(fh_dump);		
+		cmd = getUserInput(userInput, sizeof(userInput));
 
-disconnect:			
-	// disconnect the client
-	clientDisconnect();		
+		switch(cmd) {
+			
+			case CMD_NONE:
+				printUsage();
+			break;
+			
+			case CMD_EXIT:
+				return 0;
+			break;
+
+			case CMD_CONNECT:
+				r = clientConnect();
+				if (r < 0)
+					printf("failed to connect client... error: %d\n", r);
+				else	
+					clientConnected = 1;	
+			break;					
+
+			case CMD_DISCONNECT:
+				r = clientDisconnect();
+				if (r < 0)
+					printf("failed to disconnect client... error: %d\n", r);	
+				else	
+					clientConnected = 0;	
+			break;					
+
+			case CMD_DUMP:
+				if (!clientConnected) {
+					printf("client not connected...\n");				
+					break;
+				}
+			
+				p = strchr(p, ' ');
+				if (!p) {
+					printUsage();	
+					break;
+				}								
+				p++;
 				
+				p_end = strchr(p, ' ');
+				if (!p_end) {
+					printUsage();	
+					break;
+				}				
+				strncpy(str_memzone, p, (p_end - p));
+				str_memzone[p_end - p] = 0; 
+								
+				if ((strcmp(str_memzone, MEMZONE_EE)) && (strcmp(str_memzone, MEMZONE_IOP)) && \
+					(strcmp(str_memzone, MEMZONE_KERNEL)) && (strcmp(str_memzone, MEMZONE_SCRATCHPAD))) {
+					printUsage();	
+					break;
+				}				
+					
+				p = p_end + 1;
+				p_end = strchr(p, ' ');
+				if (!p_end) {
+					printUsage();	
+					break;
+				}
+				strncpy(str_dumpstart, p, (p_end - p));
+				str_dumpstart[p_end - p] = 0; 
+	
+				p = p_end + 1;
+				p_end = strchr(p, ' ');
+				if (!p_end) {
+					printUsage();	
+					break;
+				}
+				strncpy(str_dumpend, p, (p_end - p));
+				str_dumpend[p_end - p] = 0; 
+
+				p = p_end + 1;
+				p_end = strchr(p, '\0');
+				if (!p_end) {
+					printUsage();	
+					break;
+				}				
+				strncpy(dump_file, p, (p_end - p));
+				dump_file[p_end - p] = 0; 
+
+				if (!(strlen(dump_file) > 0)) {
+					printUsage();	
+					break;
+				}			
+				
+				dump_start = HexaToDecimal(str_dumpstart);
+				dump_end = HexaToDecimal(str_dumpend);
+				dump_size = dump_end - dump_start;
+				
+				if (dump_size <= 0) {
+					printUsage();	
+					break;					
+				}						
+			
+				if (!strcmp(str_memzone, MEMZONE_EE)) {
+					if ((dump_start < 0x00100000) || (dump_start > 0x02000000) ||
+						(dump_end < 0x00100000) || (dump_end > 0x02000000)) {
+						printf("invalid address range for EE dump...\n");
+						break;	
+					}					
+					remote_cmd = REMOTE_CMD_DUMPEE;	
+				}				
+				if (!strcmp(str_memzone, MEMZONE_IOP)) {
+					if ((dump_start < 0x00000000) || (dump_start > 0x00200000) ||
+						(dump_end < 0x00000000) || (dump_end > 0x00200000)) {
+						printf("invalid address range for IOP dump...\n");
+						break;	
+					}					
+					remote_cmd = REMOTE_CMD_DUMPIOP;
+				}
+				if (!strcmp(str_memzone, MEMZONE_KERNEL)) {
+					if ((dump_start < 0x80000000) || (dump_start > 0x82000000) ||
+						(dump_end < 0x80000000) || (dump_end > 0x82000000)) {
+						printf("invalid address range for Kernel dump...\n");
+						break;	
+					}
+					remote_cmd = REMOTE_CMD_DUMPKERNEL;
+				}
+				if (!strcmp(str_memzone, MEMZONE_SCRATCHPAD)) {
+					if ((dump_start < 0x70000000) || (dump_start > 0x70004000) ||
+						(dump_end < 0x70000000) || (dump_end > 0x70004000)) {
+						printf("invalid address range for ScratchPad dump...\n");
+						break;	
+					}					
+					remote_cmd = REMOTE_CMD_DUMPSCRATCHPAD;
+				}				
+				
+				// fill remote cmd buffer
+				*((unsigned int *)&cmdBuf[0]) = dump_start;
+				*((unsigned int *)&cmdBuf[4]) = dump_end;
+	
+				// send remote cmd
+				r = SendRemoteCmd(remote_cmd, cmdBuf, 8);
+				if (r < 0) {
+					printf("failed to send remote command - error %d\n", r);
+					break;
+				}
+
+				printf("Please wait while dumping %s @0x%08x-0x%08x to %s... ", str_memzone, dump_start, dump_end, dump_file);
+														
+				// receive dump	
+				r = receiveDump(dump_file, dump_size);
+				if (r < 0) {
+					printf("failed to receive dump datas - error %d\n", r);		
+					break;
+				}
+				
+				printf("done\n");			
+			break;					
+
+			case CMD_LOG:
+				printLog();
+			break;				
+			
+			case CMD_HELP:
+				printUsage();
+			break;				
+		}										
+	}
+
+	pthread_exit((void *)&netlog_thread_id);
+		
 #ifdef _WIN32
 	WSACleanup();
 #endif
-		
+
 	// End program.
 	return 0;
 

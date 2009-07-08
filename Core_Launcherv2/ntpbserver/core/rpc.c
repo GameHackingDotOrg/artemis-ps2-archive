@@ -70,7 +70,7 @@ int rpcNTPBgetRemoteCmd(u16 *cmd, u8 *buf, int *size)
 	if (!RPCclient_Inited)
 		return -1;
 				 	
-	if((ret = SifCallRpc(&rpcclient, CMD_GETREMOTECMD, 0, &getRemoteCmdParam, sizeof(getRemoteCmdParam), &getRemoteCmdParam, sizeof(getRemoteCmdParam), 0, 0)) != 0) {
+	if((ret = SifCallRpc(&rpcclient, CMD_GETREMOTECMD, 0, NULL, 0, &getRemoteCmdParam, sizeof(getRemoteCmdParam), 0, 0)) != 0) {
 		return ret;
 	}
 

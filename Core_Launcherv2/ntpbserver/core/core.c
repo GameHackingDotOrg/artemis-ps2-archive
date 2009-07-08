@@ -933,8 +933,6 @@ int getRemoteCmd(void)
 				break;
 				
 			case REMOTE_CMD_HALT:
-				rpcNTPBsendData(0, NULL, 0);
-				rpcSync(0, NULL, &ret);																			
 				rpcNTPBEndReply();
 				rpcSync(0, NULL, &ret);													
 				if (!haltState) {
@@ -945,8 +943,6 @@ int getRemoteCmd(void)
 				break;			
 				
 			case REMOTE_CMD_RESUME:
-				rpcNTPBsendData(0, NULL, 0);
-				rpcSync(0, NULL, &ret);																			
 				rpcNTPBEndReply();
 				rpcSync(0, NULL, &ret);	
 				if (haltState) {			

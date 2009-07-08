@@ -5,7 +5,7 @@
 #  ------------------------------------------------------------------------
 
 IOP_BIN = ntpbserver.irx
-IOP_OBJS = ntpbserver.o imports.o
+IOP_OBJS = ntpbserver.o netlog.o udpcl.o xprintf.o imports.o
 
 IOP_INCS += -I$(PS2SDK)/iop/include
 IOP_CFLAGS += -Wall -fno-builtin $(DEBUG_FLAGS)

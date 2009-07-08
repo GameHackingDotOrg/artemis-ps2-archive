@@ -2,7 +2,7 @@
 //                                                                       //
 //  Artemis Project: CoreLauncher_v2                                     //
 //  solution provided by jimmikaelkael                                   //
-//  rev 0.1                                                              //
+//  rev 0.2                                                              //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -22,6 +22,9 @@
  	Credits goes to dlanor & EP for the function the parses the .CNF
  files reliably (code borrowed to uLaunchElf).
 	
+	Netlog code integrated in ntpbserver.irx is the work of misfire
+ (code borrowed to his netlog.irx module), so credits to misfire.
+
 	Many thanks to ffgriever & misfire for sharing sources and
  knowledge. 
 
