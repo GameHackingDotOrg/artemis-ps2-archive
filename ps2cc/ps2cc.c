@@ -75,14 +75,14 @@ int InitTabControl(HWND hwnd, LPARAM lParam)
 
 	// Create the dialogs modelessly and move them appropriately
     hTabDlgs[CODE_SEARCH_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)SEARCH_DLG, hTab, (DLGPROC)CodeSearchProc);
+    hTabDlgs[SEARCH_RESULTS_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)RESULTS_DLG, hTab, (DLGPROC)SearchResultsProc);
 /*
-    hTabDlgs[SEARCH_RESULTS_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_SEARCH_RESULTS, hTab, (DLGPROC)SearchResultsProc);
     hTabDlgs[MEMORY_EDITOR_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_MEMORY_EDITOR, hTab, (DLGPROC)MemoryEditorProc);
     hTabDlgs[CHEAT_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_CHEAT, hTab, (DLGPROC)CheatProc);
 */
     MoveWindow(hTabDlgs[CODE_SEARCH_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
-/*
     MoveWindow(hTabDlgs[SEARCH_RESULTS_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
+/*
     MoveWindow(hTabDlgs[MEMORY_EDITOR_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
     MoveWindow(hTabDlgs[CHEAT_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
 */
@@ -107,8 +107,15 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
         {
 			LoadSettings();
 		    InitTabControl(hwnd, lParam);
-		    int statwidth = -1;
-            SendMessage(hwndStatusBar, SB_SETPARTS, 1, (LPARAM)&statwidth);
+		    //setup statusbar
+/* This is pissing me off
+            RECT StatusRect; memset(&StatusRect,0,sizeof(StatusRect));
+            GetWindowRect(hwndStatusBar,&StatusRect);
+		    int statwidths[1];
+		    statwidths[0] = (StatusRect.right - StatusRect.left) * 0.75;
+		    statwidths[1] = (StatusRect.right - StatusRect.left) * 0.25;
+            SendMessage(hwndStatusBar, SB_SETPARTS, sizeof(statwidths)/sizeof(int), (LPARAM)statwidths);
+ */
 		    //To Do: set fonts here later
             SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
 		} break;
@@ -129,6 +136,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 			    {
                     char DumpPath[MAX_PATH];
                     if (BrowseForFolder(hwnd, DumpPath)) {
+						MessageBox(NULL, DumpPath, "Debug", MB_OK);
                         strcpy(Settings.CS.DumpDir, DumpPath);
                         SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
                     }

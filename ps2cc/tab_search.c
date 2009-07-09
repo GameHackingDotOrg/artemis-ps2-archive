@@ -11,7 +11,6 @@ the interface to start the search.
 
 CODE_SEARCH_VARS Search;
 
-LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 WNDPROC wpSearchValueBoxProc;
 
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -53,7 +52,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
             SendMessage(hwndSearchArea,CB_RESETCONTENT,0,0);
             ComboAddItem(hwndSearchArea, "EE" , 0);
             ComboAddItem(hwndSearchArea, "IOP" , 1);
-            ComboAddItem(hwndSearchArea, "Kernal" , 2);
+            ComboAddItem(hwndSearchArea, "Kernel" , 2);
             ComboAddItem(hwndSearchArea, "ScratchPad" , 3);
             ComboAddItem(hwndSearchArea, "Custom" , 4);
             SendMessage(hwndSearchAreaLow, EM_SETLIMITTEXT, 8, 0);
@@ -91,7 +90,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
             //To Do: extended search options (signed, filter results, etc)
 
             //Set starting positions for the dropdown lists (last)
-            SendMessage(hwndSearchSize,CB_SETCURSEL,0,0);
+            SendMessage(hwndSearchSize,CB_SETCURSEL,2,0);
             SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchSize);
             SendMessage(hwndCompareTo,CB_SETCURSEL,0,0);
             SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(COMPARE_TO_CMB, CBN_SELCHANGE),(LPARAM)hwndCompareTo);
@@ -380,17 +379,16 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     CodeSearch(Search);
                     sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
+                    sprintf(sdFileName, "%d Results", RamInfo.NewResultsInfo.ResCount);
+                    UpdateStatusBar(sdFileName, 0,0);
 //                    SetDecWindowU(hResCount, RamInfo.NewResultsInfo.ResCount);
                     FreeRamInfo();
 					UpdateProgressBar(PBM_SETPOS, 0, 0);
-					UpdateStatusBar("Idle", 0, 0);
+//					UpdateStatusBar("Idle", 0, 0);
 				} break;
 			}
 		} break;
 
-
-//        default:
-//        	return DefWindowProc(hwnd,message,wParam,lParam);
 	}
 	return FALSE;
 }

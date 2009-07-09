@@ -132,7 +132,7 @@ showing results)*/
 typedef struct _SEARCH_RESULTS_LIST {
     char Size;
     u32 Address;
-    u64 Values[MAX_SEARCHES];
+//    u64 Values[MAX_SEARCHES];
 } SEARCH_RESULTS_LIST;
 
 //dump data and results during searches
@@ -209,9 +209,6 @@ int SaveSettings();
 int UpdateStatusBar(const char *StatusText, int PartNum, int Flags);
 int UpdateProgressBar(unsigned int Message, WPARAM wParam, LPARAM lParam);
 
-//Tab Procedures
-BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-
 //lib_api
 LRESULT CALLBACK HexEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int ComboAddItem(HWND hCombo, const char* combostring, DWORD value);
@@ -240,6 +237,15 @@ int SaveFile(u8 *buffer, u32 filesize, char* filename, int headerlen, VOID *head
 int LoadStruct(VOID *buffer, u32 filesize, char* filename);
 int SaveStruct(VOID *buffer, u32 filesize, char* filename);
 
+//lib_listview
+int ListViewAddRow(HWND hListView, int count, ...);
+int ListViewSetRow(HWND hListView, int item, int subitem, int count, ...);
+int ListViewAddCol(HWND hListView, const char* colName, int colNum, int colWidth);
+int ListViewGetText(HWND hListView, int iNum, int iSub, char* iText, int txtLen);
+u64 ListViewGetHex(HWND hListView, int iNum, int iSub);
+u64 ListViewGetDec(HWND hListView, int iNum, int iSub);
+int ListViewHitTst(HWND hListView, DWORD dwPos, int iItem);
+
 //lib_misc
 int FilterHexChar(int lvalue);
 int isHex(char* text);
@@ -267,3 +273,12 @@ int TestConnect();
 //lib_search
 int CodeSearch(CODE_SEARCH_VARS Search);
 u64 GetSearchValues(u64 *NewVal, u64 *OldVal, int index, int size, int endian);
+
+//tab_search
+BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+
+//tab_results
+BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+int LoadResultsList();
+s64 ShowResPage(s64 ResNum);

@@ -190,6 +190,7 @@ int BrowseForFolder(HWND hwnd, char* filename) {
     LPCITEMIDLIST pFolder = SHBrowseForFolder(&bInfo);
     if (!pFolder) { return 0; }
     if (!SHGetPathFromIDList(pFolder, filename)) { return 0; }
+    strcat(filename, "\\"); //add the trailing backslash
     return 1;
 }
 
