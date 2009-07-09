@@ -325,9 +325,11 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
 					u32 DumpAreaHigh = GetHexWindow(hwndSearchAreaHigh);
 					//dump ram
+///*
                     if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, DumpAreaHigh))) {
 						MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
 					}
+//*/
                     RamInfo.NewResultsInfo.DumpSize = DumpAreaHigh - DumpAreaLow;
 					//keep track of the memory address the file really starts on for displaying results
                     RamInfo.NewResultsInfo.MapFileAddy = 0;

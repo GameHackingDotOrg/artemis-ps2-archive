@@ -205,7 +205,7 @@ free()'d here.
 int FreeShit()
 {
     FreeRamInfo();
-//reinstate later    if (ResultsList) { free(ResultsList); ResultsList = NULL; }
+    if (ResultsList) { free(ResultsList); ResultsList = NULL; }
     return 0;
 }
 
@@ -250,8 +250,8 @@ int LoadSettings()
 /*results options
     Defaults.Results.ResWriteRate = 100;
     Defaults.Results.ResWriteRateId = MNU_RES_WRITE_100MS;
-    Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
 */
+    Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
 	if (FileExists(CFGFile)) { LoadStruct(&Settings, sizeof(MAIN_CFG), CFGFile); }
     if (Settings.CFGVersion != Defaults.CFGVersion) {
 		memset(&Settings,0,sizeof(Settings));

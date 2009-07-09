@@ -127,14 +127,6 @@ typedef struct CODE_SEARCH_RESULTS_INFO {
     u32 MapMemAddy; //memory address
 } CODE_SEARCH_RESULTS_INFO;
 
-/*Results list with previous values (loaded from each of the previous RAM files for
-showing results)*/
-typedef struct _SEARCH_RESULTS_LIST {
-    char Size;
-    u32 Address;
-//    u64 Values[MAX_SEARCHES];
-} SEARCH_RESULTS_LIST;
-
 //dump data and results during searches
 typedef struct _RAM_AND_RES_DATA {
     int Access;
@@ -188,6 +180,9 @@ extern HWND hwndMain;
 extern HWND hTabDlgs[NUM_TABS];
 extern char ErrTxt[1000];
 extern WNDPROC wpHexEditBoxes;
+
+//tab_results
+extern u32 *ResultsList;
 
 //structs
 extern MAIN_CFG Settings;
@@ -282,3 +277,5 @@ LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, 
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int LoadResultsList();
 s64 ShowResPage(s64 ResNum);
+int ResFormatString(char *tmpstring, int outfmt, int numbytes);
+
