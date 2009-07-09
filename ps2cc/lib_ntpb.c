@@ -3,7 +3,8 @@ Memory Library
 
 This is where the all important PC-PS2 comms code should reside. It's almost
 an exact copy of Jimmi's command line ntpb client, just without main(). My
-function to manage things is at the bottom.
+functions to manage things are at the bottom. I changed the IP var, and added
+a progress bar step line to receiveDump().
 *****************************************************************************/
 #include "ps2cc.h"
 
@@ -123,7 +124,7 @@ int clientConnect(void)
 	return 1;
 
 error:
-	printf("error: failed to connect to server...\n");
+//	printf("error: failed to connect to server...\n");
 	closesocket(tcp_socket);
 
 	return 0;
@@ -239,6 +240,10 @@ int receiveDump(unsigned int dump_size) // retrieving datas sent by server
 						return -4;
 
 					dump_wpos += sizeWritten;
+
+					//step progress bar
+					UpdateProgressBar(PBM_STEPIT, 0, 0);
+
 					break;
 
 				case NTPBCMD_END_TRANSMIT:
@@ -317,11 +322,16 @@ int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end)
 		return 0;
 #endif
 
+
 	// Connect client to PS2 server
+	UpdateStatusBar("Contacting PS2 Server...", 0, 0);
 	if (!clientConnect()) {
 		sprintf(ErrTxt, "Connecting to PS2 failed. (DumpRAM)");
+		UpdateStatusBar("Idle", 0, 0);
 		return 0;
 	}
+
+	UpdateStatusBar("Client connected...", 0, 0);
 
 	//using isDumped to determine the return value. 0 on error, 1 on success
 	int isDumped = 0;
@@ -345,6 +355,12 @@ int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end)
 
 	dump_size = dump_end - dump_start;
 
+	//init progress bar
+	UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, dump_size/8192));
+	UpdateProgressBar(PBM_SETSTEP, 1, 0);
+	UpdateProgressBar(PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
+	UpdateStatusBar("Dumping Memory...", 0, 0);
+
 	// receive dump
 	r = receiveDump(dump_size);
 	if (r < 0) {
@@ -354,6 +370,8 @@ int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end)
 
 	//Success!
 	isDumped = 1;
+	//reset progress bar
+	UpdateProgressBar(PBM_SETPOS, 0, 0);
 
 close_dump:
 	fclose(fh_dump);
@@ -366,6 +384,28 @@ disconnect:
 	WSACleanup();
 #endif
 
+	UpdateStatusBar("Idle", 0, 0);
 	return isDumped;
 
+}
+
+/****************************************************************************
+TestConnect - Test the connection when user edits IP, etc
+*****************************************************************************/
+int TestConnect()
+{
+#ifdef _WIN32
+	// Init WSA
+	WsaData = InitWS2();
+	if (WsaData == NULL)
+		return 0;
+#endif
+
+	// Connect client to PS2 server
+	if (!clientConnect()) {
+		sprintf(ErrTxt, "Connecting to PS2 failed. (DumpRAM)");
+		return 0;
+	}
+	clientDisconnect();
+	return 1;
 }

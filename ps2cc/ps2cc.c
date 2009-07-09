@@ -101,11 +101,14 @@ Menu handlers might go here later as well.
 BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 {
 	HMENU hMenu = GetMenu(hwnd);
+	HWND hwndStatusBar = GetDlgItem(hwnd, NTPB_STATUS_BAR);
 	switch (msg) {
  		case WM_INITDIALOG:
         {
 			LoadSettings();
 		    InitTabControl(hwnd, lParam);
+		    int statwidth = -1;
+            SendMessage(hwndStatusBar, SB_SETPARTS, 1, (LPARAM)&statwidth);
 		    //To Do: set fonts here later
             SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
 		} break;
@@ -257,4 +260,30 @@ int SaveSettings()
 {
     SaveStruct(&Settings, sizeof(Settings), CFGFile);
     return 0;
+}
+
+/****************************************************************************
+Update Status Bar
+*****************************************************************************/
+int UpdateStatusBar(const char *StatusText, int PartNum, int Flags)
+{
+	HWND hwndStatusBar = GetDlgItem(hwndMain, NTPB_STATUS_BAR);
+	if (hwndStatusBar) {
+		SendMessage(hwndStatusBar, SB_SETTEXT, PartNum|Flags, (LPARAM)StatusText);
+		UpdateWindow(hwndMain);
+	}
+	return 0;
+}
+
+/****************************************************************************
+Update Progress Bar
+*****************************************************************************/
+int UpdateProgressBar(unsigned int Message, WPARAM wParam, LPARAM lParam)
+{
+	HWND hwndProgressBar = GetDlgItem(hwndMain, DUMPSTATE_PRB);
+	if (hwndProgressBar) {
+		SendMessage(hwndProgressBar, Message, wParam, lParam);
+		UpdateWindow(hwndMain);
+	}
+	return 0;
 }

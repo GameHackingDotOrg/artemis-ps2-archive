@@ -180,8 +180,7 @@ typedef struct _MAIN_CFG {
 } MAIN_CFG;
 
 /****************************************************************************
-Externs (Global Vars) - possibly change to #ifndef shit later rather than
-declaring elsewhere and externing.
+Externs (Global Vars)
 *****************************************************************************/
 
 extern HINSTANCE hInst;
@@ -207,6 +206,8 @@ int FreeShit();
 int FreeRamInfo();
 int LoadSettings();
 int SaveSettings();
+int UpdateStatusBar(const char *StatusText, int PartNum, int Flags);
+int UpdateProgressBar(unsigned int Message, WPARAM wParam, LPARAM lParam);
 
 //Tab Procedures
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -259,6 +260,10 @@ int Hex2ASCII(u64 value, int bytes, char *string);
 u64 FlipBytes(u64 value, int size);
 int isIPAddr(char *text);
 
+//lib_ntpb
+int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end);
+int TestConnect();
+
 //lib_search
-int CodeSearch(CODE_SEARCH_VARS Search, HWND hProgressBar);
+int CodeSearch(CODE_SEARCH_VARS Search);
 u64 GetSearchValues(u64 *NewVal, u64 *OldVal, int index, int size, int endian);

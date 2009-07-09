@@ -18,7 +18,7 @@ SetBitFlag in the main search loop is
 /****************************************************************************
 CodeSearch - main search loop
 *****************************************************************************/
-int CodeSearch(CODE_SEARCH_VARS Search, HWND hProgressBar)
+int CodeSearch(CODE_SEARCH_VARS Search)
 {
     u32 address;
     u64 NewValue;
@@ -29,7 +29,7 @@ int CodeSearch(CODE_SEARCH_VARS Search, HWND hProgressBar)
         for (i = 0; i < 10; i++) { Search.Values[i] = SignExtend64(Search.Values[i], Search.Size); }
     }
     for (address = 0; address < RamInfo.NewResultsInfo.DumpSize; address += Search.Size) {
-        if(!(address % 0x100000)) { SendMessage(hProgressBar, PBM_STEPIT, 0, 0); }
+        if(!(address % 0x100000)) { UpdateProgressBar(PBM_STEPIT, 0, 0); }
         if (!(GetBitFlag(RamInfo.Results, address/Search.Size))) { continue; }
         GetSearchValues(&NewValue, &OldValue, address, Search.Size, LITTLE_ENDIAN_SYS);
 //        if (!CodeSearchEx(address, NewValue, OldValue, Search)) { continue; }

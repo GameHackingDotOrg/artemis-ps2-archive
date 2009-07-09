@@ -374,13 +374,16 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         return 0;
                     }
                     //init progress bar
-                    SendMessage(hwndProgress, PBM_SETRANGE, 0, MAKELPARAM(0, (RamInfo.NewResultsInfo.DumpSize/0x100000)+((RamInfo.NewResultsInfo.DumpSize % 0x100000) ? 1:0)));
-                    SendMessage(hwndProgress, PBM_SETSTEP, 1, 0);
-//                    CodeSearch(Search, hProgress);
+                    UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, (RamInfo.NewResultsInfo.DumpSize/0x100000)+((RamInfo.NewResultsInfo.DumpSize % 0x100000) ? 1:0)));
+                    UpdateProgressBar(PBM_SETSTEP, 1, 0);
+                    UpdateStatusBar("Searching...", 0, 0);
+                    CodeSearch(Search);
                     sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
 //                    SetDecWindowU(hResCount, RamInfo.NewResultsInfo.ResCount);
                     FreeRamInfo();
+					UpdateProgressBar(PBM_SETPOS, 0, 0);
+					UpdateStatusBar("Idle", 0, 0);
 				} break;
 			}
 		} break;

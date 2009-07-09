@@ -25,11 +25,12 @@ BOOL CALLBACK IpConfigDlg(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 					char ip[16];
 					GetWindowText(hwndIpAddr, ip, sizeof(ip));
 					if (!isIPAddr(ip)) {
-						MessageBox(NULL, "Invalid IP", "Debug", MB_OK);
+						MessageBox(NULL, "Invalid IP", "Error", MB_OK);
 						return 0;
 					}
 					if (LOWORD(wParam) == TEST_IP_CMD) {
-						//finish
+						if(TestConnect()) { MessageBox(NULL, "Connection Successful!", "", MB_OK); }
+						else { MessageBox(NULL, "Unable to Connect", "Error", MB_OK); }
 					} else {
 						strcpy(Settings.ServerIp, ip);
 					}
