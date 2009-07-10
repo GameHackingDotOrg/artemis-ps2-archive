@@ -9,10 +9,9 @@ Everything for the results display should pretty much be here.
 
 
 WNDPROC wpResultsListProc;
-
+WNDPROC wpResPageTxtProc;
 s64 CurrResNum;
 u32 *ResultsList;
-//u32 PageSize;
 
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -26,6 +25,10 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             SendMessage(hwndResList,LVM_SETEXTENDEDLISTVIEWSTYLE,0,LVS_EX_FULLROWSELECT|LVS_EX_GRIDLINES|LVS_EX_LABELTIP);
             SendMessage(hwndResList, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
             ListViewAddCol(hwndResList, "Address", 0, 0x80);
+            //subclass the page # textbox
+		    wpResPageTxtProc = (WNDPROC)GetWindowLongPtr (hwndResPageText, GWLP_WNDPROC);
+		    SetWindowLongPtr (hwndResPageText, GWLP_WNDPROC, (LONG_PTR)ResultsPageTxtHandler);
+
 //		    wpResultsListProc = (WNDPROC)GetWindowLongPtr (hwndResList, GWLP_WNDPROC);
 //		    SetWindowLongPtr (hwndResList, GWLP_WNDPROC, (LONG_PTR)ResultsListHandler);
 		} break;
@@ -45,6 +48,13 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 					u32 PageSize = SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
 					CurrResNum = ShowResPage(CurrResNum + PageSize);
 				} break;
+				case RESULTS_PAGE_GO_CMD:
+				{
+					if (!ResultsList) { break; }
+					u32 PageSize = SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
+					int PageNum = GetDecWindow(hwndResPageText);
+					CurrResNum = ShowResPage(PageSize * PageNum);
+				} break;
 			}
 		} break;
 
@@ -56,6 +66,28 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 	return FALSE;
 }
 
+/****************************************************************************
+Search Value box handler
+*****************************************************************************/
+LRESULT CALLBACK ResultsPageTxtHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+        case WM_CHAR:
+        {
+            if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace
+            if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
+            if (wParam == VK_RETURN) { SendMessage(hTabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, RESULTS_PAGE_GO_CMD, 0); }
+            wParam = ((isdigit(wParam))|| (wParam == '-')) ? wParam : 0;
+        } break;
+        case WM_PASTE:
+        {
+        } return 0;
+   }
+   if (wpResPageTxtProc) {
+	   return CallWindowProc (wpResPageTxtProc, hwnd, message, wParam, lParam);
+   } else { return DefWindowProc (hwnd, message, wParam, lParam); }
+}
 
 /****************************************************************************
 Load results
@@ -111,7 +143,7 @@ LoadResError:
 	return 0;
 }
 /****************************************************************************
-Show 1 page of results starting in ResAddr
+ShowResPage - Show 1 page of results starting at Result number (ResNum)
 *****************************************************************************/
 s64 ShowResPage(s64 ResNum)
 {
@@ -134,7 +166,7 @@ s64 ShowResPage(s64 ResNum)
 	if (ResNum < 0) { ResNum = 0; }
 
 	SendMessage(hwndResList,LVM_DELETEALLITEMS,0,0);
-	//open dump file handles
+	//open dump file handles - Notice they're being loaded in order from the current search back.
     for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {
         sprintf(resFileName,"%ssearch%u.bin",Settings.CS.DumpDir, (SearchCount - DumpNum));
         if (!(LoadStruct(&RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), resFileName))) { goto ShowResPageError; }
@@ -149,33 +181,34 @@ s64 ShowResPage(s64 ResNum)
 	RamInfo.NewResultsInfo.DumpSize = ftell(ramFiles[0]);
 	fseek(ramFiles[0],0,SEEK_SET);
 	RamInfo.Access = SEARCH_ACCESS_FILE;
-
-	i = 0;
-
     char txtAddress[9], txtValue[32], fmtString[20];
 	ResFormatString(fmtString, Settings.Results.DisplayFmt, RamInfo.NewResultsInfo.SearchSize);
+	i = 0;
 	u64 ResValue = 0;
+	/*loop through the results list starting from ResNum, and loop through the
+	dump handles to get the value from each.*/
     while (((ResNum + i) < RamInfo.NewResultsInfo.ResCount) && (i < PageSize)) {
+		//make address a string and add row with address in 1st column
         sprintf(txtAddress, "%08X", ResultsList[ResNum + i] + RamInfo.NewResultsInfo.MapMemAddy);
         ListViewAddRow(hwndResList, 1, txtAddress);
         SendMessage(hwndResList, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE);
-
+        //loop and update the row with the value from each search
         for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {
             RamInfo.NewFile = ramFiles[DumpNum];
             GetSearchValues(&ResValue, NULL, ResultsList[ResNum + i], RamInfo.NewResultsInfo.SearchSize, RamInfo.NewResultsInfo.Endian);
+            //Check if we need to cast the value to floating point
             if (Settings.Results.DisplayFmt == MNU_RES_SHOW_FLOAT) {
                 *CastDouble = ResValue;
                 *CastFloat = ResValue & 0xFFFFFFFF;
                 sprintf(txtValue, fmtString, (RamInfo.NewResultsInfo.SearchSize == 4) ? tmpFloat : tmpDouble);
-            } else { sprintf(txtValue, "%08X", ResValue); }
+            } else { sprintf(txtValue, fmtString, ResValue); }
             ListViewSetRow(hwndResList, i, DumpNum + 1, 1, txtValue);
             SendMessage(hwndResList, LVM_SETCOLUMNWIDTH, DumpNum + 1, LVSCW_AUTOSIZE);
         }
         i++;
-//        ResNum++;
     }
 
-    SetDecWindowU(GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_TXT), (ResNum/PageSize) + (ResNum % PageSize));
+    SetDecWindowU(GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_TXT), ((ResNum + i)/PageSize) + ((ResNum + i) % PageSize));
 
 ShowResPageError:
 	for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {

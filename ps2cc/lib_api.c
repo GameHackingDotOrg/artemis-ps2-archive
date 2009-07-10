@@ -32,9 +32,9 @@ LRESULT CALLBACK HexEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPAR
         {
             if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace
             if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
-//            if (SendMessage(hwnd, EM_GETLIMITTEXT, 0, 0) == 8) {
+//            sprintf(ErrTxt, "%u", GetDlgCtrlID(hwnd));
+//            MessageBox(NULL, ErrTxt, "Debug", MB_OK);
                 wParam = FilterHexChar(wParam);
-//            }
         } break;
         case WM_PASTE:
         {

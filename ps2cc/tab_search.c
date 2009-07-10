@@ -325,11 +325,11 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
 					u32 DumpAreaHigh = GetHexWindow(hwndSearchAreaHigh);
 					//dump ram
-///*
+
                     if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, DumpAreaHigh))) {
 						MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
 					}
-//*/
+
                     RamInfo.NewResultsInfo.DumpSize = DumpAreaHigh - DumpAreaLow;
 					//keep track of the memory address the file really starts on for displaying results
                     RamInfo.NewResultsInfo.MapFileAddy = 0;
@@ -421,7 +421,7 @@ LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, 
         {
             char txtInput[20], txtInput2[20];
             GetWindowText(hwnd, txtInput, sizeof(txtInput));
-            CallWindowProc (wpHexEditBoxes, hwnd, message, wParam, lParam);
+            CallWindowProc (wpSearchValueBoxProc, hwnd, message, wParam, lParam); //?
             GetWindowText(hwnd, txtInput2, sizeof(txtInput2));
             if ((!isHexWindow(hwnd)) || (strlen(txtInput2) > SendMessage(hwnd, EM_GETLIMITTEXT, 0, 0))) { SetWindowText(hwnd, txtInput); }
         } return 0;

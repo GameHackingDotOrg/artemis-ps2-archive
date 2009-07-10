@@ -107,6 +107,13 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
         {
 			LoadSettings();
 		    InitTabControl(hwnd, lParam);
+		    //init menus
+		    SetMenuItemData(hMenu, MNU_CS_INPUT_HEX, BASE_HEX);
+		    SetMenuItemData(hMenu, MNU_CS_INPUT_DEC, BASE_DEC);
+		    SetMenuItemData(hMenu, MNU_CS_INPUT_FLOAT, BASE_FLOAT);
+		    //apply settings to menus
+		    SetMenuState(hMenu, Settings.Results.DisplayFmt, MFS_CHECKED);
+		    SetMenuState(hMenu, Settings.CS.NumBaseId, MFS_CHECKED);
 		    //setup statusbar
 /* This is pissing me off
             RECT StatusRect; memset(&StatusRect,0,sizeof(StatusRect));
@@ -136,15 +143,33 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 			    {
                     char DumpPath[MAX_PATH];
                     if (BrowseForFolder(hwnd, DumpPath)) {
-						MessageBox(NULL, DumpPath, "Debug", MB_OK);
                         strcpy(Settings.CS.DumpDir, DumpPath);
                         SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
                     }
 			    } break;
 			    case MNU_IP_CONFIG:
 			    {
-					DialogBox(hInst, MAKEINTRESOURCE(IP_CONFIG_DLG), hwnd, IpConfigDlg);
+					DialogBox(hInst, MAKEINTRESOURCE(SETTINGS_DLG), hwnd, IpConfigDlg);
 				} break;
+                case MNU_RES_SHOW_HEX: case MNU_RES_SHOW_DECU: case MNU_RES_SHOW_DECS: case MNU_RES_SHOW_FLOAT:
+                {
+                    Settings.Results.DisplayFmt = LOWORD(wParam);
+			        SetMenuState(hMenu, MNU_RES_SHOW_HEX, MFS_UNCHECKED);
+			        SetMenuState(hMenu, MNU_RES_SHOW_DECU, MFS_UNCHECKED);
+			        SetMenuState(hMenu, MNU_RES_SHOW_DECS, MFS_UNCHECKED);
+			        SetMenuState(hMenu, MNU_RES_SHOW_FLOAT, MFS_UNCHECKED);
+			        SetMenuState(hMenu, LOWORD(wParam), MFS_CHECKED);
+			        if (ResultsList) { ShowResPage(0); } //possibly make CurrResNum a global later
+                } break;
+			    case MNU_CS_INPUT_HEX: case MNU_CS_INPUT_DEC: case MNU_CS_INPUT_FLOAT:
+                {
+                    Settings.CS.NumBase = GetMenuItemData(hMenu, LOWORD(wParam));
+                    Settings.CS.NumBaseId = LOWORD(wParam);
+                    SetMenuState(hMenu, MNU_CS_INPUT_HEX, MFS_UNCHECKED);
+                    SetMenuState(hMenu, MNU_CS_INPUT_DEC, MFS_UNCHECKED);
+                    SetMenuState(hMenu, MNU_CS_INPUT_FLOAT, MFS_UNCHECKED);
+                    SetMenuState(hMenu, LOWORD(wParam), MFS_CHECKED);
+                } break;
 			}
 		} break;
 		case WM_SIZE:
@@ -241,12 +266,12 @@ int LoadSettings()
         sprintf(CFGFile,"ps2cc.cfg");
         strcpy(Defaults.CS.DumpDir, "Searches\\");
     }
-    Defaults.CFGVersion = 1; //increment this if settings struct or sub-struct definitions in ps2cc.h change
+    Defaults.CFGVersion = 2; //increment this if settings struct or sub-struct definitions in ps2cc.h change
     sprintf(Defaults.ServerIp, "192.168.0.80");
     Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
     Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
     Defaults.CS.NumBase = BASE_HEX;
-//    Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
+    Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
 /*results options
     Defaults.Results.ResWriteRate = 100;
     Defaults.Results.ResWriteRateId = MNU_RES_WRITE_100MS;

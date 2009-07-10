@@ -275,6 +275,7 @@ LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, 
 
 //tab_results
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ResultsPageTxtHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int LoadResultsList();
 s64 ShowResPage(s64 ResNum);
 int ResFormatString(char *tmpstring, int outfmt, int numbytes);
