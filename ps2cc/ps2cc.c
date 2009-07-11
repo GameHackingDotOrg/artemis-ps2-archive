@@ -147,7 +147,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                         SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
                     }
 			    } break;
-			    case MNU_IP_CONFIG:
+			    case MNU_SHOW_CONFIG:
 			    {
 					DialogBox(hInst, MAKEINTRESOURCE(SETTINGS_DLG), hwnd, IpConfigDlg);
 				} break;
@@ -170,6 +170,15 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                     SetMenuState(hMenu, MNU_CS_INPUT_FLOAT, MFS_UNCHECKED);
                     SetMenuState(hMenu, LOWORD(wParam), MFS_CHECKED);
                 } break;
+                case MNU_LOAD_SEARCH:
+                {
+					//Not yet
+				} break;
+                case MNU_EXIT:
+                {
+					SaveSettings();
+					DestroyWindow(hwnd);
+				} break;
 			}
 		} break;
 		case WM_SIZE:
@@ -272,6 +281,7 @@ int LoadSettings()
     Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
     Defaults.CS.NumBase = BASE_HEX;
     Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
+    Defaults.CS.DumpAccess = SEARCH_ACCESS_ARRAY;
 /*results options
     Defaults.Results.ResWriteRate = 100;
     Defaults.Results.ResWriteRateId = MNU_RES_WRITE_100MS;

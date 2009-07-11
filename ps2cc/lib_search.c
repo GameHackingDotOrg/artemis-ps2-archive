@@ -10,7 +10,7 @@ Each comparison type actually compares to opposite. You start with every
 address as a possibly. Then find the bad results and turn them OFF in the list.
 SetBitflag may seem overly complicated, but you should be able to add your own
 options without really understanding it. Just do what I did. Every call to
-SetBitFlag in the main search loop is
+SetBitFlag in the main search loop is settings addreses OFF as results.
 *****************************************************************************/
 #include "ps2cc.h"
 
@@ -32,7 +32,7 @@ int CodeSearch(CODE_SEARCH_VARS Search)
         if(!(address % 0x100000)) { UpdateProgressBar(PBM_STEPIT, 0, 0); }
         if (!(GetBitFlag(RamInfo.Results, address/Search.Size))) { continue; }
         GetSearchValues(&NewValue, &OldValue, address, Search.Size, LITTLE_ENDIAN_SYS);
-//        if (!CodeSearchEx(address, NewValue, OldValue, Search)) { continue; }
+        if (!CodeSearchEx(address, NewValue, OldValue, Search)) { continue; }
         if (Search.TypeEx & EXCS_SIGNED) {
             NewValue = SignExtend64(NewValue, Search.Size);
             OldValue = SignExtend64(OldValue, Search.Size);
@@ -239,4 +239,165 @@ u64 GetSearchValues(u64 *NewVal, u64 *OldVal, int index, int size, int endian)
         }
     }
     return 0;
+}
+
+/****************************************************************************
+Set ExSearch Values based on ExSearch type
+*****************************************************************************/
+int SetExValues(CODE_SEARCH_VARS *SearchInfo, u64 exType, u64 exValue1, u64 exValue2)
+{
+    int bitnumber = 0;
+    switch (exType)
+    {
+        case EXCS_IGNORE_VALUE: { bitnumber = 4; } break;
+        case EXCS_IGNORE_IN_RANGE: { bitnumber = 5; } break;
+        case EXCS_IGNORE_NOT_RANGE: { bitnumber = 6; } break;
+        case EXCS_IGNORE_BYTE_VALUE: { bitnumber = 8; } break;
+        case EXCS_IGNORE_SHORT_VALUE: { bitnumber = 9; } break;
+        case EXCS_IGNORE_WORD_VALUE: { bitnumber = 10; } break;
+        case EXCS_IGNORE_DWORD_VALUE: { bitnumber = 11; } break;
+        case EXCS_IGNORE_BYTE_RANGE: { bitnumber = 12; } break;
+        case EXCS_IGNORE_SHORT_RANGE: { bitnumber = 13; } break;
+        case EXCS_IGNORE_WORD_RANGE: { bitnumber = 14; } break;
+        case EXCS_IGNORE_DWORD_RANGE: { bitnumber = 15; } break;
+        case EXCS_EXCLUDE_CONSEC: case EXCS_EXCLUDE_CONSEC_MATCH_VALUES:
+        case EXCS_INCLUDE_CONSEC: case EXCS_INCLUDE_CONSEC_MATCH_VALUES: { bitnumber = 16; } break;
+        case EXCS_INCLUDE_ADDRESS_RANGE: { bitnumber = 17; } break;
+    }
+    SearchInfo->ValuesEx1[bitnumber] = exValue1;
+    SearchInfo->ValuesEx2[bitnumber] = exValue2;
+    return 0;
+}
+/****************************************************************************
+Get ExSearch Value based on ExSearch type
+*****************************************************************************/
+u64 GetExSearchValue(u64 *exValues, u64 exType)
+{
+    switch (exType)
+    {
+        case EXCS_IGNORE_VALUE: { return exValues[4]; }
+        case EXCS_IGNORE_IN_RANGE: { return exValues[5]; }
+        case EXCS_IGNORE_NOT_RANGE: { return exValues[6]; }
+        case EXCS_IGNORE_BYTE_VALUE: { return exValues[8]; }
+        case EXCS_IGNORE_SHORT_VALUE: { return exValues[9]; }
+        case EXCS_IGNORE_WORD_VALUE: { return exValues[10]; }
+        case EXCS_IGNORE_DWORD_VALUE: { return exValues[11]; }
+        case EXCS_IGNORE_BYTE_RANGE: { return exValues[12]; }
+        case EXCS_IGNORE_SHORT_RANGE: { return exValues[13]; }
+        case EXCS_IGNORE_WORD_RANGE: { return exValues[14]; }
+        case EXCS_IGNORE_DWORD_RANGE: { return exValues[15]; }
+        case EXCS_EXCLUDE_CONSEC: case EXCS_EXCLUDE_CONSEC_MATCH_VALUES:
+        case EXCS_INCLUDE_CONSEC: case EXCS_INCLUDE_CONSEC_MATCH_VALUES: { return exValues[16]; }
+        case EXCS_INCLUDE_ADDRESS_RANGE: { return exValues[17]; }
+        default: return 0;
+    }
+}
+
+/****************************************************************************
+CodeSearchEx
+*****************************************************************************/
+int CodeSearchEx(u32 address, u64 NewValue, u64 OldValue, CODE_SEARCH_VARS Search)
+{
+    u64 tmpValue1, tmpValue2;
+    int i;
+    if (!(Search.TypeEx)) { return 1; }
+    if (Search.TypeEx & EXCS_INCLUDE_ADDRESS_RANGE) {
+        if (((address|RamInfo.NewResultsInfo.MapMemAddy) < GetExSearchValue(Search.ValuesEx1,EXCS_INCLUDE_ADDRESS_RANGE)) ||
+            ((address|RamInfo.NewResultsInfo.MapMemAddy) > GetExSearchValue(Search.ValuesEx2,EXCS_INCLUDE_ADDRESS_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_0) && (!(NewValue))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    if ((Search.TypeEx & EXCS_IGNORE_FF) &&  (NewValue == (0xFFFFFFFFFFFFFFFFLL >> 8*(8-Search.Size)))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    if ((Search.TypeEx & EXCS_IGNORE_VALUE) && (NewValue == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_VALUE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    if ((Search.TypeEx & EXCS_IGNORE_IN_RANGE) && (NewValue >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_IN_RANGE)) &&
+        (NewValue <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_IN_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    if ((Search.TypeEx & EXCS_IGNORE_NOT_RANGE) && ((NewValue <= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_NOT_RANGE)) ||
+        (NewValue >= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_NOT_RANGE)))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    GetSearchValues(&tmpValue1, &tmpValue2, (address & ~7), 8, LITTLE_ENDIAN_SYS);
+
+    if ((Search.TypeEx & EXCS_IGNORE_BYTE_VALUE)) {
+        for (i = 0; i < Search.Size; i++) {
+            if (ByteFromU64(NewValue, 7 - i) == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_BYTE_VALUE)) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+        }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_SHORT_VALUE)) {
+        switch(Search.Size)
+        {
+            case 1: case 2:
+            {
+                if (ShortFromU64(NewValue, (address & 7) / 2) == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_VALUE)) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+            } break;
+            case 4:
+            {
+                if ((ShortFromU64(NewValue, (address & 7) / 4) == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_VALUE)) ||
+                    (ShortFromU64(NewValue, ((address & 7) / 4) + 1)) == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_VALUE)) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+            } break;
+            case 8:
+            {
+                for (i = 0; i < 4; i++) {
+                    if (ShortFromU64(NewValue, i) == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_VALUE)) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+                }
+            } break;
+        }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_WORD_VALUE)) {
+        if (WordFromU64(NewValue, (address & 7) / 4) == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_WORD_VALUE)) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+        if (Search.Size > 4) {
+            if (WordFromU64(NewValue, ((address & 7) / 4)^1) == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_WORD_VALUE)) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+        }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_DWORD_VALUE)) {
+        if (NewValue == GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_DWORD_VALUE)) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_BYTE_RANGE)) {
+        for (i = 0; i < Search.Size; i++) {
+            if ((ByteFromU64(NewValue, 7 - i) >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_BYTE_RANGE)) &&
+                (ByteFromU64(NewValue, 7 - i) <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_BYTE_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+        }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_SHORT_RANGE)) {
+        switch(Search.Size)
+        {
+            case 1: case 2:
+            {
+                if ((ShortFromU64(NewValue, (address & 7) / 2) >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_RANGE)) &&
+                    (ShortFromU64(NewValue, (address & 7) / 2) <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_SHORT_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+            } break;
+            case 4:
+            {
+                if (((ShortFromU64(NewValue, (address & 7) / 4) >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_RANGE)) &&
+                    (ShortFromU64(NewValue, (address & 7) / 4) <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_SHORT_RANGE))) ||
+                    (((ShortFromU64(NewValue, ((address & 7) / 4) + 1)) >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_RANGE)) &&
+                     (ShortFromU64(NewValue, ((address & 7) / 4) + 1)) <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_SHORT_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+            } break;
+            case 8:
+            {
+                for (i = 0; i < 4; i++) {
+                    if ((ShortFromU64(NewValue, i) >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_SHORT_RANGE)) &&
+                        (ShortFromU64(NewValue, i) <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_SHORT_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+                }
+            } break;
+        }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_WORD_RANGE)) {
+        if ((WordFromU64(NewValue, (address & 7) / 4) >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_WORD_RANGE)) &&
+            (WordFromU64(NewValue, (address & 7) / 4) <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_WORD_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+        if (Search.Size > 4) {
+            if ((WordFromU64(NewValue, ((address & 7) / 4)^1) >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_WORD_RANGE)) &&
+                (WordFromU64(NewValue, ((address & 7) / 4)^1) <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_WORD_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+        }
+    }
+    if ((Search.TypeEx & EXCS_IGNORE_DWORD_RANGE)) {
+        if ((NewValue >= GetExSearchValue(Search.ValuesEx1,EXCS_IGNORE_DWORD_RANGE)) &&
+            (NewValue <= GetExSearchValue(Search.ValuesEx2,EXCS_IGNORE_DWORD_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    }
+
+    if ((Search.TypeEx & EXCS_EXCLUDE_UPPER16) && (Search.Size == 2)) {
+        if ((address % 4) == 0) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    }
+    if ((Search.TypeEx & EXCS_EXCLUDE_LOWER16) && (Search.Size == 2)) {
+        if (address % 4) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+    }
+
+    if ((Search.TypeEx & EXCS_OR_EQUAL) && (NewValue == OldValue)) { return 0; }
+    return 1;
 }

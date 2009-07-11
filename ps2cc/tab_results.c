@@ -227,7 +227,11 @@ int ResFormatString(char *tmpstring, int outfmt, int numbytes)
 {
     switch (outfmt) {
         case MNU_RES_SHOW_HEX: case MNU_RES_EXPORT_HEX:
-        { sprintf(tmpstring,"%%0%uI64X", numbytes*2); } break;
+        {
+			if (numbytes <= 4) { sprintf(tmpstring,"%%0%uX", numbytes*2); }
+			else { strcpy(tmpstring, "%16I64X"); }
+//				sprintf(tmpstring,"%%0%uI64X", numbytes*2); //doesn't like me
+		} break;
         MessageBox(NULL, tmpstring, "Debug", 0);
         case MNU_RES_SHOW_DECU: case MNU_RES_EXPORT_DECU:
         {

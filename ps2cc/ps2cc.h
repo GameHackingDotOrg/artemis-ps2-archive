@@ -69,7 +69,7 @@ Global Constants
 #define EXCS_IGNORE_VALUE 0x10
 #define EXCS_IGNORE_IN_RANGE 0x20
 #define EXCS_IGNORE_NOT_RANGE 0x40
-#define EXCS_IGNORE_N64_POINTERS 0x80
+#define EXCS_IGNORE_N64_POINTERS 0x80 //NA but don't use the value for anything else
 #define EXCS_IGNORE_BYTE_VALUE 0x100
 #define EXCS_IGNORE_SHORT_VALUE 0x200
 #define EXCS_IGNORE_WORD_VALUE 0x400
@@ -90,7 +90,7 @@ Global Constants
 #define BASE_DEC 0
 #define BASE_HEX 1
 #define BASE_FLOAT 2
-#define BASE_ASCII 0x100 //for certain custom window/control printing functions
+//#define BASE_ASCII 0x100 //for certain custom window/control printing functions
 
 //Endian
 #define LITTLE_ENDIAN_SYS 0
@@ -139,11 +139,19 @@ typedef struct _RAM_AND_RES_DATA {
     CODE_SEARCH_RESULTS_INFO NewResultsInfo;
 } RAM_AND_RES_DATA;
 
+//This is for tracking an editable listview the way I do
+typedef struct _LISTVIEW_ITEM_EDIT_INFO {
+    BOOL Status;
+    int iItem;
+    int iSubItem;
+} LISTVIEW_ITEM_EDIT_INFO;
+
 //Sub-Structures for settings (typically 1 per tab)
 typedef struct _CODE_SEARCH_SETTINGS {
     char DumpDir[MAX_PATH];
     int NumBase;
     int NumBaseId;
+    int DumpAccess;
 } CODE_SEARCH_SETTINGS;
 
 typedef struct _SEARCH_RESULTS_SETTINGS {
@@ -207,6 +215,7 @@ int UpdateProgressBar(unsigned int Message, WPARAM wParam, LPARAM lParam);
 //lib_api
 LRESULT CALLBACK HexEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int ComboAddItem(HWND hCombo, const char* combostring, DWORD value);
+int ComboSelFromData (HWND hCombo, u32 DataValue);
 int isHexWindow(HWND txtbox);
 u64 GetHexWindow(HWND txtbox);
 int SetHexWindow(HWND txtbox, u64 value);
@@ -268,10 +277,16 @@ int TestConnect();
 //lib_search
 int CodeSearch(CODE_SEARCH_VARS Search);
 u64 GetSearchValues(u64 *NewVal, u64 *OldVal, int index, int size, int endian);
+int SetExValues(CODE_SEARCH_VARS *SearchInfo, u64 exType, u64 exValue1, u64 exValue2);
+u64 GetExSearchValue(u64 *exValues, u64 exType);
+int CodeSearchEx(u32 address, u64 NewValue, u64 OldValue, CODE_SEARCH_VARS Search);
 
 //tab_search
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ExValueHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+int ClearDumpsFolder();
 
 //tab_results
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);

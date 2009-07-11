@@ -21,6 +21,21 @@ int ComboAddItem(HWND hCombo, const char* combostring, DWORD value)
 }
 
 /****************************************************************************
+ComboSelFromData - Set selected combo box item based on item data
+*****************************************************************************/
+int ComboSelFromData (HWND hCombo, u32 DataValue)
+{
+    int i;
+    int NumItems = SendMessage(hCombo, CB_GETCOUNT, 0, 0);
+    for (i = 0; i < NumItems; i++) {
+        if (SendMessage(hCombo, CB_GETITEMDATA, i, 0) == DataValue) {
+            SendMessage(hCombo,CB_SETCURSEL,i,0); return i;
+        }
+    }
+    return -1;
+}
+
+/****************************************************************************
 Hex editbox procedure - forces a textbox to hex input
 -check length of current text on maxlength change???
 *****************************************************************************/

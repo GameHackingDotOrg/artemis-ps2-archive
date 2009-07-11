@@ -10,8 +10,12 @@ the interface to start the search.
 #include "ps2cc_gui.h"
 
 CODE_SEARCH_VARS Search;
+LISTVIEW_ITEM_EDIT_INFO lvExEditedItem;
 
 WNDPROC wpSearchValueBoxProc;
+WNDPROC wpExSearchListProc;
+WNDPROC wpExValueProc;
+
 
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -19,12 +23,14 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
     HWND hwndCompareTo = GetDlgItem(hwnd, COMPARE_TO_CMB);
     HWND hwndSearchType = GetDlgItem(hwnd, SEARCH_TYPE_CMB);
     HWND hwndSearchArea = GetDlgItem(hwnd, SEARCH_AREA_CMB);
-//    HWND hwndExSearchList = GetDlgItem(hwnd, LSV_CS_EXSEARCH);
+    HWND hwndExSearchList = GetDlgItem(hwnd, EX_SEARCH_LSV);
     HWND hwndSearchValue1 = GetDlgItem(hwnd, SEARCH_VALUE1_TXT);
     HWND hwndSearchValue2 = GetDlgItem(hwnd, SEARCH_VALUE2_TXT);
     HWND hwndSearchAreaLow = GetDlgItem(hwnd, SEARCH_AREA_LOW_TXT);
     HWND hwndSearchAreaHigh = GetDlgItem(hwnd, SEARCH_AREA_HIGH_TXT);
     HWND hwndProgress = GetDlgItem(hwnd, DUMPSTATE_PRB);
+    HWND hwndSignedSearchChk = GetDlgItem(hwnd, SEARCH_SIGNED_CHK);
+    HWND hwndExValueTxt = GetDlgItem(hwnd, EX_VALUE_TXT);
 	switch(message)
 	{
 		case WM_INITDIALOG:
@@ -36,6 +42,11 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 		    wpSearchValueBoxProc = (WNDPROC)GetWindowLongPtr (hwndSearchValue1, GWLP_WNDPROC);
 		    SetWindowLongPtr (hwndSearchValue1, GWLP_WNDPROC, (LONG_PTR)SearchValueBoxHandler);
 		    SetWindowLongPtr (hwndSearchValue2, GWLP_WNDPROC, (LONG_PTR)SearchValueBoxHandler);
+
+		    wpExSearchListProc = (WNDPROC)GetWindowLongPtr (hwndExSearchList, GWLP_WNDPROC);
+		    SetWindowLongPtr (hwndExSearchList, GWLP_WNDPROC, (LONG_PTR)ExSearchListHandler);
+		    wpExValueProc = (WNDPROC)GetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC);
+		    SetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC, (LONG_PTR)ExValueHandler);
 
             //Search Sizes
             SendMessage(hwndSearchSize,CB_RESETCONTENT,0,0);
@@ -57,7 +68,6 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
             ComboAddItem(hwndSearchArea, "Custom" , 4);
             SendMessage(hwndSearchAreaLow, EM_SETLIMITTEXT, 8, 0);
             SendMessage(hwndSearchAreaHigh, EM_SETLIMITTEXT, 8, 0);
-            //unfinished
 
             //Search Types
             SendMessage(hwndSearchType,CB_RESETCONTENT,0,0);
@@ -87,7 +97,54 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
             ComboAddItem(hwndSearchType, "Active Bits (Any)" , SEARCH_BITS_ANY);
             ComboAddItem(hwndSearchType, "Active Bits (All)" , SEARCH_BITS_ALL);
 
-            //To Do: extended search options (signed, filter results, etc)
+            //extended search options
+            SendMessage(hwndExSearchList,LVM_DELETEALLITEMS,0,0);
+            SendMessage(hwndExSearchList,LVM_SETEXTENDEDLISTVIEWSTYLE,0,LVS_EX_FULLROWSELECT|LVS_EX_CHECKBOXES|LVS_EX_GRIDLINES|LVS_EX_LABELTIP);
+            ListViewAddCol(hwndExSearchList, "Option", 0, 0x230);
+            ListViewAddCol(hwndExSearchList, "Value1/Low", 1, 0x9A);
+            ListViewAddCol(hwndExSearchList, "Value2/High", 2, 0x9A);
+            ListViewAddCol(hwndExSearchList, "", 3, 0);
+            char ExVal[20];
+            sprintf(ExVal, "%X", EXCS_IGNORE_0);
+            ListViewAddRow(hwndExSearchList,4,"Ignore results that are 0", "-", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_FF);
+            ListViewAddRow(hwndExSearchList,4,"Ignore results that are FF,FFFF,etc.", "-", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_VALUE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore results that are <value>", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_IN_RANGE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore results that are in a specified value range", "0", "0", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_NOT_RANGE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore results that are NOT in a specified value range", "0", "0", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_BYTE_VALUE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 8-Bit value", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_SHORT_VALUE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 16-Bit (aligned) value", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_WORD_VALUE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 32-Bit (aligned) value", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_DWORD_VALUE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 64-Bit (aligned) value", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_BYTE_RANGE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 8-Bit range", "0", "0", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_SHORT_RANGE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 16-Bit (aligned) range", "0", "0", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_WORD_RANGE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 32-Bit (aligned) range", "0", "0", ExVal);
+            sprintf(ExVal, "%X", EXCS_IGNORE_DWORD_RANGE);
+            ListViewAddRow(hwndExSearchList,4,"Ignore any result that's part of a specified 64-Bit (aligned) range", "0", "0", ExVal);
+            sprintf(ExVal, "%X", EXCS_EXCLUDE_CONSEC);
+            ListViewAddRow(hwndExSearchList,4,"Exclude results with # consecutive addresses", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_EXCLUDE_CONSEC_MATCH_VALUES);
+            ListViewAddRow(hwndExSearchList,4,"Exclude results with # consecutive addresses and matching values", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_INCLUDE_CONSEC);
+            ListViewAddRow(hwndExSearchList,4,"Include Only results with # consecutive addresses", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_INCLUDE_CONSEC_MATCH_VALUES);
+            ListViewAddRow(hwndExSearchList,4,"Include Only results with # consecutive addresses and matching values", "0", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_INCLUDE_ADDRESS_RANGE);
+            ListViewAddRow(hwndExSearchList,4,"Include Only results within specified address range", "0", "0", ExVal);
+            sprintf(ExVal, "%X", EXCS_EXCLUDE_UPPER16);
+            ListViewAddRow(hwndExSearchList,4,"Exclude 16-bit Upper Address (0,4,8,C) results", "-", "-", ExVal);
+            sprintf(ExVal, "%X", EXCS_EXCLUDE_LOWER16);
+            ListViewAddRow(hwndExSearchList,4,"Exclude 16-bit Lower Address (2,6,A,E) results", "-", "-", ExVal);
 
             //Set starting positions for the dropdown lists (last)
             SendMessage(hwndSearchSize,CB_SETCURSEL,2,0);
@@ -224,6 +281,43 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         } break;
                     }
                 } break;
+                //quick search buttons
+			    case QS_INIT_CMD:
+			    {
+                    ComboSelFromData(hwndSearchType, SEARCH_INIT);
+			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
+			        SendMessage(hwnd, WM_COMMAND, DO_SEARCH_CMD, 0);
+			    } break;
+			    case QS_EQUAL_CMD:
+			    {
+                    ComboSelFromData(hwndSearchType, SEARCH_EQUAL);
+			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
+			        SendMessage(hwnd, WM_COMMAND, DO_SEARCH_CMD, 0);
+			    } break;
+			    case QS_NEQUAL_CMD:
+			    {
+                    ComboSelFromData(hwndSearchType, SEARCH_NEQUAL);
+			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
+			        SendMessage(hwnd, WM_COMMAND, DO_SEARCH_CMD, 0);
+			    } break;
+			    case QS_GREATER_CMD:
+			    {
+                    ComboSelFromData(hwndSearchType, SEARCH_GREATER);
+			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
+			        SendMessage(hwnd, WM_COMMAND, DO_SEARCH_CMD, 0);
+			    } break;
+			    case QS_LESS_CMD:
+			    {
+                    ComboSelFromData(hwndSearchType, SEARCH_LESS);
+			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
+			        SendMessage(hwnd, WM_COMMAND, DO_SEARCH_CMD, 0);
+			    } break;
+			    case QS_KNOWN_CMD:
+			    {
+                    ComboSelFromData(hwndSearchType, SEARCH_KNOWN);
+			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
+				} break;
+
                 case TAKE_DUMP_CMD: //Dump button
                 {
 					//get start and end address
@@ -257,6 +351,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         {
                             Search.CompareTo = 0;
                             Search.Count = 1;
+                            ClearDumpsFolder();
                         } break;
                         case SEARCH_KNOWN_WILD:
                         {
@@ -308,10 +403,19 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 						} break;
                     }
                     if (Search.Count > MAX_SEARCHES) { MessageBox(NULL,"Holy shit! 100 searches? If you didn't find the code by now, give it up.","Error",MB_OK); return 0; }
+                    //Signed Search check
+                    if (SendMessage(hwndSignedSearchChk,BM_GETCHECK,0,0) == BST_CHECKED) { Search.TypeEx |= EXCS_SIGNED; }
+                    //Grab EX Search options
+                    int exCount = SendMessage(hwndExSearchList, LVM_GETITEMCOUNT, 0, 0);
+                    for (i = 0; i < exCount; i++) {
+                        if (ListView_GetCheckState(hwndExSearchList, i)) {
+                            Search.TypeEx |= ListViewGetHex(hwndExSearchList, i, 3);
+                            SetExValues(&Search, ListViewGetHex(hwndExSearchList, i, 3), ListViewGetHex(hwndExSearchList, i, 1), ListViewGetHex(hwndExSearchList, i, 2));
+                        }
+                    }
 
-
-                    char sdFileName[MAX_PATH];
                     //Load previous results if this continuing a search.
+                    char sdFileName[MAX_PATH];
                     if (Search.CompareTo) {
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.CompareTo);
                         if (!(LoadStruct(&RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), sdFileName))) { FreeRamInfo(); return 0; }
@@ -365,10 +469,24 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         FreeRamInfo(); return 0;
                     }
                     //load the dump(s) for compare
-                    RamInfo.Access = SEARCH_ACCESS_ARRAY;
-                    if (!(LoadFile(&RamInfo.NewRAM, RamInfo.NewResultsInfo.dmpFileName, 0, NULL, FALSE))) { FreeRamInfo(); return 0; }
-                    if (Search.CompareTo) {
-						if (!LoadFile(&RamInfo.OldRAM, RamInfo.OldResultsInfo.dmpFileName, 0, NULL, FALSE)) { FreeRamInfo(); return 0; }
+                    RamInfo.Access = Settings.CS.DumpAccess;
+                    if (RamInfo.Access == SEARCH_ACCESS_ARRAY) {
+						if (!(LoadFile(&RamInfo.NewRAM, RamInfo.NewResultsInfo.dmpFileName, 0, NULL, FALSE))) { FreeRamInfo(); return 0; }
+                    	if (Search.CompareTo) {
+							if (!LoadFile(&RamInfo.OldRAM, RamInfo.OldResultsInfo.dmpFileName, 0, NULL, FALSE)) { FreeRamInfo(); return 0; }
+                    	}
+					} else {
+						//only loading file handles
+                        RamInfo.NewFile = fopen(RamInfo.NewResultsInfo.dmpFileName, "rb");
+                        if (!(RamInfo.NewFile)) {
+                            sprintf(ErrTxt, "Unable to open ram dump (CMD_CS_SEARCH,2) -- Error %u", GetLastError());
+                            MessageBox(NULL,ErrTxt,"Error",MB_OK); return 0;
+                        }
+                        RamInfo.OldFile = fopen(RamInfo.OldResultsInfo.dmpFileName, "rb");
+                        if ((!RamInfo.OldFile) && Search.CompareTo) {
+							sprintf(ErrTxt, "Unable to open previous ram dump (CMD_CS_SEARCH,3) -- Error %u", GetLastError());
+                            MessageBox(NULL,ErrTxt,"Error",MB_OK); return 0;
+                        }
                     }
                     if ((RamInfo.OldResultsInfo.DumpSize > 0) && (RamInfo.OldResultsInfo.DumpSize != RamInfo.NewResultsInfo.DumpSize)) {
                         MessageBox(NULL, "RAM dumps don't match in size. Are you trying to compare files of differnet size?", "Error", MB_OK);
@@ -388,6 +506,78 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 					UpdateProgressBar(PBM_SETPOS, 0, 0);
 //					UpdateStatusBar("Idle", 0, 0);
 				} break;
+				//Prep and show edit box on extended search options listview
+			    case LSV_CS_BEGINEDIT:
+			    {
+			        if (lvExEditedItem.Status) { MessageBox(NULL,"Already editing. WTF? (LSV_CS_BEGINEDIT)","Error",0); break; }
+			        if ((HIWORD(lParam) < 1) || (HIWORD(lParam) > 2)) { break; }
+			        char txtInput[20];
+			        lvExEditedItem.iItem = LOWORD(lParam);
+			        lvExEditedItem.iSubItem = HIWORD(lParam);
+			        RECT lvEditRect; memset(&lvEditRect,0,sizeof(RECT));
+			        lvEditRect.top = lvExEditedItem.iSubItem;
+			        lvEditRect.left = LVIR_LABEL;
+			        SendMessage(hwndExSearchList, LVM_GETSUBITEMRECT, lvExEditedItem.iItem, (LPARAM)&lvEditRect);
+			        Search.Size = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
+			        u32 ExType = ListViewGetHex(hwndExSearchList, lvExEditedItem.iItem, 3);
+			        switch(ExType)
+			        {
+                        case EXCS_IGNORE_VALUE: case EXCS_IGNORE_IN_RANGE:
+                        {
+                            SendMessage(hwndExValueTxt, EM_SETLIMITTEXT, Search.Size*2, 0);
+                        } break;
+                        case EXCS_IGNORE_BYTE_VALUE: case EXCS_IGNORE_BYTE_RANGE:
+                        {
+                            SendMessage(hwndExValueTxt, EM_SETLIMITTEXT, 2, 0);
+                        } break;
+                        case EXCS_IGNORE_SHORT_VALUE: case EXCS_IGNORE_SHORT_RANGE:
+                        {
+                            SendMessage(hwndExValueTxt, EM_SETLIMITTEXT, 4, 0);
+                        } break;
+                        case EXCS_IGNORE_WORD_VALUE: case EXCS_IGNORE_WORD_RANGE:
+                        case EXCS_INCLUDE_ADDRESS_RANGE:
+                        {
+                            SendMessage(hwndExValueTxt, EM_SETLIMITTEXT, 8, 0);
+                        } break;
+                        case EXCS_IGNORE_DWORD_VALUE: case EXCS_IGNORE_DWORD_RANGE:
+                        {
+                            SendMessage(hwndExValueTxt, EM_SETLIMITTEXT, 16, 0);
+                        } break;
+                        case EXCS_EXCLUDE_CONSEC: case EXCS_EXCLUDE_CONSEC_MATCH_VALUES:
+                        case EXCS_INCLUDE_CONSEC: case EXCS_INCLUDE_CONSEC_MATCH_VALUES:
+                        {
+                            if (lvExEditedItem.iSubItem == 2) { return 0; }
+                            SendMessage(hwndExValueTxt, EM_SETLIMITTEXT, 4, 0);
+                        } break;
+			        }
+			        ListViewGetText(hwndExSearchList, lvExEditedItem.iItem, lvExEditedItem.iSubItem, txtInput, sizeof(txtInput));
+			        SetWindowText(hwndExValueTxt,txtInput);
+			        WINDOWPLACEMENT lvPlace; memset(&lvPlace,0,sizeof(WINDOWPLACEMENT));
+			        lvPlace.length = sizeof(WINDOWPLACEMENT);
+			        GetWindowPlacement(hwndExSearchList, &lvPlace);
+			        POINT lvPos;
+			        lvPos.x = lvPlace.rcNormalPosition.left;
+			        lvPos.y = lvPlace.rcNormalPosition.top;
+			        SetWindowPos(hwndExValueTxt,HWND_TOP,lvPos.x+lvEditRect.left+3,lvPos.y+lvEditRect.top+1,(lvEditRect.right-lvEditRect.left),(lvEditRect.bottom-lvEditRect.top)+1,SWP_SHOWWINDOW);
+			        SetFocus(hwndExValueTxt);
+			        SendMessage(hwndExValueTxt, EM_SETSEL, 0, -1);
+			        lvExEditedItem.Status = 1;
+			    } break;
+			    case LSV_CS_ENDEDIT:
+                {
+                    if ((!lvExEditedItem.Status) || (!lParam)) {
+                        lvExEditedItem.Status = 0;
+                        SetWindowPos(hwndExValueTxt,HWND_BOTTOM,0,0,0,0,SWP_HIDEWINDOW);
+                        SetFocus(hwndExSearchList); break;
+                    }
+			        char txtValue[20];
+			        if (isHexWindow(hwndExValueTxt)) { GetWindowText(hwndExValueTxt, txtValue, sizeof(txtValue)); }
+			        else { strcpy(txtValue, "0"); }
+			        ListViewSetRow(hwndExSearchList, lvExEditedItem.iItem, lvExEditedItem.iSubItem, 1, txtValue);
+                    lvExEditedItem.Status = 0;
+                    SetWindowPos(hwndExValueTxt,HWND_BOTTOM,0,0,0,0,SWP_HIDEWINDOW);
+                    SetFocus(hwndExSearchList);
+			    } break;
 			}
 		} break;
 
@@ -397,6 +587,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 
 /****************************************************************************
 Search Value box handler
+-Makes sure people only do valid things in the search value boxes.
 *****************************************************************************/
 LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -433,4 +624,109 @@ LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, 
         }
    }
    return CallWindowProc (wpSearchValueBoxProc, hwnd, message, wParam, lParam);
+}
+
+/****************************************************************************
+Extended Search Options ListView handler
+-Manipulates the Extended Search options listview control as needed
+*****************************************************************************/
+LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+        case WM_VSCROLL: case WM_MOUSEWHEEL:
+        {
+            if (lvExEditedItem.Status) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
+        } break;
+        case WM_LBUTTONUP:
+        {
+            int iSelected = ListViewHitTst(hwnd, GetMessagePos(), -1);
+            if (iSelected < 0) { break; }
+            if (!ListView_GetCheckState(hwnd, iSelected)) { break; }
+            if (!(ListViewGetHex(hwnd, iSelected, 3) & (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES))) { break; }
+            int i, x = 0;
+            int exCount = SendMessage(hwnd, LVM_GETITEMCOUNT, 0, 0);
+            for (i = 0; i < exCount; i++) {
+                if ((ListView_GetCheckState(hwnd, i)) && (ListViewGetHex(hwnd, i, 3) &
+                    (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES))) {
+                        x++;
+                }
+            }
+            if (x > 1) {
+                ListView_SetCheckState(hwnd, iSelected, FALSE);
+                MessageBox(NULL, "Only 1 Consecutive/Matching Results option can be used at a time.", "Error", MB_OK);
+            }
+        } break;
+        case WM_LBUTTONDBLCLK:
+        {
+            if (lvExEditedItem.Status) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
+            int iSelected = SendMessage(hwnd, LVM_GETSELECTIONMARK, 0, 0);
+            if (iSelected < 0) { break; }
+            int iSubItem = ListViewHitTst(hwnd, GetMessagePos(), iSelected);
+            u32 ExType = ListViewGetHex(hwnd, iSelected, 3);
+            if (ExType & (EXCS_SIGNED|EXCS_OR_EQUAL|EXCS_IGNORE_0|EXCS_IGNORE_FF|EXCS_IGNORE_N64_POINTERS)) { break; }
+            if ((ExType & (EXCS_IGNORE_VALUE|EXCS_IGNORE_BYTE_VALUE|EXCS_IGNORE_SHORT_VALUE|EXCS_IGNORE_WORD_VALUE|EXCS_IGNORE_DWORD_VALUE|EXCS_EXCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) && (iSubItem == 2)) { break; }
+            SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_BEGINEDIT, MAKELPARAM(iSelected, iSubItem));
+        } return 0;
+        case WM_NOTIFY:
+        {
+                if (((NMHDR*)lParam)->code == HDN_BEGINTRACKW) { return TRUE; }
+                if (((NMHDR*)lParam)->code == HDN_BEGINTRACKA) { return TRUE; }
+        } break;
+    }
+	if (wpExSearchListProc) { return CallWindowProc (wpExSearchListProc, hwnd, message, wParam, lParam); }
+	else { return DefWindowProc (hwnd, message, wParam, lParam); }
+}
+
+/****************************************************************************
+Extended Search Options
+-Listview editbox handler. This is an edit box that is placed over a listview
+cell when the user clicks on it for editing.
+*****************************************************************************/
+LRESULT CALLBACK ExValueHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+        case WM_CHAR:
+        {
+            if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace
+            if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
+            //should I include VK_RETURN here? Was there a reason I didn't?
+            wParam = FilterHexChar(wParam);
+        } break;
+        case WM_KILLFOCUS:
+        {
+            SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0);
+        } return 0;
+        case WM_KEYDOWN:
+        {
+            if (wParam == VK_RETURN) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 1); }
+            if (wParam == VK_ESCAPE) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
+            if (wParam == VK_F3) {
+                if (lvExEditedItem.iSubItem == 1) {
+                    SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0);
+                    SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_BEGINEDIT, MAKELPARAM(lvExEditedItem.iItem, lvExEditedItem.iSubItem + 1));
+                }
+            }
+        } break;
+    }
+	if (wpExValueProc) { return CallWindowProc (wpExValueProc, hwnd, message, wParam, lParam); }
+	else { return DefWindowProc (hwnd, message, wParam, lParam); }
+}
+
+/****************************************************************************
+Clear Dump Folder
+-This makes a silent attempt at clearing search-related files (dump#.raw, search#.bin)
+*****************************************************************************/
+int ClearDumpsFolder()
+{
+	int i;
+	char tmpfilename[MAX_PATH];
+	for (i = 1; i < MAX_SEARCHES; i++) {
+		sprintf(tmpfilename, "%sdump%u.raw", Settings.CS.DumpDir, i);
+		if (remove(tmpfilename)) { return 0; }
+		sprintf(tmpfilename, "%ssearch%u.bin", Settings.CS.DumpDir, i);
+		if (remove(tmpfilename)) { return 0; }
+	}
+	return 1;
 }
