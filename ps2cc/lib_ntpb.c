@@ -358,7 +358,7 @@ int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end)
 	//init progress bar
 	UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, dump_size/8192));
 	UpdateProgressBar(PBM_SETSTEP, 1, 0);
-	UpdateProgressBar(PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
+//	UpdateProgressBar(PBM_SETBARCOLOR, 0, RGB(23, 219, 38));
 	UpdateStatusBar("Dumping Memory...", 0, 0);
 
 	// receive dump

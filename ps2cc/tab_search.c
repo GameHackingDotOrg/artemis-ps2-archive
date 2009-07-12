@@ -31,10 +31,19 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
     HWND hwndProgress = GetDlgItem(hwnd, DUMPSTATE_PRB);
     HWND hwndSignedSearchChk = GetDlgItem(hwnd, SEARCH_SIGNED_CHK);
     HWND hwndExValueTxt = GetDlgItem(hwnd, EX_VALUE_TXT);
+    HWND hwndSearchHistory = GetDlgItem(hwnd, SEARCH_HISTORY_TXT);
 	switch(message)
 	{
 		case WM_INITDIALOG:
         {
+            //Set fonts
+/*
+            SendMessage(hwndSearchValue1, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
+            SendMessage(hwndSearchValue2, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
+            SendMessage(hwndSearchAreaLow, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
+            SendMessage(hwndSearchAreaHigh, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
+            SendMessage(hwndExValueTxt, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
+*/
 			//subclassing for controls (value box handler etc)
 		    wpHexEditBoxes = (WNDPROC)GetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC);
 		    SetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
@@ -161,7 +170,10 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
         {
 			switch(LOWORD(wParam))
             {
-                case SEARCH_AREA_CMB: //handle user interaction with the Search Area combo box
+				/************************************************************
+				Search Area Combo Box
+				*************************************************************/
+                case SEARCH_AREA_CMB:
                 {
                     switch(HIWORD(wParam))
                     {
@@ -208,7 +220,10 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         } break;
                     }
                 } break;
-                case SEARCH_SIZE_CMB: //handle user interaction with the Search Size combo box
+				/************************************************************
+				Search Size Combo Box
+				*************************************************************/
+                case SEARCH_SIZE_CMB:
                 {
                     switch(HIWORD(wParam))
                     {
@@ -236,7 +251,10 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         } break;
                     }
                 } break;
-                case SEARCH_TYPE_CMB: //handle user interaction with the Search Type combo box
+				/************************************************************
+				Search Type Combo Box
+				*************************************************************/
+                case SEARCH_TYPE_CMB:
                 {
                     switch(HIWORD(wParam))
                     {
@@ -281,7 +299,9 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         } break;
                     }
                 } break;
-                //quick search buttons
+				/************************************************************
+                Quick search buttons
+				*************************************************************/
 			    case QS_INIT_CMD:
 			    {
                     ComboSelFromData(hwndSearchType, SEARCH_INIT);
@@ -317,8 +337,10 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     ComboSelFromData(hwndSearchType, SEARCH_KNOWN);
 			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
 				} break;
-
-                case TAKE_DUMP_CMD: //Dump button
+				/************************************************************
+				Dump button
+				*************************************************************/
+                case TAKE_DUMP_CMD:
                 {
 					//get start and end address
 					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
@@ -330,9 +352,12 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     if (!(DumpRAM(dmpFileName, DumpAreaLow, DumpAreaHigh))) {
 						MessageBox(NULL, ErrTxt, "Error", MB_OK); break;
 					}
-					MessageBox(NULL, "Did it work? You shouldn't see this until dumping is complete.", "Debug", MB_OK);
+//					MessageBox(NULL, "Did it work? You shouldn't see this until dumping is complete.", "", MB_OK);
 				} break;
-			    case DO_SEARCH_CMD: //Search button click
+				/************************************************************
+				Search button click AND EX Filter
+				*************************************************************/
+			    case DO_SEARCH_CMD: case EX_FILTER_CMD:
 			    {
                     memset(&Search,0,sizeof(CODE_SEARCH_VARS));
                     FreeRamInfo();
@@ -340,6 +365,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     Search.Type = SendMessage(hwndSearchType,CB_GETITEMDATA,SendMessage(hwndSearchType,CB_GETCURSEL,0,0),0);
                     Search.CompareTo = SendMessage(hwndCompareTo,CB_GETCURSEL,0,0);
                     Search.Count = SendMessage(hwndCompareTo,CB_GETCOUNT,0,0);
+                    if (LOWORD(wParam) == EX_FILTER_CMD) { Search.Type = SEARCH_EQUAL; }
                     if (Search.CompareTo == 0) { Search.Count = 1; }
                     int i;
                     char txtValue[17];
@@ -351,7 +377,10 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         {
                             Search.CompareTo = 0;
                             Search.Count = 1;
+#if (SNAKE_DEBUG != 1)
                             ClearDumpsFolder();
+#endif
+                            SetWindowText(hwndSearchHistory, "");
                         } break;
                         case SEARCH_KNOWN_WILD:
                         {
@@ -414,7 +443,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         }
                     }
 
-                    //Load previous results if this continuing a search.
+                    //Load previous results if continuing a search.
                     char sdFileName[MAX_PATH];
                     if (Search.CompareTo) {
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.CompareTo);
@@ -429,15 +458,24 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
 					u32 DumpAreaHigh = GetHexWindow(hwndSearchAreaHigh);
 					//dump ram
+					if (LOWORD(wParam) == EX_FILTER_CMD) {
+						memcpy(&RamInfo.NewResultsInfo, &RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO));
+                    	sprintf(RamInfo.NewResultsInfo.dmpFileName, "%sdump%u.raw", Settings.CS.DumpDir, Search.Count);
+                    	RamInfo.NewResultsInfo.ResCount = 0;
+//                    	MessageBox(NULL, RamInfo.NewResultsInfo.dmpFileName, "Debug", MB_OK); FreeRamInfo(); return 0;
+						if (!CopyBinFile(RamInfo.OldResultsInfo.dmpFileName, RamInfo.NewResultsInfo.dmpFileName)) { FreeRamInfo(); return 0; }
+					} else {
+#if (SNAKE_DEBUG != 1)
+                    	if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, DumpAreaHigh))) {
+							MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
+						}
+#endif
 
-                    if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, DumpAreaHigh))) {
-						MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
+                    	RamInfo.NewResultsInfo.DumpSize = DumpAreaHigh - DumpAreaLow;
+						//keep track of the memory address the file really starts on for displaying results
+                    	RamInfo.NewResultsInfo.MapFileAddy = 0;
+                    	RamInfo.NewResultsInfo.MapMemAddy = DumpAreaLow;
 					}
-
-                    RamInfo.NewResultsInfo.DumpSize = DumpAreaHigh - DumpAreaLow;
-					//keep track of the memory address the file really starts on for displaying results
-                    RamInfo.NewResultsInfo.MapFileAddy = 0;
-                    RamInfo.NewResultsInfo.MapMemAddy = DumpAreaLow;
                     //if new search, setup a fresh results file
                     if (!Search.CompareTo) {
                         Search.Count = 1;
@@ -450,6 +488,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                             MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
                         }
                         memset(RamInfo.Results, 0xFF, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8));
+                        RamInfo.NewResultsInfo.ResCount = RamInfo.NewResultsInfo.DumpSize/Search.Size;
                         if (!(SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo))) {
 							FreeRamInfo(); return 0;
 						}
@@ -460,12 +499,13 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     SendMessage(hwndCompareTo,CB_SETCURSEL,Search.Count,0);
                     //take care of a couple non-comparision search types
                     if (Search.Type == SEARCH_INIT) {
-//                        SetDecWindowU(hResCount, RamInfo.NewResultsInfo.DumpSize/Search.Size);
+						UpdateSearchHistory(LOWORD(wParam));
                         FreeRamInfo(); return 0;
                     }
                     if (Search.Type == SEARCH_FORGOT) {
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                         SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
+                        UpdateSearchHistory(LOWORD(wParam));
                         FreeRamInfo(); return 0;
                     }
                     //load the dump(s) for compare
@@ -496,17 +536,23 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, (RamInfo.NewResultsInfo.DumpSize/0x100000)+((RamInfo.NewResultsInfo.DumpSize % 0x100000) ? 1:0)));
                     UpdateProgressBar(PBM_SETSTEP, 1, 0);
                     UpdateStatusBar("Searching...", 0, 0);
-                    CodeSearch(Search);
+//					if (LOWORD(wParam) == EX_FILTER_CMD) {
+                  		CodeSearch(Search);
+//					} else { FilterSearchEX(Search); }
+
                     sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
                     sprintf(sdFileName, "%d Results", RamInfo.NewResultsInfo.ResCount);
                     UpdateStatusBar(sdFileName, 0,0);
+                    UpdateSearchHistory(LOWORD(wParam));
 //                    SetDecWindowU(hResCount, RamInfo.NewResultsInfo.ResCount);
                     FreeRamInfo();
 					UpdateProgressBar(PBM_SETPOS, 0, 0);
 //					UpdateStatusBar("Idle", 0, 0);
 				} break;
-				//Prep and show edit box on extended search options listview
+				/************************************************************
+				Prep and show edit box on extended search options listview
+				*************************************************************/
 			    case LSV_CS_BEGINEDIT:
 			    {
 			        if (lvExEditedItem.Status) { MessageBox(NULL,"Already editing. WTF? (LSV_CS_BEGINEDIT)","Error",0); break; }
@@ -578,6 +624,39 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     SetWindowPos(hwndExValueTxt,HWND_BOTTOM,0,0,0,0,SWP_HIDEWINDOW);
                     SetFocus(hwndExSearchList);
 			    } break;
+			    case MNU_CS_UNDO:
+			    {
+                    Search.Count = SendMessage(hwndCompareTo,CB_GETCOUNT,0,0);
+                    if (Search.Count < 3) { break; }
+                    sprintf(RamInfo.NewResultsInfo.dmpFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count - 2);
+                    if (!(LoadStruct(&RamInfo.NewResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), RamInfo.NewResultsInfo.dmpFileName))) { break; }
+                    SendMessage(hwndCompareTo, CB_DELETESTRING, Search.Count - 1, 0);
+                    SendMessage(hwndCompareTo, CB_SETCURSEL, Search.Count - 2,0);
+                    char ResTxt[20];
+                    sprintf(ResTxt, "%u Results", RamInfo.NewResultsInfo.ResCount);
+                    UpdateStatusBar(ResTxt, 0,0);
+                    UpdateSearchHistory(MNU_CS_UNDO);
+                    FreeRamInfo();
+				} break;
+			    case MNU_LOAD_SEARCH:
+                {
+                    char ResFileName[MAX_PATH];
+                    if (!DoFileOpen(hwnd, ResFileName)) { break; }
+                    if (!(LoadStruct(&RamInfo.NewResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), ResFileName))) { break; }
+                    if (!(LoadFile(&RamInfo.Results, ResFileName, sizeof(CODE_SEARCH_RESULTS_INFO), NULL, FALSE))) { break; }
+                    sprintf(ResFileName, "%sdump1.raw", Settings.CS.DumpDir);
+                    rename (RamInfo.NewResultsInfo.dmpFileName, ResFileName);
+                    sprintf(ResFileName, "%ssearch1.bin", Settings.CS.DumpDir);
+                    SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), ResFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
+                    SendMessage(hwndCompareTo,CB_RESETCONTENT,0,0);
+                    ComboAddItem(hwndCompareTo, "New Search" , 0);
+                    ComboAddItem(hwndCompareTo, "Search 1" , 0);
+                    SendMessage(hwndCompareTo,CB_SETCURSEL,1,0);
+                    sprintf(ResFileName, "%u", RamInfo.NewResultsInfo.ResCount);
+                    UpdateStatusBar(ResFileName, 0,0);
+                    UpdateSearchHistory(MNU_LOAD_SEARCH);
+                    FreeRamInfo();
+                } break;
 			}
 		} break;
 
@@ -730,3 +809,53 @@ int ClearDumpsFolder()
 	}
 	return 1;
 }
+
+/****************************************************************************
+Search History
+-RamInfo and Search structs still need to be active for this
+*****************************************************************************/
+int UpdateSearchHistory(int ActionType)
+{
+	HWND hwndSearchType = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_TYPE_CMB);
+	HWND hwndSearchHistory = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_HISTORY_TXT);
+    HWND hwndSearchValue1 = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_VALUE1_TXT);
+    HWND hwndSearchValue2 = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_VALUE2_TXT);
+    HWND hwndSignedSearchChk = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_SIGNED_CHK);
+	char SearchTypeText[1000];
+	char HistoryText[1000];
+	char ValuesText[200];
+	char Value1Text[50];
+	char Value2Text[50];
+	char SignedText[20];
+	strcpy(ValuesText, "");
+	strcpy(SignedText, "");
+	GetWindowText(hwndSearchValue1, Value1Text, sizeof(Value1Text));
+	GetWindowText(hwndSearchValue2, Value2Text, sizeof(Value2Text));
+	//if undo (or load?) process here and return?
+
+	switch (ActionType) {
+		case EX_FILTER_CMD: { strcpy(SearchTypeText, "EX Filter"); } break;
+		case MNU_CS_UNDO: { strcpy(SearchTypeText, "Undo Previous Search"); } break;
+		case MNU_LOAD_SEARCH: { strcpy(SearchTypeText, "Load Search"); } break;
+		default:
+		{
+			SendMessage(hwndSearchType, CB_GETLBTEXT, ComboSelFromData(hwndSearchType, Search.Type), (LPARAM)SearchTypeText);
+			if (SendMessage(hwndSignedSearchChk,BM_GETCHECK,0,0) == BST_CHECKED) { strcpy(SignedText, " [Signed]"); }
+			//Set values string, if applicable
+			if (Search.Type & (SEARCH_KNOWN|SEARCH_KNOWN_WILD|SEARCH_GREATER_BY|SEARCH_GREATER_LEAST|SEARCH_GREATER_MOST|
+	    		SEARCH_LESS_BY|SEARCH_LESS_LEAST|SEARCH_LESS_MOST|SEARCH_EQUAL_NUM_BITS|SEARCH_NEQUAL_TO|
+	    		SEARCH_NEQUAL_BY|SEARCH_NEQUAL_LEAST|SEARCH_NEQUAL_MOST|SEARCH_NEQUAL_TO_BITS|SEARCH_NEQUAL_BY_BITS|
+	    		SEARCH_BITS_ANY|SEARCH_BITS_ALL)) {
+					sprintf(ValuesText, " (%s)", Value1Text);
+			} else if (Search.Type & (SEARCH_IN_RANGE|SEARCH_NOT_RANGE)) {
+				sprintf(ValuesText, " (%s - %s)", Value1Text, Value2Text);
+			}
+		} break;
+	}
+
+	sprintf(HistoryText, "(%u) %s%s%s\n", RamInfo.NewResultsInfo.ResCount, SearchTypeText, SignedText, ValuesText);
+	SendMessage(hwndSearchHistory, EM_SETSEL, -1, -1);
+	SendMessage(hwndSearchHistory, EM_REPLACESEL, TRUE, (LPARAM)HistoryText);
+	return 0;
+}
+

@@ -17,6 +17,16 @@ around to answer questions though.
 p.s. Please don't screw up my source with Visual Stupid 6.0/.net/2008 or any
 other random dev environment. MinGW and Textpad for the win! ...even though
 MakeFiles are a little annoying to work on.
+
+To Do:
+possibly use threading for client comms
+load searches
+undo searches
+export results
+finish results activation funcionality
+lock things like search area once a search has started
+fonts (default and custom)
+option to leave game halted?
 *****************************************************************************/
 
 #include "ps2cc.h"
@@ -170,9 +180,13 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                     SetMenuState(hMenu, MNU_CS_INPUT_FLOAT, MFS_UNCHECKED);
                     SetMenuState(hMenu, LOWORD(wParam), MFS_CHECKED);
                 } break;
+                case MNU_CS_UNDO:
+                {
+					SendMessage(hTabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
+				} break;
                 case MNU_LOAD_SEARCH:
                 {
-					//Not yet
+					SendMessage(hTabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
 				} break;
                 case MNU_EXIT:
                 {

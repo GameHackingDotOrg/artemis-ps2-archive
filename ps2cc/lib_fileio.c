@@ -124,3 +124,38 @@ int SaveStruct(VOID *buffer, u32 filesize, char* filename)
 	fclose(f);
 	return filesize;
 }
+
+/****************************************************************************
+CopyBinFile
+*****************************************************************************/
+int CopyBinFile(char *filename, char *newfilename)
+{
+    FILE *f;
+    u64 filesize;
+	f = fopen(filename,"rb");
+	if (!(f)) {
+        sprintf(ErrTxt, "Unable to open source file (CopyBinFile) -- Error %u", GetLastError());
+        MessageBox(NULL,ErrTxt,"Error",MB_OK); return 0;
+	}
+	fseek(f,0,SEEK_END);
+	filesize = ftell(f);
+	fseek(f,0,SEEK_SET);
+	u8 *buffer;
+    if (!(buffer = (u8*)malloc(filesize+1))) {
+        sprintf(ErrTxt, "Unable to allocate buffer memory (CopyBinFile) -- Error %u", GetLastError());
+        MessageBox(NULL, ErrTxt, "Error", MB_OK);
+        fclose(f); return 0;
+    }
+	fread(buffer,1,filesize,f);
+	fclose(f);
+	f = fopen(newfilename,"wb");
+	if (!(f)) {
+        sprintf(ErrTxt, "Unable to open destination file (CopyBinFile) -- Error %u", GetLastError());
+        MessageBox(NULL,ErrTxt,"Error",MB_OK);
+        free(buffer); return 0;
+	}
+	fwrite(buffer,1,filesize,f);
+	fclose(f);
+	free(buffer);
+	return 1;
+}

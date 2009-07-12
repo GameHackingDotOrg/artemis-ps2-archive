@@ -26,6 +26,7 @@
 #define MNU_CS_INPUT_HEX 513
 #define MNU_CS_INPUT_DEC 514
 #define MNU_CS_INPUT_FLOAT 515
+#define MNU_CS_UNDO 516
 //search tab
 #define SEARCH_DLG 1100
 #define SEARCH_GRP1 1101

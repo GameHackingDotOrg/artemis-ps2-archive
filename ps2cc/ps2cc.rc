@@ -29,6 +29,7 @@ BEGIN
     	MENUITEM "Decimal",MNU_CS_INPUT_DEC
     	MENUITEM "Float/Double",MNU_CS_INPUT_FLOAT
     END
+    MENUITEM "Undo Last Search",MNU_CS_UNDO
 /*
     POPUP "Dump Folder"
     BEGIN

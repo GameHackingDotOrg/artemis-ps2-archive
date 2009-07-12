@@ -3,6 +3,7 @@ Artemis - PS2 Code Creator (for lack of a better title) - Main Header
 -PS2 dumping/communication functions by Jimmikaelkael
 -Code searching by Viper187
 *****************************************************************************/
+#define SNAKE_DEBUG 0
 
 #include <w32api.h>
 #define WINVER WindowsNT4
@@ -240,6 +241,7 @@ int LoadFile(u8 **buffer, char* filename, int headerlen, u8 **headerdata, BOOL l
 int SaveFile(u8 *buffer, u32 filesize, char* filename, int headerlen, VOID *headerdata);
 int LoadStruct(VOID *buffer, u32 filesize, char* filename);
 int SaveStruct(VOID *buffer, u32 filesize, char* filename);
+int CopyBinFile(char *filename, char *newfilename);
 
 //lib_listview
 int ListViewAddRow(HWND hListView, int count, ...);
@@ -287,6 +289,7 @@ LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, 
 LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK ExValueHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int ClearDumpsFolder();
+int UpdateSearchHistory(int ActionType);
 
 //tab_results
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
