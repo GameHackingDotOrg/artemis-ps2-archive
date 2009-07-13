@@ -380,7 +380,6 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 #if (SNAKE_DEBUG != 1)
                             ClearDumpsFolder();
 #endif
-                            SetWindowText(hwndSearchHistory, "");
                         } break;
                         case SEARCH_KNOWN_WILD:
                         {
@@ -479,6 +478,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     //if new search, setup a fresh results file
                     if (!Search.CompareTo) {
                         Search.Count = 1;
+                        SetWindowText(hwndSearchHistory, "");
                         SendMessage(hwndCompareTo,CB_RESETCONTENT,0,0);
                         ComboAddItem(hwndCompareTo, "New Search" , 0);
                         SendMessage(hwndCompareTo,CB_SETCURSEL,0,0);
