@@ -25,6 +25,7 @@ finish results activation funcionality
 lock things like search area once a search has started
 fonts (default and custom)
 option to leave game halted?
+EX Search consec results function
 *****************************************************************************/
 
 #include "ps2cc.h"

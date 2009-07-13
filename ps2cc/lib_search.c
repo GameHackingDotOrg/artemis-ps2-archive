@@ -23,26 +23,15 @@ int CodeSearch(CODE_SEARCH_VARS Search)
     u32 address;
     u64 NewValue;
     u64 OldValue;
-    u32 NewHighRes;
-    u32 NewLowRes = 0;
 //    RamInfo.NewResultsInfo.ResCount = 0;
     if (Search.TypeEx & EXCS_SIGNED) {
         int i;
         for (i = 0; i < 10; i++) { Search.Values[i] = SignExtend64(Search.Values[i], Search.Size); }
     }
-
-//debug
-//FILE *BAH = fopen("bah.txt", "wt");
-//fprintf(BAH, "ResLow: %08X, ResHigh: %08X",RamInfo.NewResultsInfo.ResLow,RamInfo.NewResultsInfo.ResHigh);
-//debug
-    for (address = 0; address < RamInfo.NewResultsInfo.ResHigh; address += Search.Size) {
+    for (address = 0; address < RamInfo.NewResultsInfo.DumpSize; address += Search.Size) {
         if(!(address % 0x100000)) { UpdateProgressBar(PBM_STEPIT, 0, 0); }
-//debug
-//fprintf(BAH, "%08X\n", address);
-//debug
-
         if (!(GetBitFlag(RamInfo.Results, address/Search.Size))) { continue; }
-        GetSearchValues(&NewValue, &OldValue, address, Search.Size, RamInfo.NewResultsInfo.Endian);
+        GetSearchValues(&NewValue, &OldValue, address, Search.Size, LITTLE_ENDIAN_SYS);
         if (!CodeSearchEx(address, NewValue, OldValue, Search)) { continue; }
         if (Search.TypeEx & EXCS_SIGNED) {
             NewValue = SignExtend64(NewValue, Search.Size);
@@ -152,7 +141,7 @@ int CodeSearch(CODE_SEARCH_VARS Search)
             {
                 if (Search.TypeEx & EXCS_SIGNED) {
                     if (((s64)NewValue <= Search.Values[0]) || ((s64)NewValue > Search.Values[1])) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); }
-                } else if ((NewValue < Search.Values[0]) || (NewValue > Search.Values[1])) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); }
+                } else if ((NewValue <= Search.Values[0]) || (NewValue > Search.Values[1])) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); }
             } break;
             case SEARCH_NOT_RANGE:
             {
@@ -169,17 +158,9 @@ int CodeSearch(CODE_SEARCH_VARS Search)
                 if ((NewValue & Search.Values[0]) != Search.Values[0]) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); }
             } break;
         }
-        if (GetBitFlag(RamInfo.Results, address/Search.Size)) {
-			RamInfo.NewResultsInfo.ResCount++;
-			NewHighRes = address;
-//			if (!NewLowRes) { NewLowRes = address; }
-		}
+        if (GetBitFlag(RamInfo.Results, address/Search.Size)) { RamInfo.NewResultsInfo.ResCount++; }
     }
-    if (Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) { FilterResultsEx(Search); }
-    RamInfo.NewResultsInfo.ResHigh = NewHighRes;
-//debug
-//fclose(BAH);
-//debug
+//    if (Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) { FilterResultsEx(Search, hProgressBar); }
     return 1;
 }
 
@@ -321,8 +302,8 @@ int CodeSearchEx(u32 address, u64 NewValue, u64 OldValue, CODE_SEARCH_VARS Searc
     int i;
     if (!(Search.TypeEx)) { return 1; }
     if (Search.TypeEx & EXCS_INCLUDE_ADDRESS_RANGE) {
-        if (((address+RamInfo.NewResultsInfo.MapMemAddy) < GetExSearchValue(Search.ValuesEx1,EXCS_INCLUDE_ADDRESS_RANGE)) ||
-            ((address+RamInfo.NewResultsInfo.MapMemAddy) > GetExSearchValue(Search.ValuesEx2,EXCS_INCLUDE_ADDRESS_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
+        if (((address|RamInfo.NewResultsInfo.MapMemAddy) < GetExSearchValue(Search.ValuesEx1,EXCS_INCLUDE_ADDRESS_RANGE)) ||
+            ((address|RamInfo.NewResultsInfo.MapMemAddy) > GetExSearchValue(Search.ValuesEx2,EXCS_INCLUDE_ADDRESS_RANGE))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
     }
     if ((Search.TypeEx & EXCS_IGNORE_0) && (!(NewValue))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
     if ((Search.TypeEx & EXCS_IGNORE_FF) &&  (NewValue == (0xFFFFFFFFFFFFFFFFLL >> 8*(8-Search.Size)))) { SetBitFlag(RamInfo.Results, address/Search.Size, 0); return 0; }
@@ -419,39 +400,4 @@ int CodeSearchEx(u32 address, u64 NewValue, u64 OldValue, CODE_SEARCH_VARS Searc
 
     if ((Search.TypeEx & EXCS_OR_EQUAL) && (NewValue == OldValue)) { return 0; }
     return 1;
-}
-
-/****************************************************************************
-FilterResultsEx - consec/matching values searchEx types
-*****************************************************************************/
-int FilterResultsEx(CODE_SEARCH_VARS Search)
-{
-    u32 address, i, matches;
-    u64 NewValue, NewValue2, OldValue;
-    UpdateProgressBar(PBM_SETPOS, 0, 0);
-    for (address = 0; address < RamInfo.NewResultsInfo.ResHigh; address += Search.Size) {
-        if(!(address % 0x100000)) { UpdateProgressBar(PBM_STEPIT, 0, 0); }
-        if (!(GetBitFlag(RamInfo.Results, address/Search.Size))) { continue; }
-        GetSearchValues(&NewValue, &OldValue, address, Search.Size, RamInfo.NewResultsInfo.Endian);
-        matches = 1;
-        for (i = address + Search.Size; i < RamInfo.NewResultsInfo.ResHigh; i += Search.Size)
-        {
-            if (!(GetBitFlag(RamInfo.Results, address/Search.Size))) { break; }
-            GetSearchValues(&NewValue2, &OldValue, i, Search.Size, RamInfo.NewResultsInfo.Endian);
-            if ((Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC)) && (!(GetBitFlag(RamInfo.Results, i/Search.Size)))) { break; }
-            if ((Search.TypeEx & (EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) &&
-                ((!(GetBitFlag(RamInfo.Results, i/Search.Size))) || (NewValue != NewValue2))) { break; }
-            matches++;
-        }
-        if (((matches >= GetExSearchValue(Search.ValuesEx1,EXCS_EXCLUDE_CONSEC)) && (Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES))) ||
-            ((matches <= GetExSearchValue(Search.ValuesEx1,EXCS_INCLUDE_CONSEC)) && (Search.TypeEx & (EXCS_INCLUDE_CONSEC|EXCS_INCLUDE_CONSEC_MATCH_VALUES)))){
-            while (address < i) {
-                SetBitFlag(RamInfo.Results, address/Search.Size, 0);
-                RamInfo.NewResultsInfo.ResCount--;
-                address++;
-            }
-            address -= Search.Size;
-        } else { address = i; }
-    }
-    return 0;
 }

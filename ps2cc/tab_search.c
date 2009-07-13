@@ -377,6 +377,10 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         {
                             Search.CompareTo = 0;
                             Search.Count = 1;
+#if (SNAKE_DEBUG != 1)
+                            ClearDumpsFolder();
+#endif
+                            SetWindowText(hwndSearchHistory, "");
                         } break;
                         case SEARCH_KNOWN_WILD:
                         {
@@ -439,23 +443,20 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         }
                     }
 
-					//get start and end address
-					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
-					u32 DumpAreaHigh = GetHexWindow(hwndSearchAreaHigh);
                     //Load previous results if continuing a search.
                     char sdFileName[MAX_PATH];
                     if (Search.CompareTo) {
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.CompareTo);
                         if (!(LoadStruct(&RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), sdFileName))) { FreeRamInfo(); return 0; }
                         if (!(LoadFile(&RamInfo.Results, sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), NULL, FALSE))) { FreeRamInfo(); return 0; }
-                        RamInfo.NewResultsInfo.ResHigh = RamInfo.OldResultsInfo.ResHigh;
-                    } else {
-                        RamInfo.NewResultsInfo.ResHigh = (DumpAreaHigh - DumpAreaLow);
-					}
+                    }
 					//setup new results info
                     sprintf(RamInfo.NewResultsInfo.dmpFileName, "%sdump%u.raw", Settings.CS.DumpDir, Search.Count);
                     RamInfo.NewResultsInfo.Endian = LITTLE_ENDIAN_SYS;
                     RamInfo.NewResultsInfo.SearchSize = Search.Size;
+					//get start and end address
+					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
+					u32 DumpAreaHigh = GetHexWindow(hwndSearchAreaHigh);
 					//dump ram
 					if (LOWORD(wParam) == EX_FILTER_CMD) {
 						memcpy(&RamInfo.NewResultsInfo, &RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO));
@@ -464,23 +465,19 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 //                    	MessageBox(NULL, RamInfo.NewResultsInfo.dmpFileName, "Debug", MB_OK); FreeRamInfo(); return 0;
 						if (!CopyBinFile(RamInfo.OldResultsInfo.dmpFileName, RamInfo.NewResultsInfo.dmpFileName)) { FreeRamInfo(); return 0; }
 					} else {
+#if (SNAKE_DEBUG != 1)
+                    	if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, DumpAreaHigh))) {
+							MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
+						}
+#endif
 
                     	RamInfo.NewResultsInfo.DumpSize = DumpAreaHigh - DumpAreaLow;
 						//keep track of the memory address the file really starts on for displaying results
                     	RamInfo.NewResultsInfo.MapFileAddy = 0;
                     	RamInfo.NewResultsInfo.MapMemAddy = DumpAreaLow;
-#if (SNAKE_DEBUG != 1)
-                    	if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, (DumpAreaLow + RamInfo.NewResultsInfo.ResHigh) ))) {
-							MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
-						}
-#endif
 					}
                     //if new search, setup a fresh results file
                     if (!Search.CompareTo) {
-#if (SNAKE_DEBUG != 1)
-                        ClearDumpsFolder();
-#endif
-                        SetWindowText(hwndSearchHistory, "");
                         Search.Count = 1;
                         SendMessage(hwndCompareTo,CB_RESETCONTENT,0,0);
                         ComboAddItem(hwndCompareTo, "New Search" , 0);
@@ -491,7 +488,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                             MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
                         }
                         memset(RamInfo.Results, 0xFF, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8));
-                        if (Search.Type == SEARCH_INIT) { RamInfo.NewResultsInfo.ResCount = RamInfo.NewResultsInfo.DumpSize/Search.Size; }
+                        RamInfo.NewResultsInfo.ResCount = RamInfo.NewResultsInfo.DumpSize/Search.Size;
                         if (!(SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo))) {
 							FreeRamInfo(); return 0;
 						}
@@ -536,10 +533,12 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         return 0;
                     }
                     //init progress bar
-                    UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, (RamInfo.NewResultsInfo.ResHigh/0x100000)+((RamInfo.NewResultsInfo.ResHigh % 0x100000) ? 1:0)));
+                    UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, (RamInfo.NewResultsInfo.DumpSize/0x100000)+((RamInfo.NewResultsInfo.DumpSize % 0x100000) ? 1:0)));
                     UpdateProgressBar(PBM_SETSTEP, 1, 0);
                     UpdateStatusBar("Searching...", 0, 0);
+//					if (LOWORD(wParam) == EX_FILTER_CMD) {
                   		CodeSearch(Search);
+//					} else { FilterSearchEX(Search); }
 
                     sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
