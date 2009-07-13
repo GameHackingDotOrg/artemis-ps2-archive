@@ -342,6 +342,7 @@ int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end)
 		sprintf(ErrTxt, "Failed to create dump file! (DumpRAM");
 		goto disconnect;
 	}
+
 	// fill remote cmd buffer
 	*((unsigned int *)&cmdBuf[0]) = dump_start;
 	*((unsigned int *)&cmdBuf[4]) = dump_end;

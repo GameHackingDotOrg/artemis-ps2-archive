@@ -33,7 +33,7 @@ Global Constants
 #define CODE_SEARCH_TAB 0
 #define SEARCH_RESULTS_TAB 1
 #define MEMORY_EDITOR_TAB 2
-#define CHEAT_TAB 3
+//#define CHEAT_TAB 3
 
 //Search types
 #define SEARCH_INIT 0x0
@@ -124,6 +124,7 @@ typedef struct CODE_SEARCH_RESULTS_INFO {
     int SearchSize;
     u32 DumpSize;
     u32 ResCount;
+    u32 ResHigh; //highest result file address
     u32 MapFileAddy; //file address
     u32 MapMemAddy; //memory address
 } CODE_SEARCH_RESULTS_INFO;
@@ -161,6 +162,8 @@ typedef struct _SEARCH_RESULTS_SETTINGS {
     int ResWriteRate;
     int ResWriteRateId;
     int RamView;
+    int MaxResPages;
+    int PageSize;
 } SEARCH_RESULTS_SETTINGS;
 
 //assuming there's a memory editor/viewer
@@ -282,6 +285,7 @@ u64 GetSearchValues(u64 *NewVal, u64 *OldVal, int index, int size, int endian);
 int SetExValues(CODE_SEARCH_VARS *SearchInfo, u64 exType, u64 exValue1, u64 exValue2);
 u64 GetExSearchValue(u64 *exValues, u64 exType);
 int CodeSearchEx(u32 address, u64 NewValue, u64 OldValue, CODE_SEARCH_VARS Search);
+int FilterResultsEx(CODE_SEARCH_VARS Search);
 
 //tab_search
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -293,7 +297,6 @@ int UpdateSearchHistory(int ActionType);
 
 //tab_results
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-LRESULT CALLBACK ResultsPageTxtHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int LoadResultsList();
 s64 ShowResPage(s64 ResNum);
 int ResFormatString(char *tmpstring, int outfmt, int numbytes);

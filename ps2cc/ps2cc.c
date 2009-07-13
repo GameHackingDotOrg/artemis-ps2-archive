@@ -20,8 +20,6 @@ MakeFiles are a little annoying to work on.
 
 To Do:
 possibly use threading for client comms
-load searches
-undo searches
 export results
 finish results activation funcionality
 lock things like search area once a search has started
@@ -289,10 +287,11 @@ int LoadSettings()
         sprintf(CFGFile,"ps2cc.cfg");
         strcpy(Defaults.CS.DumpDir, "Searches\\");
     }
-    Defaults.CFGVersion = 2; //increment this if settings struct or sub-struct definitions in ps2cc.h change
+    Defaults.CFGVersion = 3; //increment this if settings struct or sub-struct definitions in ps2cc.h change
     sprintf(Defaults.ServerIp, "192.168.0.80");
     Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
     Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
+	//Search Defaults
     Defaults.CS.NumBase = BASE_HEX;
     Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
     Defaults.CS.DumpAccess = SEARCH_ACCESS_ARRAY;
@@ -300,9 +299,13 @@ int LoadSettings()
     Defaults.Results.ResWriteRate = 100;
     Defaults.Results.ResWriteRateId = MNU_RES_WRITE_100MS;
 */
+	//Results Defaults
     Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
+    Defaults.Results.PageSize = 500;
+    Defaults.Results.MaxResPages = 20;
 	if (FileExists(CFGFile)) { LoadStruct(&Settings, sizeof(MAIN_CFG), CFGFile); }
     if (Settings.CFGVersion != Defaults.CFGVersion) {
+		MessageBox(NULL, "New CFG version. Settings are at default again.", "FYI", MB_OK);
 		memset(&Settings,0,sizeof(Settings));
         memcpy(&Settings,&Defaults,sizeof(Defaults));
 	}

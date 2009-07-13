@@ -16,18 +16,16 @@ u32 *ResultsList;
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     HWND hwndResList = GetDlgItem(hwnd, RESULTS_LSV);
-    HWND hwndResPageText = GetDlgItem(hwnd, RESULTS_PAGE_TXT);
+    HWND hwndResPage = GetDlgItem(hwnd, RESULTS_PAGE_CMB);
 	switch(message)
 	{
 		case WM_INITDIALOG:
         {
             SendMessage(hwndResList,LVM_DELETEALLITEMS,0,0);
             SendMessage(hwndResList,LVM_SETEXTENDEDLISTVIEWSTYLE,0,LVS_EX_FULLROWSELECT|LVS_EX_GRIDLINES|LVS_EX_LABELTIP);
-            SendMessage(hwndResList, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
+//            SendMessage(hwndResList, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
             ListViewAddCol(hwndResList, "Address", 0, 0x80);
             //subclass the page # textbox
-		    wpResPageTxtProc = (WNDPROC)GetWindowLongPtr (hwndResPageText, GWLP_WNDPROC);
-		    SetWindowLongPtr (hwndResPageText, GWLP_WNDPROC, (LONG_PTR)ResultsPageTxtHandler);
 
 //		    wpResultsListProc = (WNDPROC)GetWindowLongPtr (hwndResList, GWLP_WNDPROC);
 //		    SetWindowLongPtr (hwndResList, GWLP_WNDPROC, (LONG_PTR)ResultsListHandler);
@@ -36,24 +34,16 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
         {
 			switch(LOWORD(wParam))
             {
-				case RESULTS_PGUP_CMD:
-				{
-					if (!ResultsList) { break; }
-					u32 PageSize = SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
-					CurrResNum = ShowResPage(CurrResNum - PageSize);
-				} break;
-				case RESULTS_PGDOWN_CMD:
-				{
-					if (!ResultsList) { break; }
-					u32 PageSize = SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
-					CurrResNum = ShowResPage(CurrResNum + PageSize);
-				} break;
-				case RESULTS_PAGE_GO_CMD:
-				{
-					if (!ResultsList) { break; }
-					u32 PageSize = SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
-					int PageNum = GetDecWindow(hwndResPageText);
-					CurrResNum = ShowResPage(PageSize * PageNum);
+                case RESULTS_PAGE_CMB:
+                {
+                    switch(HIWORD(wParam))
+                    {
+                        case CBN_SELCHANGE:
+                        {
+							u32 PageSize = Settings.Results.PageSize ? Settings.Results.PageSize : SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
+							CurrResNum = ShowResPage(PageSize * SendMessage(hwndResPage,CB_GETITEMDATA,SendMessage(hwndResPage,CB_GETCURSEL,0,0),0));
+						} break;
+					}
 				} break;
 			}
 		} break;
@@ -67,29 +57,6 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 }
 
 /****************************************************************************
-Search Value box handler
-*****************************************************************************/
-LRESULT CALLBACK ResultsPageTxtHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-        case WM_CHAR:
-        {
-            if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace
-            if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
-            if (wParam == VK_RETURN) { SendMessage(hTabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, RESULTS_PAGE_GO_CMD, 0); }
-            wParam = ((isdigit(wParam))|| (wParam == '-')) ? wParam : 0;
-        } break;
-        case WM_PASTE:
-        {
-        } return 0;
-   }
-   if (wpResPageTxtProc) {
-	   return CallWindowProc (wpResPageTxtProc, hwnd, message, wParam, lParam);
-   } else { return DefWindowProc (hwnd, message, wParam, lParam); }
-}
-
-/****************************************************************************
 Load results
 *****************************************************************************/
 int LoadResultsList()
@@ -100,10 +67,14 @@ int LoadResultsList()
     char txtValue[32];
     HWND hwndResList = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_LSV);
     HWND hwndCompareTo = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], COMPARE_TO_CMB);
+    HWND hwndResPage = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_CMB);
     int SearchCount = SendMessage(hwndCompareTo,CB_GETCOUNT,0,0) - 1;
+    u32 PageSize = Settings.Results.PageSize ? Settings.Results.PageSize : SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
     if (!SearchCount) { return 0; }
-	//reset columns
+	//reset columns and pages
 	SendMessage(hwndResList,LVM_DELETEALLITEMS,0,0);
+	SendMessage(hwndResPage,CB_RESETCONTENT,0,0);
+	ComboAddItem(hwndResPage, "1" , 0);
 	i = 1;
     while (SendMessage(hwndResList,LVM_DELETECOLUMN,i,0)) { i++; }
 	//load current results info
@@ -131,7 +102,12 @@ int LoadResultsList()
         ResultsList[i] = DumpAddy;
         DumpAddy += RamInfo.NewResultsInfo.SearchSize;
         i++;
+        if (((i % PageSize) == 0) && ((i/ PageSize) < Settings.Results.MaxResPages)) {
+			sprintf(txtValue, "%u", (i / PageSize) + 1);
+			ComboAddItem(hwndResPage, txtValue , i / PageSize);
+		}
     }
+	SendMessage(hwndResPage,CB_SETCURSEL,0,0);
 
 	//cleanup
 	FreeRamInfo();
@@ -147,14 +123,14 @@ ShowResPage - Show 1 page of results starting at Result number (ResNum)
 *****************************************************************************/
 s64 ShowResPage(s64 ResNum)
 {
-    u32 i, DumpNum, PageSize;
+    u32 i, DumpNum;
     float tmpFloat=0;
     u32 *CastFloat=(u32*)(&tmpFloat);
     double tmpDouble=0;
     u64 *CastDouble=(u64*)&tmpDouble;
     HWND hwndResList = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_LSV);
     HWND hwndCompareTo = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], COMPARE_TO_CMB);
-    PageSize = SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
+    u32 PageSize = Settings.Results.PageSize ? Settings.Results.PageSize : SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
     int SearchCount = SendMessage(hwndCompareTo,CB_GETCOUNT,0,0) - 1;
     FILE *ramFiles[MAX_SEARCHES];
 
@@ -208,7 +184,7 @@ s64 ShowResPage(s64 ResNum)
         i++;
     }
 
-    SetDecWindowU(GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_TXT), ((ResNum + i)/PageSize) + ((ResNum + i) % PageSize));
+//    SetDecWindowU(GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_TXT), ((ResNum + i)/PageSize) + ((ResNum + i) % PageSize));
 
 ShowResPageError:
 	for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {
