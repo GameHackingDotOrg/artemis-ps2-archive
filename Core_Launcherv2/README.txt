@@ -2,7 +2,7 @@
 //                                                                       //
 //  Artemis Project: CoreLauncher_v2                                     //
 //  solution provided by jimmikaelkael                                   //
-//  rev 0.2                                                              //
+//  rev 0.3                                                              //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -43,25 +43,24 @@
 	- "core_launcher_altelfload": uses an alternate method to load the
  game elf (doesn't work with backups).
 
-	- "core_launcher_silentcore": the core doesn't display onscreen
- debug.
-
-	- "core_launcher_noadditionalirx": this one doesn't reload any
- additional modules after IOP resets. So there's no communication with the
- Win32 app, the pad combo is just triggering a quick test of onscreen debug.
- This one allow to check that the game fails because of confilcts with
- IOP modules that are reloaded by ourselves.
-
-	- "core_launcher_nosyscallhook": doesn't use any syscall hook, so
- IOP resets are not hooked (and no modules reloaded of course so no
- communication with the Win32 app...), it allow to check that's the syscall
- hooks that cause problems, and to solve this we should unhook it after the 
- 1st IOP reset.
+	- "core_launcher_disable_after_IOP_reset": the syscalls are unHooked
+ when the 1st IOP reset has been done, so no way to catch a 2nd IOP reset,
+ but this may allow some games to work.
 
  Start the game with CoreLauncher elf then use either command-line or Win32 
  client. 
 
- The program uses TCP port 4234.
+ During the game launch, you'll see colored debug screens:
+	- If the first one is White, then a fatal error occured to read disc.
+	- Blue when the core hook IOP reset.
+	- Purple will searching for free ram to put IOPRP images.
+	- Red while patching IOPRP.
+	- Green while resetting IOP with the modified IOPRP image.
+	- Cyan while loading additional modules.
+	- Magenta while searching padRead patterns. (followed by white if no pattern found, not fatal)
+	- Lime Green while searching padRead Calls. (followed by white if no call found, not fatal)		
+
+ The program uses TCP port 4234. It's planned to switch to UDP.
 
  The protocol used for communication with the PC side is fairly simple, here's
  a pseudo code (invalid as data block is of undefined size) to help you to
@@ -90,7 +89,7 @@
 //  For Backups I start FMCB with an original disc inserted then swap    //
 //  when the core_launcher ask for it.                                   //
 //                                                                       //
-//  Here are the results for 42 games I have tested myself               //
+//  Here are the results for ~50 games I have tested myself               //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -115,8 +114,6 @@
 	- SpongeBob Squarepants: Battle for Volcano Island PAL
 	- George of the Jungle PAL
 	- Burnout Dominator PAL
-
- Tested working with core_launcher_silentcore:
 	- Spiderwick Chronicles PAL
 	- Sonic Riders Zero Gravity PAL
 	- Lego Star Wars PAL
@@ -127,26 +124,34 @@
 	- The Dog Island PAL
 	- Shrek 3 PAL
  	- Azur and Asmar PAL
-
- Tested working with core_launcher_noadditionalirx:
-	- Tomb Raider Underworld PAL
-	- Ratchet & Clank: Size matters PAL
-	- FIFA 2004 PAL
-	- Teenage Mutant Ninja Turtle: the movie PAL
-	- Soul Calibur 3 PAL
-
- Tested working with core_launcher_nosyscallhook:
-	- The Golden Compass PAL
+	- Final Fantasy 12 PAL
 	- Sims: Pets PAL
+
+ Game Launching & partially working
+	- Ratchet Gladiator PAL (I can dump during menu, but the padRead hook is loosen inGame, the elf is originally packed) 
+
+ Game Launching & working but the win32 app refuse to connect(TCP), but netlog(UDP) still active:
+	- Sniper Elite PAL
+	- Medal of Honor Sunrise PAL (the core catches all 3 IOP reset and reload modules each time without problem, then locate the padRead the 3rd time)  	
+
+ Tested incompatible with the current additional module set:
+	- Tomb Raider Underworld PAL (smap, ntpbserver) 
+	- Ratchet & Clank: Size matters PAL (ntpbserver)
+	- FIFA 2004 PAL (ntpbserver)
+	- Teenage Mutant Ninja Turtle: the movie PAL (ntpbserver)
+	- Soul Calibur 3 PAL (ntpbserver)
+	- Tomb Raider Legend PAL
+	- Tomb Raider Anniversary PAL
+	- Cars Matter PAL (freeze when you select a game)
+	- The Golden Compass PAL
+
+ Tested incompatible for other reason:
+	- Naruto Ultimate Ninja 4 Shippuden PAL (freeze on Core's SifCallRpc call)
 
  Not working (I'm unable to start those game backups with CogSwap as well, there having the same symptoms):
 	- Spyro: The Eternal Knight PAL (pass loading screen, you can select language, sounds are garbage in video and freezes)
-	- Tomb Raider Legend PAL (connect to PC, but after that it's BSOD)
-	- Tomb Raider Anniversary PAL (connect to PC, seems to load a few but after that it's BSOD)
 	- Call of Duty 3: March to Paris PAL (launch fine, I can dump during menu, but freeze as soon as you want to play)
-	- Final Fantasy 12 PAL (connect to PC, seems to load a few but after that it's BSOD)
 
- NOTE: About those games which works but not responding to pad combo, 
- those games are using libpad2, and I still didn't find the corresponding
- padRead function in it. 
+ NOTE: Most of network enabled games will not connect with the Win32 app, 
+the reason why I want to switch to UDP. 
  

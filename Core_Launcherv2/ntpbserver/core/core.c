@@ -1,6 +1,6 @@
 #include "core.h"
 
-#define DEBUG
+//#define VERBOSE
 #define MANUAL_ELF_LOAD
 //#define NOADDITIONAL_IRX
 //#define NOSYSCALL_HOOKS
@@ -497,11 +497,38 @@ struct pad2ButtonStat {
     u16 btns;
 } __attribute__((packed));
 
+int patch_padRead(void);
+
 static int (*scePadRead)(int port, int slot, struct padButtonStat *data);
 static int (*scePad2Read)(int socket, struct pad2ButtonStat *data);
 static int scePadRead_style = 1;
 
 static int haltState = 0;
+
+
+//--------------------------------------------------------------
+void *find_free_ram(void *addr_start, void *addr_end, u32 len)
+{
+	u32 i, j;
+
+	addr_start = (void *)(((u32)addr_start) & 0xffffffc0);
+	
+	u32 memsize = (u32)addr_end - (u32)addr_start;
+	u8 *buf = (u8 *)addr_start;
+	
+	for (i = 0; i < memsize - len; ) {
+		for (j = 0; j < len; j++) {
+			if (buf[i + j] != 0)
+				break;
+		}
+		if (j == len)
+			return &buf[i];
+		else
+			i += (j + 0x40) & 0xffffffc0;	
+	}
+	
+	return NULL;
+}
 
 // ------------------------------------------------------------------------
 u32 NewSifSetDma(SifDmaTransfer_t *sdd, s32 len)
@@ -526,6 +553,7 @@ u32 HookSifSetDma(SifDmaTransfer_t *sdd, s32 len)
 			);
 		}
 	}
+		
 	__asm__(
 		"move $a0, %1\n\t"
 		"move $a1, %2\n\t"
@@ -542,16 +570,14 @@ int HookSifSetReg(u32 register_num, int register_value)
 	if (set_reg_hook) {
 		set_reg_hook--;
 		
-#ifdef DISABLE_AFTER_IOPRESET		
 		if (set_reg_hook == 0) {
 			__asm__(
-				"la $v1, UnHook_Syscalls\n\t"
+				"la $v1, PostReset_Hook\n\t"
 				"sw $v1, 8($sp)\n\t"
 				"jr $ra\n\t"
 				"nop\n\t"
 			);
 		}
-#endif		
 		return 1;
 	}
 
@@ -587,6 +613,18 @@ int UnHook_Syscalls(void)
 }
 
 // ------------------------------------------------------------------------
+int PostReset_Hook(void)
+{
+	patch_padRead();
+
+#ifdef DISABLE_AFTER_IOPRESET	
+	UnHook_Syscalls();
+#endif
+		
+	return 1;
+}
+
+// ------------------------------------------------------------------------
 int HookIopReset(const char *arg, int flag)
 {
  	void   *iopdest_img;
@@ -598,7 +636,10 @@ int HookIopReset(const char *arg, int flag)
 	SifDmaTransfer_t dmat;	 
 	int iopreset_update = 0;
 	int iopreset_ioprp = 0;
+	u8 *p;
  
+	GS_BGCOLOUR = 0xff0000; // Blue for 1st IOP reset
+	
 	SifInitRpc(0);
 	while (!IopReset(NULL, 0)) {;}
 	while (!IopSync()){;}
@@ -606,8 +647,8 @@ int HookIopReset(const char *arg, int flag)
 	SifExitIopHeap();
 	LoadFileExit();
 	SifInitRpc(0);
-	
-#ifdef DEBUG	
+		
+#ifdef VERBOSE	
 	init_scr();
 	scr_clear();
 #endif		
@@ -634,26 +675,43 @@ int HookIopReset(const char *arg, int flag)
 			}			
 		}  	 
 	} 
- 
+	 
 	if (iopreset_ioprp) {
-
-#ifdef DEBUG				
+		
+		GS_BGCOLOUR = 0x800080; // Purple for reset with IOPRP catched, and free mem location search
+		
+#ifdef VERBOSE				
 		scr_printf("\t Catched InGame IOP reset with IOPRPxxx.IMG !!!\n");	
 		scr_printf("\t ioprp path: %s\n", ioprp_path);
 #endif		
   
 		fioInit();
 		fd = open(ioprp_path, O_RDONLY);
-		if (fd < 0) {
-			GS_BGCOLOUR = 0x800000;
+		if (fd < 0)
 			while (1){;}
-		}
 
 		ioprp_img.size_in = lseek(fd, 0, SEEK_END);
 		lseek(fd, 0, SEEK_SET);
 
-		ioprp_img.data_in  = (char*)0x01700000;
-		ioprp_img.data_out = (char*)0x017C0000;
+		p = find_free_ram((void *)0x01700000, (void *)0x01f00000, (ioprp_img.size_in << 1) + 16384);
+		if (!p) {
+#ifdef VERBOSE			
+			scr_printf("\t No free mem found for ioprp...\n"); 		
+#endif		
+			while (1){;}
+		}	
+		
+		ioprp_img.data_in  = (void *)p;
+		ioprp_img.data_out = (void *)&p[(ioprp_img.size_in + 0x40) & 0xffffffc0];
+
+#ifdef VERBOSE					
+		scr_printf("\t ioprp_in: 0x%08x ioprp_out: 0x%08x\n", (int)ioprp_img.data_in, (int)ioprp_img.data_out); 
+#endif						
+		
+		GS_BGCOLOUR = 0x0000ff; // Red for IOPRP patching
+		
+		//ioprp_img.data_in  = (char*)0x01700000;
+		//ioprp_img.data_out = (char*)0x017C0000;
 
 		read(fd, ioprp_img.data_in , ioprp_img.size_in);
 		close(fd);
@@ -662,11 +720,11 @@ int HookIopReset(const char *arg, int flag)
 		memcpy(ioprp_img.data_out, ioprp_img.data_in, ioprp_img.size_in); 
 
 		r = PatchIOPRPimg(&ioprp_img);
-		if (r == 0) {
-			GS_BGCOLOUR = 0x00FF00;
+		if (r == 0) 
 			while (1){;}
-		}
 
+		GS_BGCOLOUR = 0x008000; // Green for IOP reset with patched IOPRP
+		
 		// Reseting IOP			  		
 		while (!IopReset(NULL, 0)) {;}
 		while (!IopSync()){;}
@@ -710,12 +768,12 @@ int HookIopReset(const char *arg, int flag)
 			ee_kmode_exit();
 			EIntr();
 		}
-		else {
-			GS_BGCOLOUR = 0xFF0000;
+		else 
 			while (1){;}
-		}
     
 		while (!IopSync()) {;}
+				
+		GS_BGCOLOUR = 0xffff00; // Cyan for loading additional IRX
   
 		// we can load additional modules here
 		SifExitIopHeap();
@@ -723,19 +781,29 @@ int HookIopReset(const char *arg, int flag)
 		SifInitIopHeap();
 		LoadFileInit();
 
-#ifdef DEBUG								 		
+#ifdef VERBOSE								 		
 		scr_printf("\t loading additional modules... ");
 #endif    
 		
 #ifndef NOADDITIONAL_IRX
-		LoadModuleBuffer(ps2dev9_irx, size_ps2dev9_irx, 0, NULL);		  				
-		LoadModuleBuffer(ps2ip_irx, size_ps2ip_irx, 0, NULL);		  				
-		LoadModuleBuffer(ps2smap_irx, size_ps2smap_irx, 0, NULL);		  				
+		r = LoadModuleBuffer(ps2dev9_irx, size_ps2dev9_irx, 0, NULL);		  				
+		if (r < 0)
+			while (1) {;}
 		
-		LoadModuleBuffer(ntpbserver_irx, size_ntpbserver_irx, 0, NULL);		  				
+		r = LoadModuleBuffer(ps2ip_irx, size_ps2ip_irx, 0, NULL);		  				
+		if (r < 0)
+			while (1) {;}
+
+		r = LoadModuleBuffer(ps2smap_irx, size_ps2smap_irx, 0, NULL);		  				
+		if (r < 0)
+			while (1) {;}
+						
+		r = LoadModuleBuffer(ntpbserver_irx, size_ntpbserver_irx, 0, NULL);		  				
+		if (r < 0)
+			while (1) {;}
 #endif		
 
-#ifdef DEBUG								 		
+#ifdef VERBOSE								 		
 		scr_printf("done\n");
 #endif    
 
@@ -744,21 +812,15 @@ int HookIopReset(const char *arg, int flag)
 #ifndef NOADDITIONAL_IRX				
 		rpcNTPBinit();
 #endif				
-/*
-#ifdef DEBUG
-    	for (i=0; i<100; i++)
-    		nopdelay();
-#endif    		
-*/			
 		FlushCache(0);
 															
 		SifExitRpc();
 		SifExitIopHeap();
 		LoadFileExit();
 				
-#ifdef DEBUG		
+#ifdef VERBOSE		
 		scr_printf("\t IOP reset done\n");
-		//SleepThread();			
+		//while(1) {;}			
 #endif	
 	
 	}
@@ -771,6 +833,8 @@ int HookIopReset(const char *arg, int flag)
  
 	set_reg_hook = 4;
 	
+	GS_BGCOLOUR = 0x000000; // Black, IOP reset done
+		
 	return 1;
 }
 
@@ -954,12 +1018,41 @@ int getRemoteCmd(void)
 	
 	return 1;
 }
-
+/*
 //--------------------------------------------------------------
+void start_screen(void)
+{
+	int i;
+	for(i = 0; i<6; i++)
+	{
+		// init debug screen
+		init_scr();
+	}
+	for(i = 0; i<500; i++)
+	{
+		scr_printf("SCREEN STARTED!!\n");
+	}
+}
+*/
+//--------------------------------------------------------------
+//u32 old_pad;
 void padReadHook_job(void *data)
-{	
+{
+	//u32 paddata, new_pad;
+	
+	//if (scePadRead_style == 2)
+	//	paddata = 0xffff ^ ((struct pad2ButtonStat *)data)->btns;
+	//else	
+	//	paddata = 0xffff ^ ((struct padButtonStat *)data)->btns;
+	//new_pad = paddata & ~old_pad;
+	//old_pad = paddata;
+              
+	//if ((new_pad) && (new_pad == (PAD_UP | PAD_R1 | PAD_CROSS))) {	
+	//	start_screen();
+	//}
+
 #ifndef NOADDITIONAL_IRX	        
-		getRemoteCmd();
+	getRemoteCmd();
 #endif			
 }
 
@@ -986,40 +1079,39 @@ static int Hook_scePad2Read(int socket, struct pad2ButtonStat *data)
 }
 
 //--------------------------------------------------------------
-int patch_padRead(void *epc)
+int patch_padRead(void)
 {
 	u8 *ptr;
 	u32 memscope, inst, fncall;	
 	u32 pattern[1], mask[1];
+	u32 start = 0x00100000;
+	int pattern_found = 0;
 
-#ifdef DEBUG			    		    	
-    scr_printf("\t patch_padRead start!\n");
-#endif    		
-		
-	memscope = 0x01f00000 - (u32)epc;
+	GS_BGCOLOUR = 0xff00ff; // Magenta while padRead pattern search	
+			
+	memscope = 0x01f00000 - start;
 	
 	// First try to locate the orginal libpad's scePadRead function
-    ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern0, (u8 *)padReadpattern0_mask, sizeof(padReadpattern0));	
+    ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern0, (u8 *)padReadpattern0_mask, sizeof(padReadpattern0));	
     if (!ptr) {
-	    ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern1, (u8 *)padReadpattern1_mask, sizeof(padReadpattern1));	
+	    ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern1, (u8 *)padReadpattern1_mask, sizeof(padReadpattern1));	
 	    if (!ptr) {
-		    ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern2, (u8 *)padReadpattern2_mask, sizeof(padReadpattern2));	
+		    ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern2, (u8 *)padReadpattern2_mask, sizeof(padReadpattern2));	
 	    	if (!ptr) {
-		    	ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern3, (u8 *)padReadpattern3_mask, sizeof(padReadpattern3));
+		    	ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern3, (u8 *)padReadpattern3_mask, sizeof(padReadpattern3));
 		    	if (!ptr) {
-		    		ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)pad2Readpattern0, (u8 *)pad2Readpattern0_mask, sizeof(pad2Readpattern0));
+		    		ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)pad2Readpattern0, (u8 *)pad2Readpattern0_mask, sizeof(pad2Readpattern0));
 		    		if (!ptr) {
-		    			ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern4, (u8 *)padReadpattern4_mask, sizeof(padReadpattern4));
+		    			ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern4, (u8 *)padReadpattern4_mask, sizeof(padReadpattern4));
 		    			if (!ptr) {
-		    				ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern5, (u8 *)padReadpattern5_mask, sizeof(padReadpattern5));
+		    				ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern5, (u8 *)padReadpattern5_mask, sizeof(padReadpattern5));
 		    				if (!ptr) {
-		    					ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern6, (u8 *)padReadpattern6_mask, sizeof(padReadpattern6));
+		    					ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern6, (u8 *)padReadpattern6_mask, sizeof(padReadpattern6));
 		    					if (!ptr) {
-		    						ptr = find_bytes_with_mask((u8 *)epc, memscope, (u8 *)padReadpattern7, (u8 *)padReadpattern7_mask, sizeof(padReadpattern7));
+		    						ptr = find_bytes_with_mask((u8 *)start, memscope, (u8 *)padReadpattern7, (u8 *)padReadpattern7_mask, sizeof(padReadpattern7));
 		    						if (!ptr) {
-#ifdef DEBUG			    		    	
-    									scr_printf("\t padReadpattern not found...\n");
-#endif    		
+    									//while(1) {;}
+    									GS_BGCOLOUR = 0xffffff; // White, pattern not found	   
     									return 0;
 									}
 								}
@@ -1032,9 +1124,8 @@ int patch_padRead(void *epc)
 	    	}
     	}
     }
-#ifdef DEBUG			    	
-	scr_printf("\t Found scePadRead at 0x%08x\n", (int)ptr);
-#endif
+    
+ 	GS_BGCOLOUR = 0x00ff00; // Lime while padRead patches	   
 
 	// Save original scePadRead ptr
 	if (scePadRead_style == 2)
@@ -1045,10 +1136,6 @@ int patch_padRead(void *epc)
 	// Retrieve scePadRead call Instruction code
 	inst = 0x0c000000;
 	inst |= 0x03ffffff & ((u32)ptr >> 2);
-
-#ifdef DEBUG			    		
-	scr_printf("\t scePadRead Call Instruction: 0x%08x\n", (int)inst);
-#endif
 	
 	// Make pattern with function call code saved above
 	pattern[0] = inst;
@@ -1065,24 +1152,23 @@ int patch_padRead(void *epc)
 	}
 		
 	// Search & patch for calls to scePadRead
-	ptr = (u8 *)epc;
+	ptr = (u8 *)start;
 	while (ptr) {
 		memscope = 0x01f00000 - (u32)ptr;	
 		ptr = find_bytes_with_mask(ptr, memscope, (u8 *)pattern, (u8 *)mask, sizeof(pattern));
 		if (ptr) {
+			pattern_found = 1;
 			fncall = (u32)ptr;
 			_sw(inst, fncall); // overwrite the original scePadRead function call with our function call		
-#ifdef DEBUG			    		    	
-			scr_printf("\t scePadRead call detected at: 0x%08x changed into: 0x%08x\n", (int)fncall, (int)inst);
-#endif			
 			ptr += 8;
 		}
 	}
 	
-#ifdef DEBUG			    		    	
-    scr_printf("\t patch_padRead complete!\n");
-#endif    		
+	if (!pattern_found)
+		GS_BGCOLOUR = 0xffffff; // White, pattern not found
 		
+	GS_BGCOLOUR = 0x000000; // Black, done
+			
 	return 1;			    	   	
 }
 
@@ -1116,7 +1202,7 @@ void GetIrxRAM(void)
 	memcpy(ps2ip_irx, irxptr_tab[4].irxaddr, size_ps2ip_irx);
 	memcpy(ps2smap_irx, irxptr_tab[5].irxaddr, size_ps2smap_irx);
 			
-#ifdef DEBUG
+#ifdef VERBOSE
 	scr_printf("\t total IRX size = %d\n", *total_irxsize); 
 #endif
 }	
@@ -1134,7 +1220,7 @@ int main(int argc, char *argv[1])
 	SifInitRpc(0);
 	SifInitIopHeap();
 
-#ifdef DEBUG
+#ifdef VERBOSE
 	init_scr();
 	scr_clear();
 	scr_printf("\t Core start !\n");
@@ -1144,7 +1230,7 @@ int main(int argc, char *argv[1])
 	GetIrxRAM();
 					
 	// Clearing user mem, so better not to have anything valuable on stack
-	for (i = 0x100000; i < 0x2000000; i += 64) {
+	for (i = 0x100000; i < 0x02000000; i += 64) {
 		asm (
 			"\tsq $0, 0(%0) \n"
 			"\tsq $0, 16(%0) \n"
@@ -1153,11 +1239,22 @@ int main(int argc, char *argv[1])
 			:: "r" (i)
 		);
 	}	
-				
+
+#ifndef NOSYSCALL_HOOKS
+	// Hooking SifSetDma & SifSetReg Syscalls
+	Hook_Syscalls();
+#endif
+					
 	// Get elf path
 	strcpy(ElfPath, argv[0]);
+/*	
+	sbv_patch_user_mem_clear(0x00100000);
 	
-#ifdef DEBUG		
+	SifExitIopHeap();
+    SifExitRpc();
+    LoadExecPS2(ElfPath, 0, NULL);	
+*/		
+#ifdef VERBOSE		
 	scr_printf("\t loading %s... ", ElfPath);	
 #endif	
 
@@ -1167,14 +1264,12 @@ int main(int argc, char *argv[1])
  	fd = open(ElfPath, O_RDONLY);
  	if (fd < 0) {
 	 	//can't open file, exiting...
-		GS_BGCOLOUR = 0xff0000;
 		goto error;
  	}
  
 	if (!lseek(fd, 0, SEEK_END)) {
 		close(fd);
 		// Zero size ? something wrong !
-		GS_BGCOLOUR = 0xffff00;
 		goto error;
 	}
 	
@@ -1186,7 +1281,6 @@ int main(int argc, char *argv[1])
 	if ( (*(u32*)elf_header.ident) != ELF_MAGIC) {
 		close(fd);
 		//not an elf file
-		GS_BGCOLOUR = 0x0000ff;
 		goto error;
 	}
 	
@@ -1207,26 +1301,18 @@ int main(int argc, char *argv[1])
 	}
 	close(fd);
 	
-#ifdef DEBUG		
+#ifdef VERBOSE		
 	scr_printf("done \n");		
 #endif
 			
-#ifndef NOSYSCALL_HOOKS
-	// Hooking SifSetDma & SifSetReg Syscalls
-	Hook_Syscalls();
-#endif
-	
 	fioExit();
 	LoadFileExit();
 	SifExitRpc();
 
 	FlushCache(0);
 	FlushCache(2);
-
-	if (!patch_padRead((void *)elf_header.entry))
-		goto error;	    		
-
-#ifdef DEBUG			
+	
+#ifdef VERBOSE			
     scr_printf("\t Executing...\n");
 #endif    
 	// temporary solution, some elfs fails if the path is not passed as argument
@@ -1248,25 +1334,17 @@ int main(int argc, char *argv[1])
 	LoadElf(ElfPath, &exec);
 
 	if (exec.epc) {
-#ifdef DEBUG		
+#ifdef VERBOSE		
 		scr_printf("done \n");		
 #endif			
-
-#ifndef NOSYSCALL_HOOKS
-		// Hooking SifSetDma & SifSetReg Syscalls
-		Hook_Syscalls();
-#endif
 	
 		fioExit();
 		SifExitRpc();
 
 		FlushCache(0);
 		FlushCache(2);
-
-		if (!patch_padRead((void *)exec.epc))
-			goto error;
-				
-#ifdef DEBUG			
+		
+#ifdef VERBOSE			
     	scr_printf("\t Executing...\n");
 #endif    
 		// temporary solution, some elfs fails if the path is not passed as argument
@@ -1284,6 +1362,7 @@ int main(int argc, char *argv[1])
 	return 0;
  
 error:
+	GS_BGCOLOUR = 0xffffff; // white: fatal error
 	while (1){;}
 }
 

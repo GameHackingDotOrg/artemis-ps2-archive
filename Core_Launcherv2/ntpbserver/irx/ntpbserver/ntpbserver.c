@@ -514,7 +514,7 @@ int _rpcNTPBEndReply(void *rpc_buf)
 int _start(int argc, char** argv)
 {			
 	iop_sema_t smp;
-			
+				
 	SifInitRpc(0);
 
 	// init netlog

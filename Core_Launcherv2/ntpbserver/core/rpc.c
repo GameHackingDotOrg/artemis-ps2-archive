@@ -69,14 +69,15 @@ int rpcNTPBgetRemoteCmd(u16 *cmd, u8 *buf, int *size)
 	// check lib is inited
 	if (!RPCclient_Inited)
 		return -1;
-				 	
+					 	
 	if((ret = SifCallRpc(&rpcclient, CMD_GETREMOTECMD, 0, NULL, 0, &getRemoteCmdParam, sizeof(getRemoteCmdParam), 0, 0)) != 0) {
 		return ret;
 	}
 
 	*cmd = getRemoteCmdParam.cmd;
 	*size = getRemoteCmdParam.size;
-	memcpy(buf, getRemoteCmdParam.buf, getRemoteCmdParam.size);
+	if (getRemoteCmdParam.size > 0)
+		memcpy(buf, getRemoteCmdParam.buf, getRemoteCmdParam.size);
 				
 	currentCmd = CMD_GETREMOTECMD;
 	*(int*)Rpc_Buffer = 1;

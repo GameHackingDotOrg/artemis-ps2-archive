@@ -328,7 +328,7 @@ void *netlogThread(void *thread_id)
 {
 	int udp_socket;
 	struct sockaddr_in peer;
-	int peerlen, r;
+	int r;
 	fd_set fd;
 	FILE *fh_log;
 
@@ -352,8 +352,6 @@ void *netlogThread(void *thread_id)
 	
 	FD_ZERO(&fd);
 
-	peerlen = sizeof(peer);
-
 	while (1) {
 		FD_SET(udp_socket, &fd);
 
@@ -361,7 +359,7 @@ void *netlogThread(void *thread_id)
 
 		memset(netlogbuffer, 0, sizeof(netlogbuffer));
 
-		r = recvfrom(udp_socket, netlogbuffer, sizeof(netlogbuffer), 0, (struct sockaddr *)&peer, &peerlen);
+		r = recvfrom(udp_socket, (void*)netlogbuffer, sizeof(netlogbuffer), 0, NULL, NULL);
 
 		fh_log = fopen("netlog.log", "a");
 		if (fh_log) {
@@ -371,7 +369,7 @@ void *netlogThread(void *thread_id)
 	}
 
 error:	
-	closesocket(udp_socket);
+	_closesocket(udp_socket);
 	pthread_exit(thread_id);
 	
 	return 0;
@@ -558,8 +556,8 @@ int main(int argc, char **argv, char **env) {
 				}						
 			
 				if (!strcmp(str_memzone, MEMZONE_EE)) {
-					if ((dump_start < 0x00100000) || (dump_start > 0x02000000) ||
-						(dump_end < 0x00100000) || (dump_end > 0x02000000)) {
+					if ((dump_start < 0x00080000) || (dump_start > 0x02000000) ||
+						(dump_end < 0x0080000) || (dump_end > 0x02000000)) {
 						printf("invalid address range for EE dump...\n");
 						break;	
 					}					
