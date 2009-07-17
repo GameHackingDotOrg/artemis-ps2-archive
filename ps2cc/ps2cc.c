@@ -66,10 +66,10 @@ int InitTabControl(HWND hwnd, LPARAM lParam)
 
     tabitem.pszText = "Results";
     SendMessage(hTab, TCM_INSERTITEM, SEARCH_RESULTS_TAB, (LPARAM)&tabitem);
-
+/*
     tabitem.pszText = "Memory Editor";
     SendMessage(hTab, TCM_INSERTITEM, MEMORY_EDITOR_TAB, (LPARAM)&tabitem);
-
+*/
 //    tabitem.pszText = "Cheat";
 //    SendMessage(hTab, TCM_INSERTITEM, CHEAT_TAB, (LPARAM)&tabitem);
 

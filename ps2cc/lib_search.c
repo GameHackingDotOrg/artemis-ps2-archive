@@ -160,7 +160,7 @@ int CodeSearch(CODE_SEARCH_VARS Search)
         }
         if (GetBitFlag(RamInfo.Results, address/Search.Size)) { RamInfo.NewResultsInfo.ResCount++; }
     }
-//    if (Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) { FilterResultsEx(Search, hProgressBar); }
+    if (Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) { FilterResultsEx(Search); }
     return 1;
 }
 
@@ -401,3 +401,37 @@ int CodeSearchEx(u32 address, u64 NewValue, u64 OldValue, CODE_SEARCH_VARS Searc
     if ((Search.TypeEx & EXCS_OR_EQUAL) && (NewValue == OldValue)) { return 0; }
     return 1;
 }
+/****************************************************************************
+FilterResultsEx - consec/matching values searchEx types
+*****************************************************************************/
+int FilterResultsEx(CODE_SEARCH_VARS Search)
+{
+    u32 address, i, matches;
+    u64 NewValue, NewValue2, OldValue;
+    for (address = 0; address < RamInfo.NewResultsInfo.DumpSize; address += Search.Size) {
+        if(!(address % 0x100000)) { UpdateProgressBar(PBM_STEPIT, 0, 0); }
+        if (!(GetBitFlag(RamInfo.Results, address/Search.Size))) { continue; }
+        GetSearchValues(&NewValue, &OldValue, address, Search.Size, LITTLE_ENDIAN_SYS);
+        matches = 1;
+        for (i = address + Search.Size; i < RamInfo.NewResultsInfo.DumpSize; i += Search.Size)
+        {
+            if (!(GetBitFlag(RamInfo.Results, address/Search.Size))) { break; }
+            GetSearchValues(&NewValue2, &OldValue, i, Search.Size, LITTLE_ENDIAN_SYS);
+            if ((Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_INCLUDE_CONSEC)) && (!(GetBitFlag(RamInfo.Results, i/Search.Size)))) { break; }
+            if ((Search.TypeEx & (EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) &&
+                ((!(GetBitFlag(RamInfo.Results, i/Search.Size))) || (NewValue != NewValue2))) { break; }
+            matches++;
+        }
+        if (((matches >= GetExSearchValue(Search.ValuesEx1,EXCS_EXCLUDE_CONSEC)) && (Search.TypeEx & (EXCS_EXCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES))) ||
+            ((matches <= GetExSearchValue(Search.ValuesEx1,EXCS_INCLUDE_CONSEC)) && (Search.TypeEx & (EXCS_INCLUDE_CONSEC|EXCS_INCLUDE_CONSEC_MATCH_VALUES)))){
+            while (address < i) {
+                SetBitFlag(RamInfo.Results, address/Search.Size, 0);
+                RamInfo.NewResultsInfo.ResCount--;
+                address++;
+            }
+            address -= Search.Size;
+        } else { address = i; }
+    }
+    return 0;
+}
+

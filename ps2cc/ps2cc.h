@@ -26,7 +26,7 @@ Artemis - PS2 Code Creator (for lack of a better title) - Main Header
 /****************************************************************************
 Global Constants
 *****************************************************************************/
-#define NUM_TABS 5
+#define NUM_TABS 2
 #define MAX_SEARCHES 100
 
 //Tab IDs
