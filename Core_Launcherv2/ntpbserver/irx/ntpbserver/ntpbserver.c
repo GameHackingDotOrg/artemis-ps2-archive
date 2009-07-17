@@ -93,6 +93,7 @@ typedef struct g_getRemoteCmdParam { // size = 16
 
 static u8 ntpb_buf[16384];
 
+
 //-------------------------------------------------------------- 
 int check_ntpb_header(void *buf) // sanity check to see if the packet have the format we expect
 {
@@ -516,7 +517,7 @@ int _start(int argc, char** argv)
 	iop_sema_t smp;
 				
 	SifInitRpc(0);
-
+	
 	// init netlog
 	netlog_init(INADDR_ANY, SERVER_UDP_PORT);		
 		

@@ -10,6 +10,7 @@ I_lwip_listen
 I_lwip_connect
 I_lwip_select
 I_lwip_sendto
+I_lwip_recvfrom
 I_inet_addr
 ps2ip_IMPORTS_end
 

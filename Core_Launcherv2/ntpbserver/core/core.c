@@ -511,7 +511,7 @@ void *find_free_ram(void *addr_start, void *addr_end, u32 len)
 {
 	u32 i, j;
 
-	addr_start = (void *)(((u32)addr_start) & 0xffffffc0);
+	addr_start = (void *)(((u32)addr_start) & 0xffffffc0); // 64bytes align check
 	
 	u32 memsize = (u32)addr_end - (u32)addr_start;
 	u8 *buf = (u8 *)addr_start;
@@ -524,7 +524,7 @@ void *find_free_ram(void *addr_start, void *addr_end, u32 len)
 		if (j == len)
 			return &buf[i];
 		else
-			i += (j + 0x40) & 0xffffffc0;	
+			i += (j + 0x40) & 0xffffffc0; // 64bytes align check
 	}
 	
 	return NULL;
@@ -614,7 +614,7 @@ int UnHook_Syscalls(void)
 
 // ------------------------------------------------------------------------
 int PostReset_Hook(void)
-{
+{	
 	patch_padRead();
 
 #ifdef DISABLE_AFTER_IOPRESET	
@@ -698,21 +698,21 @@ int HookIopReset(const char *arg, int flag)
 #ifdef VERBOSE			
 			scr_printf("\t No free mem found for ioprp...\n"); 		
 #endif		
-			while (1){;}
+			// force default adresses
+			ioprp_img.data_in  = (void *)0x01700000;
+			ioprp_img.data_out = (void *)0x017C0000;		
 		}	
-		
-		ioprp_img.data_in  = (void *)p;
-		ioprp_img.data_out = (void *)&p[(ioprp_img.size_in + 0x40) & 0xffffffc0];
-
+		else {
+			ioprp_img.data_in  = (void *)p;
+			ioprp_img.data_out = (void *)&p[(ioprp_img.size_in + 0x40) & 0xffffffc0]; // 64bytes align check
+		}
+				
 #ifdef VERBOSE					
 		scr_printf("\t ioprp_in: 0x%08x ioprp_out: 0x%08x\n", (int)ioprp_img.data_in, (int)ioprp_img.data_out); 
 #endif						
 		
 		GS_BGCOLOUR = 0x0000ff; // Red for IOPRP patching
 		
-		//ioprp_img.data_in  = (char*)0x01700000;
-		//ioprp_img.data_out = (char*)0x017C0000;
-
 		read(fd, ioprp_img.data_in , ioprp_img.size_in);
 		close(fd);
 		fioExit();
@@ -789,18 +789,18 @@ int HookIopReset(const char *arg, int flag)
 		r = LoadModuleBuffer(ps2dev9_irx, size_ps2dev9_irx, 0, NULL);		  				
 		if (r < 0)
 			while (1) {;}
-		
+								
 		r = LoadModuleBuffer(ps2ip_irx, size_ps2ip_irx, 0, NULL);		  				
 		if (r < 0)
 			while (1) {;}
-
+			
 		r = LoadModuleBuffer(ps2smap_irx, size_ps2smap_irx, 0, NULL);		  				
 		if (r < 0)
 			while (1) {;}
-						
+									
 		r = LoadModuleBuffer(ntpbserver_irx, size_ntpbserver_irx, 0, NULL);		  				
 		if (r < 0)
-			while (1) {;}
+			while (1) {;}						
 #endif		
 
 #ifdef VERBOSE								 		
@@ -808,7 +808,7 @@ int HookIopReset(const char *arg, int flag)
 #endif    
 
 		FlushCache(0);
-
+				
 #ifndef NOADDITIONAL_IRX				
 		rpcNTPBinit();
 #endif				

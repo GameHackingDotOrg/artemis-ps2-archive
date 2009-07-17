@@ -2,7 +2,7 @@
 //                                                                       //
 //  Artemis Project: CoreLauncher_v2                                     //
 //  solution provided by jimmikaelkael                                   //
-//  rev 0.3                                                              //
+//  rev 0.4                                                            //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -126,6 +126,7 @@
  	- Azur and Asmar PAL
 	- Final Fantasy 12 PAL
 	- Sims: Pets PAL
+	- Naruto Shippuden: Ultimate Ninja 4 PAL
 
  Game Launching & partially working
 	- Ratchet Gladiator PAL (I can dump during menu, but the padRead hook is loosen inGame, the elf is originally packed) 
@@ -144,9 +145,6 @@
 	- Tomb Raider Anniversary PAL
 	- Cars Matter PAL (freeze when you select a game)
 	- The Golden Compass PAL
-
- Tested incompatible for other reason:
-	- Naruto Ultimate Ninja 4 Shippuden PAL (freeze on Core's SifCallRpc call)
 
  Not working (I'm unable to start those game backups with CogSwap as well, there having the same symptoms):
 	- Spyro: The Eternal Knight PAL (pass loading screen, you can select language, sounds are garbage in video and freezes)
