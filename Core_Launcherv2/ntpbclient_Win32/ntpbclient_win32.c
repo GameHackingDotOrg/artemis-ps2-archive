@@ -58,6 +58,8 @@ const unsigned char *ntpb_hdrMagic = "\xff\x00NTPB";
 #define REMOTE_CMD_DUMPSCRATCHPAD			0x104
 #define REMOTE_CMD_HALT						0x201
 #define REMOTE_CMD_RESUME					0x202
+#define REMOTE_CMD_PATCHMEM					0x501
+#define REMOTE_CMD_UNPATCHMEM				0x502
 
 static int remote_cmd;
 
@@ -81,6 +83,8 @@ HWND hwndLabelScratchpaddumpStart; 	// Label control handle
 HWND hwndLabelScratchpaddumpEnd;   	// Label control handle
 HWND hwndLabeldumpState;		   	// Label control handle
 HWND hwndLabelServerLog;		   	// Label control handle
+HWND hwndLabelAddr;				   	// Label control handle
+HWND hwndLabelVal;				   	// Label control handle
 
 HWND hwndTextBoxEEdump;				// Edit control handle
 HWND hwndTextBoxIOPdump;			// Edit control handle
@@ -97,6 +101,7 @@ HWND hwndTextBoxScratchpaddumpStart;// Edit control handle
 HWND hwndTextBoxScratchpaddumpEnd;	// Edit control handle
 HWND hwndTextBoxServerLog;			// Edit control handle
 HWND hwndTextBoxPatchMem;			// Edit control handle
+HWND hwndTextBoxPatchVal;			// Edit control handle
 
 HWND hwndButtonEEdump;				// Button control handle
 HWND hwndButtonIOPdump;				// Button control handle
@@ -104,6 +109,8 @@ HWND hwndButtonKerneldump;			// Button control handle
 HWND hwndButtonScratchpaddump;		// Button control handle
 
 HWND hwndButtonHaltResume;			// Button control handle
+HWND hwndButtonPatchMem;			// Button control handle
+HWND hwndButtonUnPatchMem;			// Button control handle
 
 HWND hwndProgressBardumpState;		// Progress Bar control handle
 HWND hWndStatusbar;					// StatusBar handle
@@ -212,6 +219,9 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 	int ln;
 	unsigned char buf[128];
 	char startbuf[128], endbuf[128], tmp[128], tmp_file[128];
+	char patchbuf[2048];
+	char *patchaddr[32], *patchval[32];
+
 
 	switch(id) {
 		// ---TODO--- Add new menu commands here
@@ -379,6 +389,81 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 				}
 			}
 			break;
+
+		case IDC_BUTTON_PATCHMEM:
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
+				remote_cmd = REMOTE_CMD_PATCHMEM;
+
+				int i, j, z, addr_count, val_count;
+
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_PATCHMEM));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_PATCHMEM, patchbuf, ln + 1);
+
+			    j = 0;
+				z = 0;
+				for (i=0; i<ln+1; i++) {
+					if ((patchbuf[i] == '\r') || (patchbuf[i] == '\0')) {
+						if (i-j > 0) {
+							patchaddr[z] = (char*)GlobalAlloc(GPTR, i-j+1);
+							memcpy(patchaddr[z], &patchbuf[j], i-j);
+							patchaddr[z][i-j] = 0;
+							//MessageBox(GetActiveWindow(),patchaddr[z],"ntpbclient",MB_ICONERROR | MB_OK);
+							z++;
+						}
+						j = i + 2;
+					}
+				}
+				addr_count = z;
+
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_PATCHVAL));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_PATCHVAL, patchbuf, ln + 1);
+
+			    j = 0;
+				z = 0;
+				for (i=0; i<ln+1; i++) {
+					if ((patchbuf[i] == '\r') || (patchbuf[i] == '\0')) {
+						if (i-j > 0) {
+							patchval[z] = (char*)GlobalAlloc(GPTR, i-j+1);
+							memcpy(patchval[z], &patchbuf[j], i-j);
+							patchval[z][i-j] = 0;
+							//MessageBox(GetActiveWindow(),patchval[z],"ntpbclient",MB_ICONERROR | MB_OK);
+							z++;
+						}
+						j = i + 2;
+					}
+				}
+				val_count = z;
+
+				if (addr_count == val_count) {
+					*((unsigned int *)&buf[0]) = addr_count;
+					z = 4;
+					for (i=0; i<addr_count; i++) {
+						*((unsigned int *)&buf[z]) = (unsigned int)HexaToDecimal(patchaddr[i]);
+						*((unsigned int *)&buf[z+4]) = (unsigned int)HexaToDecimal(patchval[i]);
+						z += 8;
+					}
+					SendRemoteCmd(remote_cmd, buf, ((addr_count << 1) << 2) + 4);
+					HANDLE rcvDataThid = CreateThread(NULL, 0, rcvDataThread, NULL, 0, NULL); // no stack, 1MB by default
+				}
+				else {
+					MessageBox(GetActiveWindow(),"Error: addresses items count <> val items count","ntpbclient",MB_ICONERROR | MB_OK);
+				}
+
+				for (i=0; i<addr_count; i++)
+					GlobalFree((HANDLE)patchaddr[i]);
+				for (i=0; i<val_count; i++)
+					GlobalFree((HANDLE)patchval[i]);
+			}
+			break;
+
+		case IDC_BUTTON_UNPATCHMEM:
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
+				remote_cmd = REMOTE_CMD_UNPATCHMEM;
+				SendRemoteCmd(remote_cmd, NULL, 0);
+				HANDLE rcvDataThid = CreateThread(NULL, 0, rcvDataThread, NULL, 0, NULL); // no stack, 1MB by default
+			}
+			break;
+
 	}
 }
 
@@ -1175,15 +1260,66 @@ VOID CreateControls(HINSTANCE hInstance)
                                hInstance,
                                NULL);
 
+	hwndLabelAddr = CreateWindow (TEXT("static"),
+                               "address:",
+                               WS_CHILD|WS_VISIBLE,
+                               20,518,
+                               100,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_ADDR,
+                               hInstance,
+                               NULL);
+
+	hwndLabelVal = CreateWindow (TEXT("static"),
+                               "value:",
+                               WS_CHILD|WS_VISIBLE,
+                               120,518,
+                               100,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_VAL,
+                               hInstance,
+                               NULL);
+
 	hwndTextBoxPatchMem = CreateWindow (TEXT("edit"),
                                "",
                                WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE,
                                20,538,
-                               300,70,
+                               100,70,
                                hwndMain,
                                (HMENU)IDC_TEXTBOX_PATCHMEM,
                                hInstance,
                                NULL);
+
+	hwndTextBoxPatchVal = CreateWindow (TEXT("edit"),
+                               "",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE,
+                               120,538,
+                               100,70,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_PATCHVAL,
+                               hInstance,
+                               NULL);
+
+	hwndButtonPatchMem = CreateWindow (TEXT("button"),
+                               "Patch",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               240,538,
+                               80,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_PATCHMEM,
+                               hInstance,
+                               NULL);
+
+	hwndButtonPatchMem = CreateWindow (TEXT("button"),
+                               "Unpatch",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               240,566,
+                               80,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_UNPATCHMEM,
+                               hInstance,
+                               NULL);
+
 }
 
 /*<---------------------------------------------------------------------->*/

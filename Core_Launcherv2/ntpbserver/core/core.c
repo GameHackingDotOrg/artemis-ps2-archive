@@ -505,7 +505,11 @@ static int scePadRead_style = 1;
 
 static int haltState = 0;
 
+static int num_patches = 0;
+u32 patch_addr[32];
+u32 patch_val[32];
 
+ 
 //--------------------------------------------------------------
 void *find_free_ram(void *addr_start, void *addr_end, u32 len)
 {
@@ -966,10 +970,40 @@ int sendDump(int dump_type, u32 dump_start, u32 dump_end)
 }
 
 //--------------------------------------------------------------
+int getMemPatches(int num_patches, u8 *buf)
+{
+	int i, j;
+	
+	j = 0;
+	for (i=0; i<num_patches; i++) {
+		patch_addr[i] = *((u32 *)&buf[j]);
+		patch_val[i] = *((u32 *)&buf[j+4]);
+		j += 8;
+	}
+	
+	return 1;
+}
+
+//--------------------------------------------------------------
+int applyMemPatches(void)
+{
+	int i;
+	
+	DIntr();
+	
+	for (i=0; i<num_patches; i++)
+		*((u32 *)patch_addr[i]) = patch_val[i];
+	
+	EIntr();
+		
+	return 1;
+}
+
+//--------------------------------------------------------------
 int getRemoteCmd(void)
 {
 	u16 remote_cmd;
-	u8 buf[8];
+	u8 buf[256];
 	int size;
 	int ret; 
 	
@@ -1010,15 +1044,22 @@ int getRemoteCmd(void)
 				rpcNTPBEndReply();
 				rpcSync(0, NULL, &ret);	
 				if (haltState) {			
-					haltState = 0;
+					haltState = 0; 
 				}
 				break;
 				
 			case REMOTE_CMD_PATCHMEM:
 				rpcNTPBEndReply();
 				rpcSync(0, NULL, &ret);	
-				GetPatchList			
-				break;				
+				num_patches = *((u32 *)&buf[0]);
+				getMemPatches(num_patches, &buf[4]);
+				break;
+
+			case REMOTE_CMD_UNPATCHMEM:
+				rpcNTPBEndReply();
+				rpcSync(0, NULL, &ret);	
+				num_patches = 0;
+				break;												
 		}
 	}
 	
@@ -1044,6 +1085,9 @@ void start_screen(void)
 //u32 old_pad;
 void padReadHook_job(void *data)
 {
+	if (num_patches > 0)
+		applyMemPatches();
+	
 	//u32 paddata, new_pad;
 	
 	//if (scePadRead_style == 2)
