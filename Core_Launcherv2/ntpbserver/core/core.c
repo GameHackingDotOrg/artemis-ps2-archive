@@ -1012,7 +1012,13 @@ int getRemoteCmd(void)
 				if (haltState) {			
 					haltState = 0;
 				}
-				break;			
+				break;
+				
+			case REMOTE_CMD_PATCHMEM:
+				rpcNTPBEndReply();
+				rpcSync(0, NULL, &ret);	
+				GetPatchList			
+				break;				
 		}
 	}
 	

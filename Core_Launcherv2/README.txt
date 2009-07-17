@@ -53,7 +53,7 @@
  During the game launch, you'll see colored debug screens:
 	- If the first one is White, then a fatal error occured to read disc.
 	- Blue when the core hook IOP reset.
-	- Purple will searching for free ram to put IOPRP images.
+	- Purple while searching for free ram to put IOPRP images.
 	- Red while patching IOPRP.
 	- Green while resetting IOP with the modified IOPRP image.
 	- Cyan while loading additional modules.

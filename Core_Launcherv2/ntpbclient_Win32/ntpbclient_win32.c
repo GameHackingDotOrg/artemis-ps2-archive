@@ -96,6 +96,7 @@ HWND hwndTextBoxKerneldumpEnd;		// Edit control handle
 HWND hwndTextBoxScratchpaddumpStart;// Edit control handle
 HWND hwndTextBoxScratchpaddumpEnd;	// Edit control handle
 HWND hwndTextBoxServerLog;			// Edit control handle
+HWND hwndTextBoxPatchMem;			// Edit control handle
 
 HWND hwndButtonEEdump;				// Button control handle
 HWND hwndButtonIOPdump;				// Button control handle
@@ -197,7 +198,7 @@ HWND Createntpbclient_win32WndClassWnd(void)
 {
 	return CreateWindow("ntpbclient_win32WndClass","ntpbclient_win32",
 		WS_MINIMIZEBOX|WS_VISIBLE|WS_CLIPSIBLINGS|WS_CLIPCHILDREN|WS_CAPTION|WS_BORDER|WS_SYSMENU,
-		CW_USEDEFAULT,CW_USEDEFAULT,1024,585,
+		CW_USEDEFAULT,CW_USEDEFAULT,1024,685,
 		NULL,
 		NULL,
 		hInst,
@@ -1174,6 +1175,15 @@ VOID CreateControls(HINSTANCE hInstance)
                                hInstance,
                                NULL);
 
+	hwndTextBoxPatchMem = CreateWindow (TEXT("edit"),
+                               "",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE,
+                               20,538,
+                               300,70,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_PATCHMEM,
+                               hInstance,
+                               NULL);
 }
 
 /*<---------------------------------------------------------------------->*/

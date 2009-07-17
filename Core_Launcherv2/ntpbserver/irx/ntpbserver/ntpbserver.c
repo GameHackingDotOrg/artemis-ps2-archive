@@ -84,10 +84,10 @@ typedef struct g_sendDataParam { // size = 16384
 	int size;				 // 16380
 } g_sendDataParam_t;
 
-typedef struct g_getRemoteCmdParam { // size = 16
+typedef struct g_getRemoteCmdParam { // size = 256
 	u16 cmd;				 //	0
-	u8 buf[8];		 	 	 // 2
-	int size;				 // 10
+	u8 buf[248];		 	 // 2
+	int size;				 // 250
 	u16 pad;
 } g_getRemoteCmdParam_t;
 
@@ -108,7 +108,7 @@ int check_ntpb_header(void *buf) // sanity check to see if the packet have the f
 	if (i == ntpb_MagicSize)
 		return 1;
 
-	return 0;
+	return 0; 
 }
 
 //-------------------------------------------------------------- 
@@ -487,10 +487,12 @@ int _rpcNTPBgetRemoteCmd(void *rpc_buf)
 	g_getRemoteCmdParam_t *eP = (g_getRemoteCmdParam_t *)rpc_buf;	
 				
 	eP->cmd = remote_cmd;
-	remote_cmd = 0;
 	
-	memcpy(eP->buf, cmdbuf, cmdsize);
-	eP->size = cmdsize;
+	if (remote_cmd) {
+		remote_cmd = 0;
+		memcpy(eP->buf, cmdbuf, cmdsize);
+		eP->size = cmdsize;
+	}
 	
 	return 1;
 }

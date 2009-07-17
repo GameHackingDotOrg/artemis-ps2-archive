@@ -16,9 +16,9 @@ static struct { 		// size = 16384
 } sendDataParam __attribute__((aligned(64)));
 
 static struct { 		// size = 16
-	u16 cmd;			// 0
-	u8 buf[8];			// 2
-	int size;			// 10
+	u16 cmd;			//	0
+	u8 buf[248];		// 2
+	int size;			// 250
 	u16 pad;
 } getRemoteCmdParam __attribute__((aligned(64)));
 
