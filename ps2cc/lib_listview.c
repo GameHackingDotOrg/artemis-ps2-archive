@@ -124,6 +124,33 @@ u64 ListViewGetDec(HWND hListView, int iNum, int iSub)
 }
 
 /**********************************************
+ListViewGetFloat - Grab the float value from a listview item/subitem
+***********************************************/
+u64 ListViewGetFloat(HWND hListView, int iNum, int iSub, int fsize)
+{
+    char iText[20];
+//    u64 tvalue;
+    LVITEM LvItem;  memset(&LvItem,0,sizeof(LvItem));
+    LvItem.iItem = iNum;
+    LvItem.iSubItem = iSub;
+    LvItem.mask = LVIF_TEXT;
+    LvItem.cchTextMax = 20;
+    LvItem.pszText = iText;
+    SendMessage(hListView, LVM_GETITEMTEXT, iNum, (LPARAM)&LvItem);
+    float tmpFloat;
+    double tmpDouble;
+    if (!isFloat(iText)) { return 0; }
+    if (fsize == 4 ) {
+        sscanf(iText, "%f", &tmpFloat);
+        return Float2Hex(tmpFloat);
+    }
+    else {
+        sscanf(iText, "%Lf", &tmpDouble);
+        return Double2Hex(tmpDouble);
+    }
+}
+
+/**********************************************
 ListViewHitTst - hit test/ subitem hit test
 ***********************************************/
 int ListViewHitTst(HWND hListView, DWORD dwPos, int iItem)

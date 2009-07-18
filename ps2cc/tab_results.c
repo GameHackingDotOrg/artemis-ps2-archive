@@ -9,7 +9,6 @@ Everything for the results display should pretty much be here.
 
 
 WNDPROC wpResultsListProc;
-WNDPROC wpResPageTxtProc;
 s64 CurrResNum;
 u32 *ResultsList;
 
@@ -17,6 +16,10 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 {
     HWND hwndResList = GetDlgItem(hwnd, RESULTS_LSV);
     HWND hwndResPage = GetDlgItem(hwnd, RESULTS_PAGE_CMB);
+    HWND hwndActiveResAddr = GetDlgItem(hwnd, ACTIVE_RES_ADDR_TXT);
+    HWND hwndActiveResSize = GetDlgItem(hwnd, ACTIVE_RES_SIZE_CMB);
+    HWND hwndActiveResValue = GetDlgItem(hwnd, ACTIVE_RES_VALUE_TXT);
+    HWND hwndAciveList = GetDlgItem(hwnd, ACTIVE_CODES_LSV);
 	switch(message)
 	{
 		case WM_INITDIALOG:
@@ -24,16 +27,39 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             SendMessage(hwndResList,LVM_DELETEALLITEMS,0,0);
             SendMessage(hwndResList,LVM_SETEXTENDEDLISTVIEWSTYLE,0,LVS_EX_FULLROWSELECT|LVS_EX_GRIDLINES|LVS_EX_LABELTIP);
 //            SendMessage(hwndResList, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
-            ListViewAddCol(hwndResList, "Address", 0, 0x80);
-            //subclass the page # textbox
+            ListViewAddCol(hwndResList, "Address", 0, 0x80);            //subclassing
+		    wpResultsListProc = (WNDPROC)GetWindowLongPtr (hwndResList, GWLP_WNDPROC);
+		    SetWindowLongPtr (hwndResList, GWLP_WNDPROC, (LONG_PTR)ResultsListHandler);
+//		    wpActiveValueBoxProc = (WNDPROC)GetWindowLongPtr (hwndActiveResValue, GWLP_WNDPROC);
+		    SetWindowLongPtr (hwndActiveResValue, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
+		    SetWindowLongPtr (hwndActiveResAddr, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
 
-//		    wpResultsListProc = (WNDPROC)GetWindowLongPtr (hwndResList, GWLP_WNDPROC);
-//		    SetWindowLongPtr (hwndResList, GWLP_WNDPROC, (LONG_PTR)ResultsListHandler);
+            //Active Code Sizes
+            SendMessage(hwndActiveResSize,CB_RESETCONTENT,0,0);
+//            ComboAddItem(hwndActiveResSize, "8-Bit" , 1);
+//            ComboAddItem(hwndActiveResSize, "16-Bit" , 2);
+            ComboAddItem(hwndActiveResSize, "32-Bit" , 4);
+//            ComboAddItem(hwndActiveResSize, "64-Bit" , 8);
+            //Init Active Codes List
+            SendMessage(hwndAciveList,LVM_DELETEALLITEMS,0,0);
+            SendMessage(hwndAciveList,LVM_SETEXTENDEDLISTVIEWSTYLE,0,LVS_EX_FULLROWSELECT|LVS_EX_CHECKBOXES|LVS_EX_GRIDLINES|LVS_EX_LABELTIP);
+//            SendMessage(hwndAciveList, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
+            ListViewAddCol(hwndAciveList, "Address", 0, 0x70);
+            ListViewAddCol(hwndAciveList, "Value", 1, 0x80);
+            ListViewAddCol(hwndAciveList, "Size", 2, 0x30);
+            SendMessage(hwndAciveList, LVM_SETCOLUMNWIDTH, 2, LVSCW_AUTOSIZE_USEHEADER);
+
+            SendMessage(hwndActiveResSize,CB_SETCURSEL,0,0);
+            SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(ACTIVE_RES_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndActiveResSize);
+		    SendMessage(hwndActiveResAddr, EM_SETLIMITTEXT, 8, 0);
 		} break;
 		case WM_COMMAND:
         {
 			switch(LOWORD(wParam))
             {
+				/************************************************************
+				Result Page # Combo Box
+				*************************************************************/
                 case RESULTS_PAGE_CMB:
                 {
                     switch(HIWORD(wParam))
@@ -45,6 +71,32 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 						} break;
 					}
 				} break;
+				/************************************************************
+				Active Code Size Combo Box
+				*************************************************************/
+                case ACTIVE_RES_SIZE_CMB:
+                {
+                    switch(HIWORD(wParam))
+                    {
+                        case CBN_SELCHANGE:
+                        {
+                            int ResSize = SendMessage(hwndActiveResSize,CB_GETITEMDATA,SendMessage(hwndActiveResSize,CB_GETCURSEL,0,0),0);
+                            SendMessage(hwndActiveResValue, EM_SETLIMITTEXT, ResSize*2, 0);
+                        } break;
+                    }
+                } break;
+				/************************************************************
+				Activate Result button
+				*************************************************************/
+				case RES_ACTIVATE_CMD:
+                {
+                    u32 address = GetHexWindow(hwndActiveResAddr);
+                    u64 value = GetHexWindow(hwndActiveResValue);
+                    int size = SendMessage(hwndActiveResSize,CB_GETITEMDATA,SendMessage(hwndActiveResSize,CB_GETCURSEL,0,0), 0);
+                    if (address % size) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
+                    ListView_SetCheckState(hwndAciveList, Result2ActiveList(address, value, size), TRUE);
+                    UpdateActiveCheats();
+                } break;
 			}
 		} break;
 
@@ -54,6 +106,79 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
         } break;
 	}
 	return FALSE;
+}
+
+/****************************************************************************
+Results Listview Handler
+*****************************************************************************/
+LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+        case WM_LBUTTONDBLCLK: case WM_LBUTTONDOWN:
+        {
+            if (!(ResultsList)) { break; }
+            int iSelected = ListViewHitTst(hwnd, GetMessagePos(), -1);
+            if (iSelected < 0) { break; }
+            int iSubItem = ListViewHitTst(hwnd, GetMessagePos(), iSelected);
+            if (iSubItem <= 0) { iSubItem = 1; }
+            u32 address = ListViewGetHex(hwnd, iSelected, 0);	
+			u64 value = 0;
+			HWND hwndActiveResValue = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_VALUE_TXT);
+			HWND hwndSearchSize = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
+			int SearchSize = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
+            ComboSelFromData(GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_SIZE_CMB), SearchSize);
+            SetHexWindow(GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_ADDR_TXT), address);
+            SendMessage(hwndActiveResValue, EM_SETLIMITTEXT, SearchSize*2, 0);
+			switch (Settings.Results.DisplayFmt)
+			{
+				case MNU_RES_SHOW_HEX:
+				{
+		            value = ListViewGetHex(hwnd, iSelected, iSubItem);
+				} break;
+				case MNU_RES_SHOW_DECU:
+				case MNU_RES_SHOW_DECS:
+				{
+		            value = ListViewGetDec(hwnd, iSelected, iSubItem);
+				} break;
+				case MNU_RES_SHOW_FLOAT:
+				{
+		            value = ListViewGetFloat(hwnd, iSelected, iSubItem, SearchSize);
+				} break;
+			}
+			SetHexWindow(hwndActiveResValue, value);
+//            extern CurrMemAddress;
+//            if (Settings.Results.RamView == 1) { CurrMemAddress = ShowRAM(address & 0xFFFFFFF0); }
+            if (message == WM_LBUTTONDBLCLK) {
+                ListView_SetCheckState(GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, 4), TRUE);
+            }
+//            sprintf(ErrTxt, "%08I64X: %I64X", address, value);
+//            MessageBox(NULL, ErrTxt, "Debug", MB_OK);
+        } break;
+        case WM_KEYDOWN:
+        {
+            switch (wParam)
+            {
+                case VK_NEXT: case VK_PRIOR:
+                {
+                    if (!(ResultsList)) { break; }
+                    HWND hwndResPage = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_CMB);
+                    int iSelected = SendMessage(hwnd, LVM_GETSELECTIONMARK, 0, 0);
+                    if (wParam == VK_NEXT) {
+                    	SendMessage(hwndResPage,CB_SETCURSEL, SendMessage(hwndResPage,CB_GETCURSEL,0,0) + 1, 0);
+            			SendMessage(hTabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, MAKEWPARAM(SEARCH_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
+					}
+                    else {
+                    	SendMessage(hwndResPage,CB_SETCURSEL, SendMessage(hwndResPage,CB_GETCURSEL,0,0) - 1, 0);
+            			SendMessage(hTabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, MAKEWPARAM(SEARCH_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
+                    }
+                    ListView_SetItemState(hwnd, iSelected, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
+                } return 0;
+            }
+        } break;
+    }
+    if (wpResultsListProc) { return CallWindowProc (wpResultsListProc, hwnd, message, wParam, lParam); }
+    else { return DefWindowProc (hwnd, message, wParam, lParam); }
 }
 
 /****************************************************************************
@@ -224,4 +349,50 @@ int ResFormatString(char *tmpstring, int outfmt, int numbytes)
         } break;
     }
     return 0;
+}
+/****************************************************************************
+Add Code to active list
+*****************************************************************************/
+int Result2ActiveList(u32 address, u64 value, int size)
+{
+    HWND hwndActList = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV);
+    int iCount = SendMessage(hwndActList, LVM_GETITEMCOUNT, 0, 0);
+    char txtValue[32], txtSize[4], txtAddress[20];
+    int i;
+    sprintf(txtAddress, "%08I64X", address);
+    sprintf(txtValue, "%08I64X", value);
+    sprintf(txtSize, "%u", size);
+    for (i = 0; i < iCount; i++) {
+        if (ListViewGetHex(hwndActList, i, 0) == address) {
+            ListViewSetRow(hwndActList, i, 1, 2, txtValue, txtSize);
+            return i;
+        }
+    }
+    return ListViewAddRow(hwndActList, 3, txtAddress, txtValue, txtSize);
+}
+/****************************************************************************
+Update Active Cheats - Make array of cheats to send to PS2 and calls said function
+*****************************************************************************/
+int UpdateActiveCheats()
+{
+    DeActivateCodes();
+	unsigned char actcodes[128];
+    HWND hwndActList = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV);
+    int i = 0, iCount = SendMessage(hwndActList, LVM_GETITEMCOUNT, 0, 0);
+    int aCount = 1;
+    u32 address, value;
+    while ((i < iCount) && (aCount < 16))
+    {
+    	if (ListView_GetCheckState(hwndActList, i)) {
+    		*((unsigned int *)&actcodes[aCount * 4]) = ListViewGetHex(hwndActList, i, 0);
+    		*((unsigned int *)&actcodes[(aCount * 4)+4]) = ListViewGetHex(hwndActList, i, 1);
+    		aCount++;
+    	}
+    	i++;
+    }
+    *((unsigned int *)&actcodes[0]) = aCount - 1;
+    if (!ActivateCheats(actcodes, aCount-1)) {
+    	MessageBox(NULL, ErrTxt, "Error", MB_OK); return 0;
+    }
+    return 1;
 }

@@ -107,6 +107,14 @@ u64 GetDecWindow(HWND txtbox)
     char txtInput[31];
     u64 tvalue=0;
     GetWindowText(txtbox, txtInput, sizeof(txtInput));
+    if (isDec(txtInput)) { sscanf(txtInput,"%I64u",&tvalue); }
+    return tvalue;
+}
+u64 GetDecWindowS(HWND txtbox)
+{
+    char txtInput[31];
+    u64 tvalue=0;
+    GetWindowText(txtbox, txtInput, sizeof(txtInput));
     if (isDec(txtInput)) { sscanf(txtInput,"%I64d",&tvalue); }
     return tvalue;
 }
@@ -114,6 +122,14 @@ int SetDecWindowU(HWND txtbox, u64 value)
 {
     char txtValue[31];
     sprintf(txtValue, "%I64u", value);
+    SetWindowText(txtbox, txtValue);
+    return 0;
+}
+
+int SetDecWindowS(HWND txtbox, u64 value)
+{
+    char txtValue[31];
+    sprintf(txtValue, "%I64d", value);
     SetWindowText(txtbox, txtValue);
     return 0;
 }
@@ -143,6 +159,24 @@ u64 GetFloatWindow(HWND txtbox, int fsize)
         sscanf(txtInput, "%Lf", &tmpDouble);
         return Double2Hex(tmpDouble);
     }
+}
+
+int SetFloatWindow(HWND txtbox, u64 value, int fsize)
+{
+    char txtValue[31];
+    float tmpFloat=0;
+    u32 *CastFloat=(u32*)(&tmpFloat);
+    double tmpDouble=0;
+    u64 *CastDouble=(u64*)&tmpDouble;
+    if (fsize == 4) {
+    	*CastFloat = value & 0xFFFFFFFF;
+    	sprintf(txtValue, "%f", tmpFloat);
+    } else {
+    	*CastDouble = value;
+    	sprintf(txtValue, "%Lf", tmpDouble);
+    }
+    SetWindowText(txtbox, txtValue);
+    return 0;
 }
 
 /****************************************************************************

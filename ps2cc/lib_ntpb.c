@@ -59,6 +59,8 @@ const char *id_ram[5] = {
 #define REMOTE_CMD_DUMPIOP					0x102
 #define REMOTE_CMD_DUMPKERNEL				0x103
 #define REMOTE_CMD_DUMPSCRATCHPAD			0x104
+#define REMOTE_CMD_PATCHMEM					0x501
+#define REMOTE_CMD_UNPATCHMEM				0x502
 
 // commands sent in return by server
 #define NTPBCMD_PRINT_EEDUMP 				0x301
@@ -408,4 +410,97 @@ int TestConnect()
 	}
 	clientDisconnect();
 	return 1;
+}
+/****************************************************************************
+Activate Cheats*****************************************************************************/
+int ActivateCheats(unsigned char codes[128], int numcodes)
+{
+	int i, r, cmd, remote_cmd, opstatus;
+	unsigned char cmdBuf[16];
+
+#ifdef _WIN32
+	// Init WSA
+	WsaData = InitWS2();
+	if (WsaData == NULL)
+		return 0;
+#endif
+
+	// Connect client to PS2 server
+	UpdateStatusBar("Contacting PS2 Server...", 0, 0);
+	if (!clientConnect()) {
+		sprintf(ErrTxt, "Connecting to PS2 failed. (DumpRAM)");
+		UpdateStatusBar("Idle", 0, 0);
+		return 0;
+	}
+
+	UpdateStatusBar("Client connected...", 0, 0);
+
+	// send remote cmd
+	UpdateStatusBar("Updating Codes...", 0, 0);	
+	remote_cmd = REMOTE_CMD_PATCHMEM;
+	r = SendRemoteCmd(remote_cmd, codes, (numcodes * 8) + 4);
+	if (r < 0) {
+		sprintf(ErrTxt, "Failed to send remote command - error %d (ActivateCodes)", r);
+		opstatus = 0;
+		goto ac_disconnect;
+	}
+	opstatus = 1;
+
+ac_disconnect:
+	// disconnect the client
+	clientDisconnect();
+
+#ifdef _WIN32
+	WSACleanup();
+#endif
+
+	UpdateStatusBar("Idle", 0, 0);
+	return opstatus;
+}
+
+/****************************************************************************
+DeActivate Cheats*****************************************************************************/
+int DeActivateCodes()
+{
+	int i, r, cmd, remote_cmd, opstatus;
+	unsigned char cmdBuf[16];
+
+#ifdef _WIN32
+	// Init WSA
+	WsaData = InitWS2();
+	if (WsaData == NULL)
+		return 0;
+#endif
+
+	// Connect client to PS2 server
+	UpdateStatusBar("Contacting PS2 Server...", 0, 0);
+	if (!clientConnect()) {
+		sprintf(ErrTxt, "Connecting to PS2 failed. (DumpRAM)");
+		UpdateStatusBar("Idle", 0, 0);
+		return 0;
+	}
+
+	UpdateStatusBar("Client connected...", 0, 0);
+
+	// send remote cmd
+	UpdateStatusBar("Updating Codes...", 0, 0);	
+	remote_cmd = REMOTE_CMD_UNPATCHMEM;
+	r = SendRemoteCmd(remote_cmd, NULL, 0);
+	if (r < 0) {
+		sprintf(ErrTxt, "Failed to send remote command - error %d (DeActivateCodes)", r);
+		opstatus = 0;
+		goto dac_disconnect;
+	}
+	opstatus = 1;
+
+dac_disconnect:
+	// disconnect the client
+	clientDisconnect();
+
+#ifdef _WIN32
+	WSACleanup();
+#endif
+
+	UpdateStatusBar("Idle", 0, 0);
+	return opstatus;
 }

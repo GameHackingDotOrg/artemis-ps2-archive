@@ -226,8 +226,10 @@ int SetHexWindow(HWND txtbox, u64 value);
 u64 isDecWindow(HWND txtbox);
 u64 GetDecWindow(HWND txtbox);
 int SetDecWindowU(HWND txtbox, u64 value);
+int SetDecWindowS(HWND txtbox, u64 value);
 u64 IsFloatWindow(HWND txtbox);
 u64 GetFloatWindow(HWND txtbox, int fsize);
+int SetFloatWindow(HWND txtbox, u64 value, int fsize);
 int DoFileOpen(HWND hwnd, char* filename);
 int BrowseForFolder(HWND hwnd, char* filename);
 int SetMenuState(HMENU hMenu, UINT id, UINT state);
@@ -253,6 +255,7 @@ int ListViewAddCol(HWND hListView, const char* colName, int colNum, int colWidth
 int ListViewGetText(HWND hListView, int iNum, int iSub, char* iText, int txtLen);
 u64 ListViewGetHex(HWND hListView, int iNum, int iSub);
 u64 ListViewGetDec(HWND hListView, int iNum, int iSub);
+u64 ListViewGetFloat(HWND hListView, int iNum, int iSub, int fsize);
 int ListViewHitTst(HWND hListView, DWORD dwPos, int iItem);
 
 //lib_misc
@@ -278,6 +281,8 @@ int isIPAddr(char *text);
 //lib_ntpb
 int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end);
 int TestConnect();
+int ActivateCheats(unsigned char codes[128], int numcodes);
+int DeActivateCodes();
 
 //lib_search
 int CodeSearch(CODE_SEARCH_VARS Search);
@@ -297,7 +302,10 @@ int UpdateSearchHistory(int ActionType);
 
 //tab_results
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ActiveValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int LoadResultsList();
 s64 ShowResPage(s64 ResNum);
 int ResFormatString(char *tmpstring, int outfmt, int numbytes);
+int Result2ActiveList(u32 address, u64 value, int size);int UpdateActiveCheats();
 

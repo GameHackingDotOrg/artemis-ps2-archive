@@ -7,6 +7,8 @@ API calls. It's mostly for value/text manipulation.
 NO GLOBALS
 *****************************************************************************/
 
+#include <stdio.h>
+#include <stdlib.h>
 #include "_types.h"
 
 /**********************************************
