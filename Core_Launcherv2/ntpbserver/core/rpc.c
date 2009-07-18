@@ -15,11 +15,11 @@ static struct { 		// size = 16384
 	int size;			// 16380
 } sendDataParam __attribute__((aligned(64)));
 
-static struct { 		// size = 16
-	u16 cmd;			//	0
-	u8 buf[248];		// 2
-	int size;			// 250
-	u16 pad;
+static struct { 		// size = 1024
+	u16 cmd;			// 0
+	u8 buf[1016];		// 2
+	int size;			// 1018
+	u16 pad;			// 1022
 } getRemoteCmdParam __attribute__((aligned(64)));
 
 // stores command currently being executed on the iop

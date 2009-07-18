@@ -2,7 +2,7 @@
 //                                                                       //
 //  Artemis Project: CoreLauncher_v2                                     //
 //  solution provided by jimmikaelkael                                   //
-//  rev 0.5                                                          //
+//  rev 0.6	                                                         //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
@@ -106,6 +106,7 @@
 	- Euro 2004 PAL
 	- Harry Potter: the Order of the Phenix PAL
 	- FIFA 2003 PAL
+	- Madagascar 2 PAL
 	- Bee Movie PAL
 	- Sega SuperStars Tennis PAL
 	- Crash of the Titans PAL

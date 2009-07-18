@@ -205,11 +205,11 @@ int ParseSYSTEMCNF(char *system_cnf, char *boot_path)
 }
 
 //-------------------------------------------------------------- 
-void SendIrxRAM(void)
+void SendIrxKernelRAM(void)
 {
-	u32 *total_irxsize = (u32 *)0x01a00000;
-	void *irxtab = (void *)0x01a00010;
-	void *irxptr = (void *)0x01a00100;	
+	u32 *total_irxsize = (u32 *)0x80030000;
+	void *irxtab = (void *)0x80030010;
+	void *irxptr = (void *)0x80030100;
 	irxptr_t irxptr_tab[IRX_NUM];
 	void *irxsrc[IRX_NUM];
 	int i;
@@ -230,7 +230,10 @@ void SendIrxRAM(void)
 	irxsrc[5] = (void *)&ps2smap_irx;
 	
 	irxsize = 0;		
-			
+
+	DIntr();
+	ee_kmode_enter();
+				
 	for (i = 0; i <	IRX_NUM; i++) {
 		irxptr_tab[i].irxaddr = irxptr; 
 		
@@ -243,6 +246,9 @@ void SendIrxRAM(void)
 	memcpy((void *)irxtab, (void *)&irxptr_tab[0], sizeof(irxptr_tab));	
 	
 	*total_irxsize = irxsize;
+	
+	ee_kmode_exit();
+	EIntr();
 }	
 
 //-------------------------------------------------------------- 
@@ -281,7 +287,7 @@ int main(int argc, char *argv[])
 {	
 	init_scr();
 	scr_clear();
-	scr_printf("\t CORE LAUNCHER V2 - v0.5\n\n");
+	scr_printf("\t CORE LAUNCHER V2 - v0.6\n\n");
 	
 	SifInitRpc(0);
 	
@@ -312,8 +318,8 @@ int main(int argc, char *argv[])
 	padInit(0);
 	padPortOpen(0, 0, padBuf);
             	
-    // Send all IRX modules to EE ram for the Core elf to get it
-	SendIrxRAM();
+    // Send all IRX modules to Kernel ram for the Core elf to get it
+	SendIrxKernelRAM();
         	
 	cdInit(CDVD_INIT_INIT);
 	//cdSetMediaMode(2);

@@ -123,7 +123,11 @@ int PrintLog(void *buf, int size, int ResultControlID);
 DWORD WINAPI clientThread(LPVOID lpParam);
 DWORD WINAPI rcvDataThread(LPVOID lpParam); // retrieving a packet sent by the Client
 
-unsigned char cmdBuf[16];
+//unsigned char cmdBuf[1024];
+
+#define MAX_PATCHES_PER_CMD 	126
+
+char *patchaddr[8192], *patchval[8192];
 
 /*<---------------------------------------------------------------------->*/
 void UpdateStatusBar(LPSTR lpszStatusString, WORD partNumber, WORD displayFlags)
@@ -434,7 +438,7 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 				}
 				val_count = z;
 
-				if (addr_count == val_count) {
+				if ((addr_count == val_count) && (addr_count <= MAX_PATCHES_PER_CMD)) {
 					*((unsigned int *)&buf[0]) = addr_count;
 					z = 4;
 					for (i=0; i<addr_count; i++) {
@@ -446,7 +450,10 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 					HANDLE rcvDataThid = CreateThread(NULL, 0, rcvDataThread, NULL, 0, NULL); // no stack, 1MB by default
 				}
 				else {
-					MessageBox(GetActiveWindow(),"Error: addresses items count <> val items count","ntpbclient",MB_ICONERROR | MB_OK);
+					if (addr_count > MAX_PATCHES_PER_CMD)
+						MessageBox(GetActiveWindow(),"Error: too much patches for 1 command...","ntpbclient",MB_ICONERROR | MB_OK);
+					else
+						MessageBox(GetActiveWindow(),"Error: addresses items count <> val items count...","ntpbclient",MB_ICONERROR | MB_OK);
 				}
 
 				for (i=0; i<addr_count; i++)

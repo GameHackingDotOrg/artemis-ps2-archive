@@ -505,10 +505,19 @@ static int scePadRead_style = 1;
 
 static int haltState = 0;
 
-static int num_patches = 0;
-u32 patch_addr[32];
-u32 patch_val[32];
+#define MAX_PATCHES 	8192
 
+typedef struct {
+	u32 addr;
+	u32 val;	
+} MemPatch_t;
+
+MemPatch_t MemPatches[MAX_PATCHES];
+
+static int num_patches = 0;
+
+void *irx_mem;
+u8 cmd_buf[1024];
  
 //--------------------------------------------------------------
 void *find_free_ram(void *addr_start, void *addr_end, u32 len)
@@ -626,6 +635,20 @@ int PostReset_Hook(void)
 #endif
 		
 	return 1;
+}
+
+// ------------------------------------------------------------------------
+int LoadIRXfromKernel(void *irxkernelmem, int irxsize, int arglen, char* argv)
+{	
+	DIntr();
+	ee_kmode_enter();
+	
+	memcpy(irx_mem, irxkernelmem, irxsize);
+	
+	ee_kmode_exit();
+	EIntr();
+		
+	return LoadModuleBuffer(irx_mem, irxsize, arglen, argv);		  				
 }
 
 // ------------------------------------------------------------------------
@@ -749,15 +772,21 @@ int HookIopReset(const char *arg, int flag)
 			
 			qid = SifSetDma(&dmat, 1);
 			while (SifDmaStat(qid) >= 0);
+					
+			DIntr();
+			ee_kmode_enter();
+			memcpy(irx_mem, memdisk_irx, size_memdisk_irx);
+			ee_kmode_exit();
+			EIntr();
 			
 			// Patching memdisk irx
-			u8 *memdisk_drv = (u8 *)memdisk_irx;
+			u8 *memdisk_drv = (u8 *)irx_mem;
 			*(u32*)(&memdisk_drv[0x19C]) = (u32)iopdest_img;
 			*(u32*)(&memdisk_drv[0x1A8]) = ioprp_img.size_out;
 			FlushCache(0);
 
 			// Load module asynchronously with memdisk drv
-			LoadModuleBuffer(memdisk_irx, size_memdisk_irx, 0, NULL);
+			LoadModuleBuffer(memdisk_drv, size_memdisk_irx, 0, NULL);			
 			LoadModuleAsync("rom0:UDNL", 7, "MDISK0:");
 
 			SifExitRpc();
@@ -790,21 +819,22 @@ int HookIopReset(const char *arg, int flag)
 #endif    
 		
 #ifndef NOADDITIONAL_IRX
-		r = LoadModuleBuffer(ps2dev9_irx, size_ps2dev9_irx, 0, NULL);		  				
+
+		r = LoadIRXfromKernel(ps2dev9_irx, size_ps2dev9_irx, 0, NULL);
 		if (r < 0)
 			while (1) {;}
-								
-		r = LoadModuleBuffer(ps2ip_irx, size_ps2ip_irx, 0, NULL);		  				
+											
+		r = LoadIRXfromKernel(ps2ip_irx, size_ps2ip_irx, 0, NULL);			
 		if (r < 0)
 			while (1) {;}
 			
-		r = LoadModuleBuffer(ps2smap_irx, size_ps2smap_irx, 0, NULL);		  				
+		r = LoadIRXfromKernel(ps2smap_irx, size_ps2smap_irx, 0, NULL);			
 		if (r < 0)
 			while (1) {;}
 									
-		r = LoadModuleBuffer(ntpbserver_irx, size_ntpbserver_irx, 0, NULL);		  				
+		r = LoadIRXfromKernel(ntpbserver_irx, size_ntpbserver_irx, 0, NULL);	
 		if (r < 0)
-			while (1) {;}						
+			while (1) {;}									
 #endif		
 
 #ifdef VERBOSE								 		
@@ -857,7 +887,11 @@ int PatchIOPRPimg(ioprp_t *ioprp_img)
 	while(strlen(romdir_in->fileName) > 0) {
 		// replacing some modules from .img file
 		if (!strcmp(romdir_in->fileName, "EESYNC")) {
+			DIntr();
+			ee_kmode_enter();
 			memcpy((void*)((u32)ioprp_img->data_out+offset_out), eesync_irx, size_eesync_irx);
+			ee_kmode_exit();
+			EIntr();
 			romdir_out->fileSize = size_eesync_irx;
 		}
 		// leave module from .img file as it is
@@ -970,16 +1004,21 @@ int sendDump(int dump_type, u32 dump_start, u32 dump_end)
 }
 
 //--------------------------------------------------------------
-int getMemPatches(int num_patches, u8 *buf)
+int addMemPatches(int num, u8 *buf)
 {
 	int i, j;
 	
+	if (num_patches+num > MAX_PATCHES)
+		return 0;
+	
 	j = 0;
-	for (i=0; i<num_patches; i++) {
-		patch_addr[i] = *((u32 *)&buf[j]);
-		patch_val[i] = *((u32 *)&buf[j+4]);
+	for (i=num_patches; i<(num_patches+num); i++) {
+		MemPatches[i].addr = *((u32 *)&buf[j]);
+		MemPatches[i].val = *((u32 *)&buf[j+4]);
 		j += 8;
 	}
+	
+	num_patches += num;
 	
 	return 1;
 }
@@ -992,7 +1031,7 @@ int applyMemPatches(void)
 	DIntr();
 	
 	for (i=0; i<num_patches; i++)
-		*((u32 *)patch_addr[i]) = patch_val[i];
+		*((u32 *)MemPatches[i].addr) = MemPatches[i].val;
 	
 	EIntr();
 		
@@ -1003,11 +1042,10 @@ int applyMemPatches(void)
 int getRemoteCmd(void)
 {
 	u16 remote_cmd;
-	u8 buf[256];
 	int size;
 	int ret; 
 	
-	rpcNTPBgetRemoteCmd(&remote_cmd, buf, &size);
+	rpcNTPBgetRemoteCmd(&remote_cmd, cmd_buf, &size);
 	rpcSync(0, NULL, &ret);
 		
 	if (remote_cmd != REMOTE_CMD_NONE) {
@@ -1015,19 +1053,19 @@ int getRemoteCmd(void)
 		switch (remote_cmd) {
 			
 			case REMOTE_CMD_DUMPEE:
-				sendDump(EE_DUMP, *((u32 *)&buf[0]), *((u32 *)&buf[4]));
+				sendDump(EE_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
 				break;			
 
 			case REMOTE_CMD_DUMPIOP:
-				sendDump(IOP_DUMP, *((u32 *)&buf[0]), *((u32 *)&buf[4]));
+				sendDump(IOP_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
 				break;
 				
 			case REMOTE_CMD_DUMPKERNEL:
-				sendDump(KERNEL_DUMP, *((u32 *)&buf[0]), *((u32 *)&buf[4]));
+				sendDump(KERNEL_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
 				break;
 				
 			case REMOTE_CMD_DUMPSCRATCHPAD:
-				sendDump(SCRATCHPAD_DUMP, *((u32 *)&buf[0]), *((u32 *)&buf[4]));
+				sendDump(SCRATCHPAD_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
 				break;
 				
 			case REMOTE_CMD_HALT:
@@ -1048,14 +1086,13 @@ int getRemoteCmd(void)
 				}
 				break;
 				
-			case REMOTE_CMD_PATCHMEM:
+			case REMOTE_CMD_ADDMEMPATCHES:
 				rpcNTPBEndReply();
 				rpcSync(0, NULL, &ret);	
-				num_patches = *((u32 *)&buf[0]);
-				getMemPatches(num_patches, &buf[4]);
+				addMemPatches(*((u32 *)&cmd_buf[0]), &cmd_buf[4]);
 				break;
 
-			case REMOTE_CMD_UNPATCHMEM:
+			case REMOTE_CMD_CLEARMEMPATCHES:
 				rpcNTPBEndReply();
 				rpcSync(0, NULL, &ret);	
 				num_patches = 0;
@@ -1223,13 +1260,26 @@ int patch_padRead(void)
 }
 
 //-------------------------------------------------------------- 
-void GetIrxRAM(void)
+void GetIrxKernelRAM(void)
 {
-	u32 *total_irxsize = (u32 *)0x01a00000;
-	void *irx_tab = (void *)0x01a00010;
+	int i, irx_maxsize;
+	u32 *total_irxsize = (u32 *)0x80030000;
+	void *irx_tab = (void *)0x80030010;
 	irxptr_t irxptr_tab[IRX_NUM];
 
+	DIntr();
+	ee_kmode_enter();
+	
 	memcpy(&irxptr_tab[0], irx_tab, sizeof(irxptr_tab));
+
+	ee_kmode_exit();
+	EIntr();
+		
+	irx_maxsize = 0;
+	for (i=0; i<IRX_NUM; i++) {
+		if (irxptr_tab[i].irxsize > irx_maxsize)
+			irx_maxsize = irxptr_tab[i].irxsize;
+	}
 	
 	size_memdisk_irx = irxptr_tab[0].irxsize; 
 	size_eesync_irx = irxptr_tab[1].irxsize; 
@@ -1237,21 +1287,16 @@ void GetIrxRAM(void)
 	size_ps2dev9_irx = irxptr_tab[3].irxsize; 
 	size_ps2ip_irx = irxptr_tab[4].irxsize; 
 	size_ps2smap_irx = irxptr_tab[5].irxsize; 
-		
-	memdisk_irx = malloc(size_memdisk_irx);
-	eesync_irx = malloc(size_eesync_irx);
-	ntpbserver_irx = malloc(size_ntpbserver_irx);	
-	ps2dev9_irx = malloc(size_ps2dev9_irx);
-	ps2ip_irx = malloc(size_ps2ip_irx);
-	ps2smap_irx = malloc(size_ps2smap_irx);
-			
-	memcpy(memdisk_irx, irxptr_tab[0].irxaddr, size_memdisk_irx);
-	memcpy(eesync_irx, irxptr_tab[1].irxaddr, size_eesync_irx);
-	memcpy(ntpbserver_irx, irxptr_tab[2].irxaddr, size_ntpbserver_irx);	
-	memcpy(ps2dev9_irx, irxptr_tab[3].irxaddr, size_ps2dev9_irx);
-	memcpy(ps2ip_irx, irxptr_tab[4].irxaddr, size_ps2ip_irx);
-	memcpy(ps2smap_irx, irxptr_tab[5].irxaddr, size_ps2smap_irx);
-			
+	
+	irx_mem = malloc(irx_maxsize);
+	
+	memdisk_irx = (void *)irxptr_tab[0].irxaddr;
+	eesync_irx = (void *)irxptr_tab[1].irxaddr;
+	ntpbserver_irx = (void *)irxptr_tab[2].irxaddr;
+	ps2dev9_irx = (void *)irxptr_tab[3].irxaddr;
+	ps2ip_irx = (void *)irxptr_tab[4].irxaddr;
+	ps2smap_irx = (void *)irxptr_tab[5].irxaddr;
+					
 #ifdef VERBOSE
 	scr_printf("\t total IRX size = %d\n", *total_irxsize); 
 #endif
@@ -1276,8 +1321,8 @@ int main(int argc, char *argv[1])
 	scr_printf("\t Core start !\n");
 #endif	
 	
-	// Get back needed modules pointers from EE ram				
-	GetIrxRAM();
+	// Get back needed modules pointers from Kernel ram				
+	GetIrxKernelRAM();
 					
 	// Clearing user mem, so better not to have anything valuable on stack
 	for (i = 0x100000; i < 0x02000000; i += 64) {
