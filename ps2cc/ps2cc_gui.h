@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#define PROGRAM_NAME "PS2 Code Creator - Rev 9"
+#define PROGRAM_NAME "PS2 Code Creator - Rev 10"
 
 #define PS2CC_DLG 1000
 #define PS2CC_TABCTRL 1001

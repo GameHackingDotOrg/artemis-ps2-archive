@@ -436,7 +436,7 @@ int ActivateCheats(unsigned char codes[128], int numcodes)
 	UpdateStatusBar("Client connected...", 0, 0);
 
 	// send remote cmd
-	UpdateStatusBar("Updating Codes...", 0, 0);	
+	UpdateStatusBar("Updating Codes...", 0, 0);
 	remote_cmd = REMOTE_CMD_PATCHMEM;
 	r = SendRemoteCmd(remote_cmd, codes, (numcodes * 8) + 4);
 	if (r < 0) {
@@ -444,6 +444,13 @@ int ActivateCheats(unsigned char codes[128], int numcodes)
 		opstatus = 0;
 		goto ac_disconnect;
 	}
+
+	r = receiveDump(0);
+	if (r < 0) {
+		sprintf(ErrTxt, "Failed to receive data - error %d (DumpRAM)", r);
+		goto ac_disconnect;
+	}
+
 	opstatus = 1;
 
 ac_disconnect:
@@ -483,7 +490,7 @@ int DeActivateCodes()
 	UpdateStatusBar("Client connected...", 0, 0);
 
 	// send remote cmd
-	UpdateStatusBar("Updating Codes...", 0, 0);	
+	UpdateStatusBar("Updating Codes...", 0, 0);
 	remote_cmd = REMOTE_CMD_UNPATCHMEM;
 	r = SendRemoteCmd(remote_cmd, NULL, 0);
 	if (r < 0) {
@@ -491,6 +498,12 @@ int DeActivateCodes()
 		opstatus = 0;
 		goto dac_disconnect;
 	}
+	r = receiveDump(0);
+	if (r < 0) {
+		sprintf(ErrTxt, "Failed to receive data - error %d (DumpRAM)", r);
+		goto dac_disconnect;
+	}
+
 	opstatus = 1;
 
 dac_disconnect:

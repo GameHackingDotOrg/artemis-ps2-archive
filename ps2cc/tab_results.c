@@ -8,9 +8,10 @@ Everything for the results display should pretty much be here.
 
 
 
-WNDPROC wpResultsListProc;
+WNDPROC wpResultsListProc, wpActiveListProc;
 s64 CurrResNum;
 u32 *ResultsList;
+
 
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -19,7 +20,7 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
     HWND hwndActiveResAddr = GetDlgItem(hwnd, ACTIVE_RES_ADDR_TXT);
     HWND hwndActiveResSize = GetDlgItem(hwnd, ACTIVE_RES_SIZE_CMB);
     HWND hwndActiveResValue = GetDlgItem(hwnd, ACTIVE_RES_VALUE_TXT);
-    HWND hwndAciveList = GetDlgItem(hwnd, ACTIVE_CODES_LSV);
+    HWND hwndActiveList = GetDlgItem(hwnd, ACTIVE_CODES_LSV);
 	switch(message)
 	{
 		case WM_INITDIALOG:
@@ -30,6 +31,8 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             ListViewAddCol(hwndResList, "Address", 0, 0x80);            //subclassing
 		    wpResultsListProc = (WNDPROC)GetWindowLongPtr (hwndResList, GWLP_WNDPROC);
 		    SetWindowLongPtr (hwndResList, GWLP_WNDPROC, (LONG_PTR)ResultsListHandler);
+		    wpActiveListProc = (WNDPROC)GetWindowLongPtr (hwndActiveList, GWLP_WNDPROC);
+		    SetWindowLongPtr (hwndActiveList, GWLP_WNDPROC, (LONG_PTR)ActiveListHandler);
 //		    wpActiveValueBoxProc = (WNDPROC)GetWindowLongPtr (hwndActiveResValue, GWLP_WNDPROC);
 		    SetWindowLongPtr (hwndActiveResValue, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
 		    SetWindowLongPtr (hwndActiveResAddr, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
@@ -41,13 +44,13 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             ComboAddItem(hwndActiveResSize, "32-Bit" , 4);
 //            ComboAddItem(hwndActiveResSize, "64-Bit" , 8);
             //Init Active Codes List
-            SendMessage(hwndAciveList,LVM_DELETEALLITEMS,0,0);
-            SendMessage(hwndAciveList,LVM_SETEXTENDEDLISTVIEWSTYLE,0,LVS_EX_FULLROWSELECT|LVS_EX_CHECKBOXES|LVS_EX_GRIDLINES|LVS_EX_LABELTIP);
+            SendMessage(hwndActiveList,LVM_DELETEALLITEMS,0,0);
+            SendMessage(hwndActiveList,LVM_SETEXTENDEDLISTVIEWSTYLE,0,LVS_EX_FULLROWSELECT|LVS_EX_CHECKBOXES|LVS_EX_GRIDLINES|LVS_EX_LABELTIP);
 //            SendMessage(hwndAciveList, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
-            ListViewAddCol(hwndAciveList, "Address", 0, 0x70);
-            ListViewAddCol(hwndAciveList, "Value", 1, 0x80);
-            ListViewAddCol(hwndAciveList, "Size", 2, 0x30);
-            SendMessage(hwndAciveList, LVM_SETCOLUMNWIDTH, 2, LVSCW_AUTOSIZE_USEHEADER);
+            ListViewAddCol(hwndActiveList, "Address", 0, 0x70);
+            ListViewAddCol(hwndActiveList, "Value", 1, 0x80);
+            ListViewAddCol(hwndActiveList, "Size", 2, 0x30);
+            SendMessage(hwndActiveList, LVM_SETCOLUMNWIDTH, 2, LVSCW_AUTOSIZE_USEHEADER);
 
             SendMessage(hwndActiveResSize,CB_SETCURSEL,0,0);
             SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(ACTIVE_RES_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndActiveResSize);
@@ -86,20 +89,67 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
                     }
                 } break;
 				/************************************************************
-				Activate Result button
+				Write Once button
+				*************************************************************/
+                case RES_WRITE_ONCE_CMD:
+                {
+                    unsigned char actcodes[128];
+                    u32 address = GetHexWindow(hwndActiveResAddr);
+    				*((unsigned int *)&actcodes[0]) = 1;
+    				*((unsigned int *)&actcodes[4]) = address;
+    				*((unsigned int *)&actcodes[8]) = (u32)GetHexWindow(hwndActiveResValue);
+                    if (address % 4) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
+    				if (!ActivateCheats(actcodes, 1)) {
+    					MessageBox(NULL, ErrTxt, "Error", MB_OK); break;
+    				}
+                    UpdateActiveCheats();
+                } break;
+				/************************************************************
+				Activate button
 				*************************************************************/
 				case RES_ACTIVATE_CMD:
                 {
                     u32 address = GetHexWindow(hwndActiveResAddr);
                     u64 value = GetHexWindow(hwndActiveResValue);
-                    int size = SendMessage(hwndActiveResSize,CB_GETITEMDATA,SendMessage(hwndActiveResSize,CB_GETCURSEL,0,0), 0);
-                    if (address % size) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
-                    ListView_SetCheckState(hwndAciveList, Result2ActiveList(address, value, size), TRUE);
+                    if (address % 4) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
+                    ListView_SetCheckState(hwndActiveList, Result2ActiveList(address, value, 4), TRUE);
                     UpdateActiveCheats();
                 } break;
+				/************************************************************
+				Delete button
+				*************************************************************/
+				case RES_DEL_ACTIVE_CMD:
+				{
+                    int iCount = SendMessage(hwndActiveList, LVM_GETITEMCOUNT, 0, 0);
+                    int i;
+                    for (i = 0; i < iCount; i++) {
+                        if (SendMessage(hwndActiveList, LVM_GETITEMSTATE, i, LVIS_SELECTED)) {
+                            SendMessage(hwndActiveList, LVM_DELETEITEM, i, 0);
+                        }
+                    }
+                    UpdateActiveCheats();
+				} break;
+				/************************************************************
+				ALL On/Off buttons
+				*************************************************************/
+				case RES_ALL_ON_CMD: case RES_ALL_OFF_CMD:
+				{
+                    int iCount = SendMessage(hwndActiveList, LVM_GETITEMCOUNT, 0, 0);
+                    int i;
+                    int iState = (LOWORD(wParam) == RES_ALL_ON_CMD) ? TRUE : FALSE;
+                    for (i = 0; i < iCount; i++) {
+						ListView_SetCheckState(hwndActiveList, i, iState);
+					}
+				} break;
+				/************************************************************
+				Clear ALL button
+				*************************************************************/
+				case RES_CLEAR_ALL_CMD:
+				{
+					SendMessage(hwndActiveList,LVM_DELETEALLITEMS,0,0);
+				} break;
 			}
 		} break;
-
         case WM_SHOWWINDOW:
         {
             if (wParam) { LoadResultsList(); }
@@ -122,7 +172,7 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
             if (iSelected < 0) { break; }
             int iSubItem = ListViewHitTst(hwnd, GetMessagePos(), iSelected);
             if (iSubItem <= 0) { iSubItem = 1; }
-            u32 address = ListViewGetHex(hwnd, iSelected, 0);	
+            u32 address = ListViewGetHex(hwnd, iSelected, 0);
 			u64 value = 0;
 			HWND hwndActiveResValue = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_VALUE_TXT);
 			HWND hwndSearchSize = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
@@ -179,6 +229,28 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
     }
     if (wpResultsListProc) { return CallWindowProc (wpResultsListProc, hwnd, message, wParam, lParam); }
     else { return DefWindowProc (hwnd, message, wParam, lParam); }
+}
+
+/****************************************************************************
+Active List Handler
+*****************************************************************************/
+//LRESULT CALLBACK ActiveListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+LRESULT CALLBACK ActiveListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    switch (message)
+    {
+		case WM_LBUTTONUP:
+		{
+			UpdateActiveCheats();
+		} break;
+		case WM_KEYUP:
+		{
+			if (wParam == VK_DELETE) { SendMessage(hTabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, RES_DEL_ACTIVE_CMD, 0); }
+		} break;
+	}
+    if (wpActiveListProc) { return CallWindowProc (wpActiveListProc, hwnd, message, wParam, lParam); }
+    else { return DefWindowProc (hwnd, message, wParam, lParam); }
+//	return DefSubclassProc(hwnd, message, wParam, lParam);
 }
 
 /****************************************************************************
@@ -375,7 +447,7 @@ Update Active Cheats - Make array of cheats to send to PS2 and calls said functi
 *****************************************************************************/
 int UpdateActiveCheats()
 {
-    DeActivateCodes();
+//    DeActivateCodes();
 	unsigned char actcodes[128];
     HWND hwndActList = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV);
     int i = 0, iCount = SendMessage(hwndActList, LVM_GETITEMCOUNT, 0, 0);
@@ -390,6 +462,10 @@ int UpdateActiveCheats()
     	}
     	i++;
     }
+    if (aCount == 1) { //deactivate
+		if(!DeActivateCodes()) { MessageBox(NULL, ErrTxt, "Error", MB_OK); return 0; }
+		return 1;
+	}
     *((unsigned int *)&actcodes[0]) = aCount - 1;
     if (!ActivateCheats(actcodes, aCount-1)) {
     	MessageBox(NULL, ErrTxt, "Error", MB_OK); return 0;

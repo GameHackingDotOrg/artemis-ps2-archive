@@ -6,8 +6,9 @@ Artemis - PS2 Code Creator (for lack of a better title) - Main Header
 #define SNAKE_DEBUG 0
 
 #include <w32api.h>
-#define WINVER WindowsNT4
+#define WINVER WindowsXP
 #define _WIN32_IE IE6
+#define _WIN32_WINNT 0x0501
 
 #include <windows.h>
 #include <windowsx.h>
@@ -303,7 +304,7 @@ int UpdateSearchHistory(int ActionType);
 //tab_results
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-LRESULT CALLBACK ActiveValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ActiveListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 int LoadResultsList();
 s64 ShowResPage(s64 ResNum);
 int ResFormatString(char *tmpstring, int outfmt, int numbytes);
