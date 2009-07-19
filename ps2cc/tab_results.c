@@ -451,22 +451,22 @@ int UpdateActiveCheats()
 	unsigned char actcodes[128];
     HWND hwndActList = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV);
     int i = 0, iCount = SendMessage(hwndActList, LVM_GETITEMCOUNT, 0, 0);
-    int aCount = 1;
+    int aCount = 4;
     u32 address, value;
-    while ((i < iCount) && (aCount < 16))
+    while ((i < iCount) && (aCount < 128))
     {
     	if (ListView_GetCheckState(hwndActList, i)) {
-    		*((unsigned int *)&actcodes[aCount * 4]) = ListViewGetHex(hwndActList, i, 0);
-    		*((unsigned int *)&actcodes[(aCount * 4)+4]) = ListViewGetHex(hwndActList, i, 1);
-    		aCount++;
+    		*((unsigned int *)&actcodes[aCount]) = ListViewGetHex(hwndActList, i, 0);
+    		*((unsigned int *)&actcodes[aCount + 4]) = ListViewGetHex(hwndActList, i, 1);
+    		aCount += 8;
     	}
     	i++;
     }
-    if (aCount == 1) { //deactivate
+    if (aCount == 4) { //deactivate
 		if(!DeActivateCodes()) { MessageBox(NULL, ErrTxt, "Error", MB_OK); return 0; }
 		return 1;
 	}
-    *((unsigned int *)&actcodes[0]) = aCount - 1;
+    *((unsigned int *)&actcodes[0]) = (aCount - 4)/8;
     if (!ActivateCheats(actcodes, aCount-1)) {
     	MessageBox(NULL, ErrTxt, "Error", MB_OK); return 0;
     }
