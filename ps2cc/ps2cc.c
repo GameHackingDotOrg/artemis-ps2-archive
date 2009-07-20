@@ -21,11 +21,10 @@ MakeFiles are a little annoying to work on.
 To Do:
 possibly use threading for client comms
 export results
-finish results activation funcionality
 lock things like search area once a search has started
 fonts (default and custom)
 option to leave game halted?
-EX Search consec results function
+Make the goddamn tab key work on hex/value boxes
 *****************************************************************************/
 
 #include "ps2cc.h"

@@ -93,7 +93,7 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 				*************************************************************/
                 case RES_WRITE_ONCE_CMD:
                 {
-                    unsigned char actcodes[128];
+                    unsigned char actcodes[1016];
                     u32 address = GetHexWindow(hwndActiveResAddr);
     				*((unsigned int *)&actcodes[0]) = 1;
     				*((unsigned int *)&actcodes[4]) = address;
@@ -447,13 +447,13 @@ Update Active Cheats - Make array of cheats to send to PS2 and calls said functi
 *****************************************************************************/
 int UpdateActiveCheats()
 {
-//    DeActivateCodes();
-	unsigned char actcodes[128];
+	if(!DeActivateCodes()) { MessageBox(NULL, ErrTxt, "Error", MB_OK); return 0; }
+	unsigned char actcodes[1016];
     HWND hwndActList = GetDlgItem(hTabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV);
     int i = 0, iCount = SendMessage(hwndActList, LVM_GETITEMCOUNT, 0, 0);
     int aCount = 4;
     u32 address, value;
-    while ((i < iCount) && (aCount < 128))
+    while ((i < iCount) && (aCount < 1016))
     {
     	if (ListView_GetCheckState(hwndActList, i)) {
     		*((unsigned int *)&actcodes[aCount]) = ListViewGetHex(hwndActList, i, 0);

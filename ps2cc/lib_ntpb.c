@@ -413,7 +413,7 @@ int TestConnect()
 }
 /****************************************************************************
 Activate Cheats*****************************************************************************/
-int ActivateCheats(unsigned char codes[128], int numcodes)
+int ActivateCheats(unsigned char codes[1016], int numcodes)
 {
 	int i, r, cmd, remote_cmd, opstatus;
 	unsigned char cmdBuf[16];
