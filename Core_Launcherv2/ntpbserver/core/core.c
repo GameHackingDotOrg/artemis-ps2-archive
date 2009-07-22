@@ -18,6 +18,34 @@ typedef struct {
 
 u8 membuffer[65536];
 
+static int haltState = 0;
+
+#define MAX_PATCHES 		256
+
+typedef struct {
+	u32 addr;
+	u32 val;	
+} MemPatch_t;
+
+MemPatch_t MemPatches[MAX_PATCHES];
+
+static int num_patches = 0;
+
+#define MAX_RAWCODES	 	256
+
+typedef struct {
+	u32 code_1;
+	u32 code_2;	
+} RawCodes_t;
+
+RawCodes_t RawCodes[MAX_RAWCODES];
+
+static int num_rawcodes = 0;
+
+void *irx_mem;
+u8 cmd_buf[1024];
+
+
 #define PAD_LEFT      0x0080
 #define PAD_DOWN      0x0040
 #define PAD_RIGHT     0x0020
@@ -503,22 +531,7 @@ static int (*scePadRead)(int port, int slot, struct padButtonStat *data);
 static int (*scePad2Read)(int socket, struct pad2ButtonStat *data);
 static int scePadRead_style = 1;
 
-static int haltState = 0;
 
-#define MAX_PATCHES 	8192
-
-typedef struct {
-	u32 addr;
-	u32 val;	
-} MemPatch_t;
-
-MemPatch_t MemPatches[MAX_PATCHES];
-
-static int num_patches = 0;
-
-void *irx_mem;
-u8 cmd_buf[1024];
- 
 //--------------------------------------------------------------
 void *find_free_ram(void *addr_start, void *addr_end, u32 len)
 {
@@ -638,7 +651,7 @@ int PostReset_Hook(void)
 }
 
 // ------------------------------------------------------------------------
-int LoadIRXfromKernel(void *irxkernelmem, int irxsize, int arglen, char* argv)
+int LoadIRXfromKernel(void *irxkernelmem, int irxsize, int arglen, char *argv)
 {	
 	DIntr();
 	ee_kmode_enter();
@@ -648,7 +661,7 @@ int LoadIRXfromKernel(void *irxkernelmem, int irxsize, int arglen, char* argv)
 	ee_kmode_exit();
 	EIntr();
 		
-	return LoadModuleBuffer(irx_mem, irxsize, arglen, argv);		  				
+	return LoadModuleBuffer(irx_mem, irxsize, arglen, argv);
 }
 
 // ------------------------------------------------------------------------
@@ -772,7 +785,8 @@ int HookIopReset(const char *arg, int flag)
 			
 			qid = SifSetDma(&dmat, 1);
 			while (SifDmaStat(qid) >= 0);
-					
+			
+			// get back memdisk drv from kernel ram		
 			DIntr();
 			ee_kmode_enter();
 			memcpy(irx_mem, memdisk_irx, size_memdisk_irx);
@@ -887,7 +901,7 @@ int PatchIOPRPimg(ioprp_t *ioprp_img)
 	while(strlen(romdir_in->fileName) > 0) {
 		// replacing some modules from .img file
 		if (!strcmp(romdir_in->fileName, "EESYNC")) {
-			DIntr();
+			DIntr(); // get back eesync drv from kernel ram		
 			ee_kmode_enter();
 			memcpy((void*)((u32)ioprp_img->data_out+offset_out), eesync_irx, size_eesync_irx);
 			ee_kmode_exit();
@@ -1024,18 +1038,264 @@ int addMemPatches(int num, u8 *buf)
 }
 
 //--------------------------------------------------------------
-int applyMemPatches(void)
+void writeMemPatches(void)
 {
 	int i;
 	
 	DIntr();
 	
+	// apply raw mem patches
 	for (i=0; i<num_patches; i++)
 		*((u32 *)MemPatches[i].addr) = MemPatches[i].val;
-	
+			
 	EIntr();
-		
+}
+
+//--------------------------------------------------------------
+int addRawCodes(int num, u8 *buf)
+{
+	int i, j;
+	
+	if (num_rawcodes+num > MAX_RAWCODES)
+		return 0;
+	
+	j = 0;
+	for (i=num_rawcodes; i<(num_rawcodes+num); i++) {
+		RawCodes[i].code_1 = *((u32 *)&buf[j]);
+		RawCodes[i].code_2 = *((u32 *)&buf[j+4]);
+		j += 8;
+	}
+	
+	num_rawcodes += num;
+	
 	return 1;
+}
+
+//--------------------------------------------------------------
+void writeRawCodes(void)
+{
+	int i;
+	u8 codeCmd, test_condition, test_type, num_skip;
+	u8 *src, *dest;
+	u16 optype, opval;
+	u32 value, cmpvalue;
+	u32 addr, num_bytes, num_writes, vstep, astep, z;
+	
+	DIntr();
+	
+	i=0;	
+	while (i<num_rawcodes) { // codes loop			
+		
+		codeCmd = RawCodes[i].code_1 >> 28; // get the code type
+		
+		if (codeCmd == 0x03) { 				// Increment / Decrement
+			optype = (RawCodes[i].code_1 << 8) >> 24;
+			addr = RawCodes[i].code_2 & 0x01ffffff; // addr on 25 bits
+			if (optype == 0x000) {			// 8-bit increment
+				vstep = RawCodes[i].code_1 & 0xff;
+				value = _lb(addr);
+				_sb(value+1, addr);
+				i++;
+			}
+			else if (optype == 0x010) {		// 8-bit decrement
+				vstep = RawCodes[i].code_1 & 0xff;
+				value = _lb(addr);
+				_sb(value-1, addr);
+				i++;
+			}
+			else if (optype == 0x020) {		// 16-bit increment
+				vstep = RawCodes[i].code_1 & 0xffff;
+				value = _lh(addr);
+				_sh(value+1, addr);
+				i++;
+			}
+			else if (optype == 0x030) {		// 16-bit decrement
+				vstep = RawCodes[i].code_1 & 0xffff;
+				value = _lh(addr);
+				_sh(value-1, addr);
+				i++;
+			}
+			else if (optype == 0x040) {		// 32-bit increment
+				if ((i+1) < num_rawcodes) {
+					vstep = RawCodes[i+1].code_1;
+					value = _lw(addr);
+					_sw(value+1, addr);
+				} 
+				i+=2;
+			}
+			else if (optype == 0x050) {		// 32-bit decrement
+				if ((i+1) < num_rawcodes) {
+					vstep = RawCodes[i+1].code_1;
+					value = _lw(addr);
+					_sw(value-1, addr);
+				}
+				i+=2;
+			}			
+		}				
+		else if (codeCmd == 0x0e) {
+			// not implemented
+			i++;
+		}
+		else {
+			addr = RawCodes[i].code_1 & 0x01ffffff; // addr on 25 bits
+			
+			if (codeCmd == 0x00) { 					// 8-bit constant write
+				_sb(RawCodes[i].code_2, addr);
+				i++;		
+			}
+			else if (codeCmd == 0x01) {				// 16-bit constant write
+				_sh(RawCodes[i].code_2, addr);
+				i++;										
+			}
+			else if (codeCmd == 0x02) {				// 32-bit constant write
+				_sw(RawCodes[i].code_2, addr);
+				i++;										
+			}
+			else if (codeCmd == 0x04) {				// 32-bit constant serial write
+				if ((i+1) < num_rawcodes) { 
+					value = RawCodes[i+1].code_1;
+					vstep =  RawCodes[i+1].code_2;
+					astep = (RawCodes[i].code_2 & 0xffff) << 2; // 16-bit addr step
+					num_writes = RawCodes[i].code_2 >> 16;
+					if (num_writes == 0)
+						num_writes = 1;
+					for (z=0; z<num_writes; z++) {
+						_sw(value, addr); 
+						value += vstep;
+						addr += astep;
+					}
+				}
+				i+=2;				
+			}
+			else if (codeCmd == 0x05) {				// constant copy bytes	
+				if ((i+1) < num_rawcodes) {
+					src = (u8 *)addr; 
+					dest =(u8 *)(RawCodes[i+1].code_1 & 0x01ffffff); // dest addr on 25 bits
+					num_bytes = RawCodes[i].code_2;
+					for (z=0; z<num_bytes; z++)
+						dest[z] = src[z];
+				}
+				i+=2;									
+			}
+			else if (codeCmd == 0x06) {				// not implemented
+				i++;				
+			}
+			else if (codeCmd == 0x07) {				// Boolean operation
+				optype = RawCodes[i].code_2 >> 16;
+				opval = RawCodes[i].code_2 & 0xffff;
+				if (optype == 0x0000) {				// 8-bit OR
+					opval &= 0xff;
+					value = _lb(addr);
+					_sb(value | opval ,addr);					
+				}
+				else if (optype == 0x0010) {		// 16-bit OR	
+					opval &= 0xffff;
+					value = _lh(addr);
+					_sh(value | opval ,addr);					
+				}
+				else if (optype == 0x0020) {		// 8-bit AND
+					opval &= 0xff;
+					value = _lb(addr);
+					_sb(value & opval ,addr);					
+				}
+				else if (optype == 0x0030) {		// 16-bit AND
+					opval &= 0xffff;
+					value = _lh(addr);
+					_sh(value & opval ,addr);					
+				}
+				else if (optype == 0x0040) {		// 8-bit XOR
+					opval &= 0xff;
+					value = _lb(addr);
+					_sb(value ^ opval ,addr);					
+				}
+				else if (optype == 0x0050) {		// 16-bit XOR
+					opval &= 0xffff;
+					value = _lh(addr);
+					_sh(value ^ opval ,addr);					
+				}
+				i++;				
+			}
+			else if (codeCmd == 0x08) {				//  not implemented
+				i++;
+			}
+			else if (codeCmd == 0x09) {				//  not implemented
+				i++;
+			}
+			else if (codeCmd == 0x0a) {				//  not implemented
+				i++;				
+			}
+			else if (codeCmd == 0x0b) {				//  not implemented
+				i++;				
+			}
+			else if (codeCmd == 0x0c) {				// 32-bit do all following codes if equal to
+				value = _lw(addr);
+				cmpvalue = RawCodes[i].code_2;
+				if (value == cmpvalue)			
+					i++;
+				else
+					i = num_rawcodes;
+			}
+			else if (codeCmd == 0x0d) {				// Do multi-lines if conditional
+				test_condition = (RawCodes[i].code_2 >> 20) & 0xf;
+				test_type = (RawCodes[i].code_2 >> 16) & 0xf; // 0=16-bit 1=8-bit	
+				num_skip = (RawCodes[i].code_2 >> 24); 		  // num of lines to skip if test fails	
+				value = _lw(addr);
+				if (test_type == 0) { // 16-bit test
+					value &= 0xffff;
+					cmpvalue = RawCodes[i].code_2 & 0xffff;
+				}
+				else { // 8-bit test
+					value &= 0xff;
+					cmpvalue = RawCodes[i].code_2 & 0xff;					
+				}			
+				
+				if (num_skip == 0)
+					num_skip = 1;
+					
+				i++;
+				if (test_condition == 0x00) {		// equal to
+					if (!(value == cmpvalue)) 	
+							i+=num_skip;						
+				}
+				else if (test_condition == 0x01) {	// not equal to
+					if (!(value != cmpvalue)) 	
+						i+=num_skip;																
+				}
+				else if (test_condition == 0x02) {	// lesser than
+					if (!(value < cmpvalue)) 	
+						i+=num_skip;																
+				}
+				else if (test_condition == 0x03) {	// greater than
+					if (!(value > cmpvalue)) 	
+						i+=num_skip;																
+				}
+				else if (test_condition == 0x04) {	// NAND
+					if (value & cmpvalue) 		
+						i+=num_skip;						
+				}
+				else if (test_condition == 0x05) {	// AND
+					if (!(value & cmpvalue))
+						i+=num_skip;																
+				}
+				else if (test_condition == 0x06) {	// NOR
+					if (value | cmpvalue) 		
+						i+=num_skip;									
+				}
+				else if (test_condition == 0x07) {	// OR
+					if (!(value | cmpvalue))
+						i+=num_skip;									
+				}
+				else {
+					i+=num_skip;						
+				}
+			}
+			else if (codeCmd == 0x0f) {				// not implemented
+				i++;				
+			}			
+		}		
+	}
+			
+	EIntr();
 }
 
 //--------------------------------------------------------------
@@ -1096,7 +1356,19 @@ int getRemoteCmd(void)
 				rpcNTPBEndReply();
 				rpcSync(0, NULL, &ret);	
 				num_patches = 0;
-				break;												
+				break;	
+	
+			case REMOTE_CMD_ADDRAWCODES:
+				rpcNTPBEndReply();
+				rpcSync(0, NULL, &ret);	
+				addRawCodes(*((u32 *)&cmd_buf[0]), &cmd_buf[4]);
+				break;
+
+			case REMOTE_CMD_CLEARRAWCODES:
+				rpcNTPBEndReply();
+				rpcSync(0, NULL, &ret);	
+				num_rawcodes = 0;
+				break;																								
 		}
 	}
 	
@@ -1123,8 +1395,11 @@ void start_screen(void)
 void padReadHook_job(void *data)
 {
 	if (num_patches > 0)
-		applyMemPatches();
-	
+		writeMemPatches();
+		
+	if (num_rawcodes > 0)
+		writeRawCodes();
+			
 	//u32 paddata, new_pad;
 	
 	//if (scePadRead_style == 2)
@@ -1253,8 +1528,8 @@ int patch_padRead(void)
 	
 	if (!pattern_found)
 		GS_BGCOLOUR = 0xffffff; // White, pattern not found
-		
-	GS_BGCOLOUR = 0x000000; // Black, done
+	else	
+		GS_BGCOLOUR = 0x000000; // Black, done
 			
 	return 1;			    	   	
 }
@@ -1460,4 +1735,5 @@ error:
 	GS_BGCOLOUR = 0xffffff; // white: fatal error
 	while (1){;}
 }
+
 

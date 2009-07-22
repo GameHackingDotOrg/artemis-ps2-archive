@@ -84,11 +84,11 @@ typedef struct g_sendDataParam { // size = 16384
 	int size;				 // 16380
 } g_sendDataParam_t;
 
-typedef struct g_getRemoteCmdParam { // size = 1024
+typedef struct g_getRemoteCmdParam { // size = 64
 	u16 cmd;			// 0
-	u8 buf[1016];		// 2
-	int size;			// 1018
-	u16 pad;			// 1022
+	u8 buf[56];			// 2
+	int size;			// 58
+	u16 pad;			// 62
 } g_getRemoteCmdParam_t;
 
 static u8 ntpb_buf[16384];

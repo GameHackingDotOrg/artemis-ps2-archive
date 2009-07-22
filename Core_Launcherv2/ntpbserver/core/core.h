@@ -123,6 +123,8 @@ int rpcSync(int mode, int *cmd, int *result);
 #define REMOTE_CMD_RESUME					0x202
 #define REMOTE_CMD_ADDMEMPATCHES			0x501
 #define REMOTE_CMD_CLEARMEMPATCHES			0x502
+#define REMOTE_CMD_ADDRAWCODES				0x601
+#define REMOTE_CMD_CLEARRAWCODES			0x602
 
 #define PRINT_DUMP							0x300
 
