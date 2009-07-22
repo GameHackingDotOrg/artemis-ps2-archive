@@ -5,7 +5,7 @@ NAME  = ps2cc.exe
 CC = gcc.exe
 WINDRES = windres
 RES  = ps2cc.res
-OBJ  = ps2cc.o tab_search.o tab_results.o lib_api.o lib_fileio.o lib_ntpb.o lib_misc.o lib_search.o lib_dialog.o lib_listview.o $(RES)
+OBJ  = ps2cc.o tab_search.o tab_results.o lib_api.o lib_fileio.o lib_ntpb.o lib_ps2cc.o lib_misc.o lib_search.o lib_dialog.o lib_listview.o $(RES)
 LDFLAGS = -s -mwindows -lwsock32 -lcomctl32
 CFLAGS = -O2 -s
 
@@ -46,6 +46,9 @@ lib_misc.o: lib_misc.c _types.h
 
 lib_ntpb.o: lib_ntpb.c _types.h
 	$(CC) -c lib_ntpb.c -o lib_ntpb.o $(CFLAGS)	
+
+lib_ps2cc.o: lib_ps2cc.c ps2cc.h _types.h
+	$(CC) -c lib_ps2cc.c -o lib_ps2cc.o $(CFLAGS)	
 
 lib_search.o: lib_search.c ps2cc.h _types.h
 	$(CC) -c lib_search.c -o lib_search.o $(CFLAGS)

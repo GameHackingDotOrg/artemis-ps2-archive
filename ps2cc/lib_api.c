@@ -36,36 +36,6 @@ int ComboSelFromData (HWND hCombo, u32 DataValue)
 }
 
 /****************************************************************************
-Hex editbox procedure - forces a textbox to hex input
--check length of current text on maxlength change???
-*****************************************************************************/
-LRESULT CALLBACK HexEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-        case WM_CHAR:
-        {
-            if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace/tab
-            if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
-//            sprintf(ErrTxt, "%u", GetDlgCtrlID(hwnd));
-//            MessageBox(NULL, ErrTxt, "Debug", MB_OK);
-                wParam = FilterHexChar(wParam);
-        } break;
-        case WM_PASTE:
-        {
-            char txtInput[20], txtInput2[20];
-            GetWindowText(hwnd, txtInput, sizeof(txtInput));
-            CallWindowProc (wpHexEditBoxes, hwnd, message, wParam, lParam);
-            GetWindowText(hwnd, txtInput2, sizeof(txtInput2));
-            if ((!isHexWindow(hwnd)) || (strlen(txtInput2) > SendMessage(hwnd, EM_GETLIMITTEXT, 0, 0))) { SetWindowText(hwnd, txtInput); }
-        } return 0;
-   }
-//   return DefWindowProc (hwnd, message, wParam, lParam);
-   if (wpHexEditBoxes) { return CallWindowProc (wpHexEditBoxes, hwnd, message, wParam, lParam); }
-   else { return DefWindowProc (hwnd, message, wParam, lParam); }
-}
-
-/****************************************************************************
 Hex window functions
 *****************************************************************************/
 int isHexWindow(HWND txtbox)

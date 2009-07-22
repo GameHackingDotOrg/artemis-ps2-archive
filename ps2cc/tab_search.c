@@ -10,12 +10,6 @@ the interface to start the search.
 #include "ps2cc_gui.h"
 
 CODE_SEARCH_VARS Search;
-LISTVIEW_ITEM_EDIT_INFO lvExEditedItem;
-
-WNDPROC wpSearchValueBoxProc;
-WNDPROC wpExSearchListProc;
-WNDPROC wpExValueProc;
-
 
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -45,6 +39,24 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
             SendMessage(hwndExValueTxt, WM_SETFONT, (WPARAM)Settings.ValueHFont, TRUE);
 */
 			//subclassing for controls (value box handler etc)
+			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC), SEARCH_AREA_LOW_TXT);
+			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndSearchAreaHigh, GWLP_WNDPROC), SEARCH_AREA_HIGH_TXT);
+		    SetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC, (LONG_PTR)ValueEditBoxHandler);
+		    SetWindowLongPtr (hwndSearchAreaHigh, GWLP_WNDPROC, (LONG_PTR)ValueEditBoxHandler);
+
+			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndSearchValue1, GWLP_WNDPROC), SEARCH_VALUE1_TXT);
+			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndSearchValue2, GWLP_WNDPROC), SEARCH_VALUE2_TXT);
+		    SetWindowLongPtr (hwndSearchValue1, GWLP_WNDPROC, (LONG_PTR)ValueEditBoxHandler);
+		    SetWindowLongPtr (hwndSearchValue2, GWLP_WNDPROC, (LONG_PTR)ValueEditBoxHandler);
+
+			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndExSearchList, GWLP_WNDPROC), EX_SEARCH_LSV);
+		    SetWindowLongPtr (hwndExSearchList, GWLP_WNDPROC, (LONG_PTR)ExSearchListHandler);
+
+			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC), EX_VALUE_TXT);
+		    SetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC, (LONG_PTR)ValueEditBoxHandler);
+
+
+/*
 		    wpHexEditBoxes = (WNDPROC)GetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC);
 		    SetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
 		    SetWindowLongPtr (hwndSearchAreaHigh, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
@@ -56,7 +68,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 		    SetWindowLongPtr (hwndExSearchList, GWLP_WNDPROC, (LONG_PTR)ExSearchListHandler);
 		    wpExValueProc = (WNDPROC)GetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC);
 		    SetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC, (LONG_PTR)ExValueHandler);
-
+*/
             //Search Sizes
             SendMessage(hwndSearchSize,CB_RESETCONTENT,0,0);
             ComboAddItem(hwndSearchSize, "8-Bit (1 Byte)" , 1);
@@ -555,17 +567,17 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 				*************************************************************/
 			    case LSV_CS_BEGINEDIT:
 			    {
-			        if (lvExEditedItem.Status) { MessageBox(NULL,"Already editing. WTF? (LSV_CS_BEGINEDIT)","Error",0); break; }
+			        if (DlgInfo.lvEdit[LV_EX_SEARCH].Status) { MessageBox(NULL,"Already editing. WTF? (LSV_CS_BEGINEDIT)","Error",0); break; }
 			        if ((HIWORD(lParam) < 1) || (HIWORD(lParam) > 2)) { break; }
 			        char txtInput[20];
-			        lvExEditedItem.iItem = LOWORD(lParam);
-			        lvExEditedItem.iSubItem = HIWORD(lParam);
+			        DlgInfo.lvEdit[LV_EX_SEARCH].iItem = LOWORD(lParam);
+			        DlgInfo.lvEdit[LV_EX_SEARCH].iSubItem = HIWORD(lParam);
 			        RECT lvEditRect; memset(&lvEditRect,0,sizeof(RECT));
-			        lvEditRect.top = lvExEditedItem.iSubItem;
+			        lvEditRect.top = DlgInfo.lvEdit[LV_EX_SEARCH].iSubItem;
 			        lvEditRect.left = LVIR_LABEL;
-			        SendMessage(hwndExSearchList, LVM_GETSUBITEMRECT, lvExEditedItem.iItem, (LPARAM)&lvEditRect);
+			        SendMessage(hwndExSearchList, LVM_GETSUBITEMRECT, DlgInfo.lvEdit[LV_EX_SEARCH].iItem, (LPARAM)&lvEditRect);
 			        Search.Size = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
-			        u32 ExType = ListViewGetHex(hwndExSearchList, lvExEditedItem.iItem, 3);
+			        u32 ExType = ListViewGetHex(hwndExSearchList, DlgInfo.lvEdit[LV_EX_SEARCH].iItem, 3);
 			        switch(ExType)
 			        {
                         case EXCS_IGNORE_VALUE: case EXCS_IGNORE_IN_RANGE:
@@ -592,11 +604,11 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         case EXCS_EXCLUDE_CONSEC: case EXCS_EXCLUDE_CONSEC_MATCH_VALUES:
                         case EXCS_INCLUDE_CONSEC: case EXCS_INCLUDE_CONSEC_MATCH_VALUES:
                         {
-                            if (lvExEditedItem.iSubItem == 2) { return 0; }
+                            if (DlgInfo.lvEdit[LV_EX_SEARCH].iSubItem == 2) { return 0; }
                             SendMessage(hwndExValueTxt, EM_SETLIMITTEXT, 4, 0);
                         } break;
 			        }
-			        ListViewGetText(hwndExSearchList, lvExEditedItem.iItem, lvExEditedItem.iSubItem, txtInput, sizeof(txtInput));
+			        ListViewGetText(hwndExSearchList, DlgInfo.lvEdit[LV_EX_SEARCH].iItem, DlgInfo.lvEdit[LV_EX_SEARCH].iSubItem, txtInput, sizeof(txtInput));
 			        SetWindowText(hwndExValueTxt,txtInput);
 			        WINDOWPLACEMENT lvPlace; memset(&lvPlace,0,sizeof(WINDOWPLACEMENT));
 			        lvPlace.length = sizeof(WINDOWPLACEMENT);
@@ -607,20 +619,20 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 			        SetWindowPos(hwndExValueTxt,HWND_TOP,lvPos.x+lvEditRect.left+3,lvPos.y+lvEditRect.top+1,(lvEditRect.right-lvEditRect.left),(lvEditRect.bottom-lvEditRect.top)+1,SWP_SHOWWINDOW);
 			        SetFocus(hwndExValueTxt);
 			        SendMessage(hwndExValueTxt, EM_SETSEL, 0, -1);
-			        lvExEditedItem.Status = 1;
+			        DlgInfo.lvEdit[LV_EX_SEARCH].Status = 1;
 			    } break;
 			    case LSV_CS_ENDEDIT:
                 {
-                    if ((!lvExEditedItem.Status) || (!lParam)) {
-                        lvExEditedItem.Status = 0;
+                    if ((!DlgInfo.lvEdit[LV_EX_SEARCH].Status) || (!lParam)) {
+                        DlgInfo.lvEdit[LV_EX_SEARCH].Status = 0;
                         SetWindowPos(hwndExValueTxt,HWND_BOTTOM,0,0,0,0,SWP_HIDEWINDOW);
                         SetFocus(hwndExSearchList); break;
                     }
 			        char txtValue[20];
 			        if (isHexWindow(hwndExValueTxt)) { GetWindowText(hwndExValueTxt, txtValue, sizeof(txtValue)); }
 			        else { strcpy(txtValue, "0"); }
-			        ListViewSetRow(hwndExSearchList, lvExEditedItem.iItem, lvExEditedItem.iSubItem, 1, txtValue);
-                    lvExEditedItem.Status = 0;
+			        ListViewSetRow(hwndExSearchList, DlgInfo.lvEdit[LV_EX_SEARCH].iItem, DlgInfo.lvEdit[LV_EX_SEARCH].iSubItem, 1, txtValue);
+                    DlgInfo.lvEdit[LV_EX_SEARCH].Status = 0;
                     SetWindowPos(hwndExValueTxt,HWND_BOTTOM,0,0,0,0,SWP_HIDEWINDOW);
                     SetFocus(hwndExSearchList);
 			    } break;
@@ -665,57 +677,17 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 }
 
 /****************************************************************************
-Search Value box handler
--Makes sure people only do valid things in the search value boxes.
-*****************************************************************************/
-LRESULT CALLBACK SearchValueBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-        case WM_CHAR:
-        {
-            if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace
-            if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
-            HWND hwndSearchType = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_TYPE_CMB);
-            Search.Type = SendMessage(hwndSearchType,CB_GETITEMDATA,SendMessage(hwndSearchType,CB_GETCURSEL,0,0),0);
-            if ((Search.Type & SEARCH_KNOWN_WILD) && (wParam == 42)) { break; } //asterisk
-            switch ((Search.Type & (SEARCH_KNOWN_WILD|SEARCH_EQUAL_NUM_BITS|SEARCH_NEQUAL_TO_BITS|SEARCH_NEQUAL_BY_BITS|SEARCH_BITS_ANY|SEARCH_BITS_ALL)) ?
-            BASE_HEX : Settings.CS.NumBase)
-            {
-                case BASE_HEX: { wParam = FilterHexChar(wParam); } break;
-                case BASE_DEC: { wParam = ((isdigit(wParam))|| (wParam == '-')) ? wParam : 0; } break;
-                case BASE_FLOAT: { wParam = (isdigit(wParam) || (wParam == '.') || (wParam == '-')) ? wParam : 0; } break;
-            }
-        } break;
-        case WM_PASTE:
-        {
-            char txtInput[20], txtInput2[20];
-            GetWindowText(hwnd, txtInput, sizeof(txtInput));
-            CallWindowProc (wpSearchValueBoxProc, hwnd, message, wParam, lParam); //?
-            GetWindowText(hwnd, txtInput2, sizeof(txtInput2));
-            if ((!isHexWindow(hwnd)) || (strlen(txtInput2) > SendMessage(hwnd, EM_GETLIMITTEXT, 0, 0))) { SetWindowText(hwnd, txtInput); }
-        } return 0;
-        default:
-        {
-            if (wpSearchValueBoxProc) {
-                return CallWindowProc (wpSearchValueBoxProc, hwnd, message, wParam, lParam);
-            } else { return DefWindowProc (hwnd, message, wParam, lParam); }
-        }
-   }
-   return CallWindowProc (wpSearchValueBoxProc, hwnd, message, wParam, lParam);
-}
-
-/****************************************************************************
 Extended Search Options ListView handler
 -Manipulates the Extended Search options listview control as needed
 *****************************************************************************/
 LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+	WNDPROC wpOriginalProc = GetSubclassProc(GetDlgCtrlID(hwnd));
     switch (message)
     {
         case WM_VSCROLL: case WM_MOUSEWHEEL:
         {
-            if (lvExEditedItem.Status) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
+            if (DlgInfo.lvEdit[LV_EX_SEARCH].Status) { SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
         } break;
         case WM_LBUTTONUP:
         {
@@ -738,14 +710,14 @@ LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LP
         } break;
         case WM_LBUTTONDBLCLK:
         {
-            if (lvExEditedItem.Status) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
+            if (DlgInfo.lvEdit[LV_EX_SEARCH].Status) { SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
             int iSelected = SendMessage(hwnd, LVM_GETSELECTIONMARK, 0, 0);
             if (iSelected < 0) { break; }
             int iSubItem = ListViewHitTst(hwnd, GetMessagePos(), iSelected);
             u32 ExType = ListViewGetHex(hwnd, iSelected, 3);
             if (ExType & (EXCS_SIGNED|EXCS_OR_EQUAL|EXCS_IGNORE_0|EXCS_IGNORE_FF|EXCS_IGNORE_N64_POINTERS)) { break; }
             if ((ExType & (EXCS_IGNORE_VALUE|EXCS_IGNORE_BYTE_VALUE|EXCS_IGNORE_SHORT_VALUE|EXCS_IGNORE_WORD_VALUE|EXCS_IGNORE_DWORD_VALUE|EXCS_EXCLUDE_CONSEC|EXCS_EXCLUDE_CONSEC_MATCH_VALUES|EXCS_INCLUDE_CONSEC|EXCS_INCLUDE_CONSEC_MATCH_VALUES)) && (iSubItem == 2)) { break; }
-            SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_BEGINEDIT, MAKELPARAM(iSelected, iSubItem));
+            SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_BEGINEDIT, MAKELPARAM(iSelected, iSubItem));
         } return 0;
         case WM_NOTIFY:
         {
@@ -753,44 +725,8 @@ LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LP
                 if (((NMHDR*)lParam)->code == HDN_BEGINTRACKA) { return TRUE; }
         } break;
     }
-	if (wpExSearchListProc) { return CallWindowProc (wpExSearchListProc, hwnd, message, wParam, lParam); }
-	else { return DefWindowProc (hwnd, message, wParam, lParam); }
-}
-
-/****************************************************************************
-Extended Search Options
--Listview editbox handler. This is an edit box that is placed over a listview
-cell when the user clicks on it for editing.
-*****************************************************************************/
-LRESULT CALLBACK ExValueHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-        case WM_CHAR:
-        {
-            if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace
-            if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
-            //should I include VK_RETURN here? Was there a reason I didn't?
-            wParam = FilterHexChar(wParam);
-        } break;
-        case WM_KILLFOCUS:
-        {
-            SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0);
-        } return 0;
-        case WM_KEYDOWN:
-        {
-            if (wParam == VK_RETURN) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 1); }
-            if (wParam == VK_ESCAPE) { SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
-            if (wParam == VK_F3) {
-                if (lvExEditedItem.iSubItem == 1) {
-                    SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0);
-                    SendMessage(hTabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_BEGINEDIT, MAKELPARAM(lvExEditedItem.iItem, lvExEditedItem.iSubItem + 1));
-                }
-            }
-        } break;
-    }
-	if (wpExValueProc) { return CallWindowProc (wpExValueProc, hwnd, message, wParam, lParam); }
-	else { return DefWindowProc (hwnd, message, wParam, lParam); }
+   if (wpOriginalProc) { return CallWindowProc (wpOriginalProc, hwnd, message, wParam, lParam); }
+   else { return DefWindowProc (hwnd, message, wParam, lParam); }
 }
 
 /****************************************************************************
@@ -816,11 +752,11 @@ Search History
 *****************************************************************************/
 int UpdateSearchHistory(int ActionType)
 {
-	HWND hwndSearchType = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_TYPE_CMB);
-	HWND hwndSearchHistory = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_HISTORY_TXT);
-    HWND hwndSearchValue1 = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_VALUE1_TXT);
-    HWND hwndSearchValue2 = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_VALUE2_TXT);
-    HWND hwndSignedSearchChk = GetDlgItem(hTabDlgs[CODE_SEARCH_TAB], SEARCH_SIGNED_CHK);
+	HWND hwndSearchType = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_TYPE_CMB);
+	HWND hwndSearchHistory = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_HISTORY_TXT);
+    HWND hwndSearchValue1 = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_VALUE1_TXT);
+    HWND hwndSearchValue2 = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_VALUE2_TXT);
+    HWND hwndSignedSearchChk = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIGNED_CHK);
 	char SearchTypeText[1000];
 	char HistoryText[1000];
 	char ValuesText[200];

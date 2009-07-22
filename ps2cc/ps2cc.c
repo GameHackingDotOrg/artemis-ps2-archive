@@ -30,18 +30,12 @@ Make the goddamn tab key work on hex/value boxes
 #include "ps2cc.h"
 #include "ps2cc_gui.h"
 
-HINSTANCE hInst;					// Instance handle
-HWND hwndMain;						// Main window handle
-
-char CFGFile[MAX_PATH];
-HWND hTabDlgs[NUM_TABS]; //an array of handles for the dialogs on each tab.
 char ErrTxt[1000];
-WNDPROC wpHexEditBoxes;
 
 //Global structs
 MAIN_CFG Settings, Defaults;
 RAM_AND_RES_DATA RamInfo;
-
+HWND_WNDPROC_INFO DlgInfo;
 
 /****************************************************************************
 Tab Control
@@ -82,20 +76,20 @@ int InitTabControl(HWND hwnd, LPARAM lParam)
 	ScreenToClient(hTab, (LPPOINT)&rt);
 
 	// Create the dialogs modelessly and move them appropriately
-    hTabDlgs[CODE_SEARCH_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)SEARCH_DLG, hTab, (DLGPROC)CodeSearchProc);
-    hTabDlgs[SEARCH_RESULTS_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)RESULTS_DLG, hTab, (DLGPROC)SearchResultsProc);
+    DlgInfo.TabDlgs[CODE_SEARCH_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)SEARCH_DLG, hTab, (DLGPROC)CodeSearchProc);
+    DlgInfo.TabDlgs[SEARCH_RESULTS_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)RESULTS_DLG, hTab, (DLGPROC)SearchResultsProc);
 /*
     hTabDlgs[MEMORY_EDITOR_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_MEMORY_EDITOR, hTab, (DLGPROC)MemoryEditorProc);
     hTabDlgs[CHEAT_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_CHEAT, hTab, (DLGPROC)CheatProc);
 */
-    MoveWindow(hTabDlgs[CODE_SEARCH_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
-    MoveWindow(hTabDlgs[SEARCH_RESULTS_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
+    MoveWindow(DlgInfo.TabDlgs[CODE_SEARCH_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
+    MoveWindow(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
 /*
     MoveWindow(hTabDlgs[MEMORY_EDITOR_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
     MoveWindow(hTabDlgs[CHEAT_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
 */
     // Show the default dialog
-    ShowWindow(hTabDlgs[CODE_SEARCH_TAB], SW_SHOW);
+    ShowWindow(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SW_SHOW);
 //    SendMessage(hTab, TCM_SETCURSEL, CODE_SEARCH_TAB, 0);
     SendMessage(hTab, TCM_SETCURFOCUS, CODE_SEARCH_TAB, 0);
     return 0;
@@ -140,7 +134,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
             if (hdr->code == TCN_SELCHANGING || hdr->code == TCN_SELCHANGE)  //switching tabs
             {
                 int index = TabCtrl_GetCurSel(hdr->hwndFrom);
-                if (index >= 0 && index < NUM_TABS) ShowWindow(hTabDlgs[index], (hdr->code == TCN_SELCHANGE) ? SW_SHOW : SW_HIDE);
+                if (index >= 0 && index < NUM_TABS) ShowWindow(DlgInfo.TabDlgs[index], (hdr->code == TCN_SELCHANGE) ? SW_SHOW : SW_HIDE);
             }
         } break;
 		case WM_COMMAND:
@@ -157,7 +151,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 			    } break;
 			    case MNU_SHOW_CONFIG:
 			    {
-					DialogBox(hInst, MAKEINTRESOURCE(SETTINGS_DLG), hwnd, IpConfigDlg);
+					DialogBox(DlgInfo.Instance, MAKEINTRESOURCE(SETTINGS_DLG), hwnd, IpConfigDlg);
 				} break;
                 case MNU_RES_SHOW_HEX: case MNU_RES_SHOW_DECU: case MNU_RES_SHOW_DECS: case MNU_RES_SHOW_FLOAT:
                 {
@@ -180,11 +174,11 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                 } break;
                 case MNU_CS_UNDO:
                 {
-					SendMessage(hTabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
+					SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
 				} break;
                 case MNU_LOAD_SEARCH:
                 {
-					SendMessage(hTabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
+					SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
 				} break;
                 case MNU_EXIT:
                 {
@@ -215,13 +209,12 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, INT nCmdShow)
 {
 	MSG msg;
-	unsigned char *p;
 
-	hInst = hInstance;
-
-   hwndMain = CreateDialog(hInst,MAKEINTRESOURCE(PS2CC_DLG),HWND_DESKTOP, MainWndProc);
+   memset(&DlgInfo, 0, sizeof(HWND_WNDPROC_INFO));
+   DlgInfo.Instance = hInstance;
+   DlgInfo.Main = CreateDialog(hInstance,MAKEINTRESOURCE(PS2CC_DLG),HWND_DESKTOP, MainWndProc);
    sprintf(ErrTxt, "%u", GetLastError());
-   if (!hwndMain) { MessageBox(NULL,ErrTxt, "debug",MB_OK); }
+   if (!DlgInfo.Main) { MessageBox(NULL,ErrTxt, "debug",MB_OK); }
 
 
 	// Create our controls
@@ -230,7 +223,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     blah.dwICC = -1;
     InitCommonControlsEx(&blah);
 
-	ShowWindow(hwndMain,SW_SHOW);
+	ShowWindow(DlgInfo.Main,SW_SHOW);
 
 
 	// API message loop
@@ -277,6 +270,7 @@ int LoadSettings()
 {
     memset(&Defaults,0,sizeof(Defaults));
     memset(&Settings,0,sizeof(Settings));
+	char CFGFile[MAX_PATH];
     if (GetModuleFileName(NULL,CFGFile,sizeof(CFGFile)) ) {
         char *fndchr = strrchr(CFGFile,'\\');
         *(fndchr + 1) = '\0';
@@ -287,7 +281,7 @@ int LoadSettings()
         sprintf(CFGFile,"ps2cc.cfg");
         strcpy(Defaults.CS.DumpDir, "Searches\\");
     }
-    Defaults.CFGVersion = 3; //increment this if settings struct or sub-struct definitions in ps2cc.h change
+    Defaults.CFGVersion = 4; //increment this if settings struct or sub-struct definitions in ps2cc.h change
     sprintf(Defaults.ServerIp, "192.168.0.80");
     Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
     Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
@@ -295,10 +289,6 @@ int LoadSettings()
     Defaults.CS.NumBase = BASE_HEX;
     Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
     Defaults.CS.DumpAccess = SEARCH_ACCESS_ARRAY;
-/*results options
-    Defaults.Results.ResWriteRate = 100;
-    Defaults.Results.ResWriteRateId = MNU_RES_WRITE_100MS;
-*/
 	//Results Defaults
     Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
     Defaults.Results.PageSize = 500;
@@ -318,6 +308,14 @@ SaveSettings
 *****************************************************************************/
 int SaveSettings()
 {
+    char CFGFile[MAX_PATH];
+    if (GetModuleFileName(NULL,CFGFile,sizeof(CFGFile)) ) {
+        char *fndchr = strrchr(CFGFile,'\\');
+        *(fndchr + 1) = '\0';
+        strcat(CFGFile,"ps2cc.cfg");
+    } else {
+        sprintf(CFGFile,"ps2cc.cfg");
+    }
     SaveStruct(&Settings, sizeof(Settings), CFGFile);
     return 0;
 }
@@ -327,10 +325,10 @@ Update Status Bar
 *****************************************************************************/
 int UpdateStatusBar(const char *StatusText, int PartNum, int Flags)
 {
-	HWND hwndStatusBar = GetDlgItem(hwndMain, NTPB_STATUS_BAR);
+	HWND hwndStatusBar = GetDlgItem(DlgInfo.Main, NTPB_STATUS_BAR);
 	if (hwndStatusBar) {
 		SendMessage(hwndStatusBar, SB_SETTEXT, PartNum|Flags, (LPARAM)StatusText);
-		UpdateWindow(hwndMain);
+		UpdateWindow(DlgInfo.Main);
 	}
 	return 0;
 }
@@ -340,10 +338,10 @@ Update Progress Bar
 *****************************************************************************/
 int UpdateProgressBar(unsigned int Message, WPARAM wParam, LPARAM lParam)
 {
-	HWND hwndProgressBar = GetDlgItem(hwndMain, DUMPSTATE_PRB);
+	HWND hwndProgressBar = GetDlgItem(DlgInfo.Main, DUMPSTATE_PRB);
 	if (hwndProgressBar) {
 		SendMessage(hwndProgressBar, Message, wParam, lParam);
-		UpdateWindow(hwndMain);
+		UpdateWindow(DlgInfo.Main);
 	}
 	return 0;
 }

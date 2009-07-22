@@ -59,8 +59,8 @@ const char *id_ram[5] = {
 #define REMOTE_CMD_DUMPIOP					0x102
 #define REMOTE_CMD_DUMPKERNEL				0x103
 #define REMOTE_CMD_DUMPSCRATCHPAD			0x104
-#define REMOTE_CMD_PATCHMEM					0x501
-#define REMOTE_CMD_UNPATCHMEM				0x502
+#define REMOTE_CMD_ADDMEMPATCHES			0x501
+#define REMOTE_CMD_CLEARMEMPATCHES 			0x502
 
 // commands sent in return by server
 #define NTPBCMD_PRINT_EEDUMP 				0x301
@@ -413,10 +413,10 @@ int TestConnect()
 }
 /****************************************************************************
 Activate Cheats*****************************************************************************/
-int ActivateCheats(unsigned char codes[1016], int numcodes)
+int ActivateCheats(unsigned char *codes, int numcodes)
 {
-	int i, r, cmd, remote_cmd, opstatus;
-	unsigned char cmdBuf[16];
+	int i, r, cmd, remote_cmd, opstatus, codestosend, numcodes_sent;
+	unsigned char cmdBuf[64];
 
 #ifdef _WIN32
 	// Init WSA
@@ -437,18 +437,32 @@ int ActivateCheats(unsigned char codes[1016], int numcodes)
 
 	// send remote cmd
 	UpdateStatusBar("Updating Codes...", 0, 0);
-	remote_cmd = REMOTE_CMD_PATCHMEM;
-	r = SendRemoteCmd(remote_cmd, codes, (numcodes * 8) + 4);
-	if (r < 0) {
-		sprintf(ErrTxt, "Failed to send remote command - error %d (ActivateCodes)", r);
-		opstatus = 0;
-		goto ac_disconnect;
-	}
+	remote_cmd = REMOTE_CMD_ADDMEMPATCHES;
 
-	r = receiveDump(0);
-	if (r < 0) {
-		sprintf(ErrTxt, "Failed to receive data - error %d (DumpRAM)", r);
-		goto ac_disconnect;
+	numcodes_sent = 0;
+	while (numcodes_sent < numcodes) {
+
+		codestosend = numcodes - numcodes_sent;
+
+		if (codestosend > 6)
+			codestosend = 6;
+
+		*((unsigned int *)&cmdBuf[0]) = codestosend;
+		memcpy(&cmdBuf[4], &codes[(numcodes_sent * 8) + 4], codestosend * 8);
+
+		r = SendRemoteCmd(remote_cmd, cmdBuf, (codestosend * 8) + 4);
+		if (r < 0) {
+			sprintf(ErrTxt, "Failed to send remote command - error %d (ActivateCheats)", r);
+			opstatus = 0;
+			goto ac_disconnect;
+		}
+
+		r = receiveDump(0);
+		if (r < 0) {
+			sprintf(ErrTxt, "Failed to receive data - error %d (ActivateCheats)", r);
+			goto ac_disconnect;
+		}
+		numcodes_sent += codestosend;
 	}
 
 	opstatus = 1;
@@ -467,7 +481,7 @@ ac_disconnect:
 
 /****************************************************************************
 DeActivate Cheats*****************************************************************************/
-int DeActivateCodes()
+int DeActivateCheats()
 {
 	int i, r, cmd, remote_cmd, opstatus;
 	unsigned char cmdBuf[16];
@@ -491,16 +505,16 @@ int DeActivateCodes()
 
 	// send remote cmd
 	UpdateStatusBar("Updating Codes...", 0, 0);
-	remote_cmd = REMOTE_CMD_UNPATCHMEM;
+	remote_cmd = REMOTE_CMD_CLEARMEMPATCHES;
 	r = SendRemoteCmd(remote_cmd, NULL, 0);
 	if (r < 0) {
-		sprintf(ErrTxt, "Failed to send remote command - error %d (DeActivateCodes)", r);
+		sprintf(ErrTxt, "Failed to send remote command - error %d (DeActivateCheats)", r);
 		opstatus = 0;
 		goto dac_disconnect;
 	}
 	r = receiveDump(0);
 	if (r < 0) {
-		sprintf(ErrTxt, "Failed to receive data - error %d (DumpRAM)", r);
+		sprintf(ErrTxt, "Failed to receive data - error %d (DeActivateCheats)", r);
 		goto dac_disconnect;
 	}
 
