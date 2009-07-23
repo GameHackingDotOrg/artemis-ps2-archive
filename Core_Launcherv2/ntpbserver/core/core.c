@@ -1077,7 +1077,7 @@ void writeRawCodes(void)
 	u8 codeCmd, test_condition, test_type, num_skip;
 	u8 *src, *dest;
 	u16 optype, opval;
-	u32 value, cmpvalue;
+	u32 value, cmpvalue, base, offset;
 	u32 addr, num_bytes, num_writes, vstep, astep, z;
 	
 	DIntr();
@@ -1176,8 +1176,20 @@ void writeRawCodes(void)
 				}
 				i+=2;									
 			}
-			else if (codeCmd == 0x06) {				// not implemented
-				i++;				
+			else if (codeCmd == 0x06) {				// Pointer write
+				if ((i+1) < num_rawcodes) { 
+					base = _lw(addr);
+					offset = RawCodes[i+1].code_2;
+					optype = RawCodes[i+1].code_1;
+					value = RawCodes[i].code_2;
+					if (optype == 0x00000000)		// 8-bit write
+						_sb(value & 0xff, base + offset);
+					else if (optype == 0x00010000)	// 16-bit write 
+						_sh(value & 0xffff, base + offset);
+					else if (optype == 0x00020000)	// 32-bit write
+						_sw(value, base + offset);
+				}	
+				i+=2;			
 			}
 			else if (codeCmd == 0x07) {				// Boolean operation
 				optype = RawCodes[i].code_2 >> 16;

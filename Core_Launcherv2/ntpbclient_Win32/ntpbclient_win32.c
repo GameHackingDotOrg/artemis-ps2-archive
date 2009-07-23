@@ -58,8 +58,10 @@ const unsigned char *ntpb_hdrMagic = "\xff\x00NTPB";
 #define REMOTE_CMD_DUMPSCRATCHPAD			0x104
 #define REMOTE_CMD_HALT						0x201
 #define REMOTE_CMD_RESUME					0x202
-#define REMOTE_CMD_PATCHMEM					0x501
-#define REMOTE_CMD_UNPATCHMEM				0x502
+#define REMOTE_CMD_ADDMEMPATCHES			0x501
+#define REMOTE_CMD_CLEARMEMPATCHES			0x502
+#define REMOTE_CMD_ADDRAWCODES				0x601
+#define REMOTE_CMD_CLEARRAWCODES			0x602
 
 static int remote_cmd;
 
@@ -85,6 +87,7 @@ HWND hwndLabeldumpState;		   	// Label control handle
 HWND hwndLabelServerLog;		   	// Label control handle
 HWND hwndLabelAddr;				   	// Label control handle
 HWND hwndLabelVal;				   	// Label control handle
+HWND hwndLabelCodes;				// Label control handle
 
 HWND hwndTextBoxEEdump;				// Edit control handle
 HWND hwndTextBoxIOPdump;			// Edit control handle
@@ -102,6 +105,8 @@ HWND hwndTextBoxScratchpaddumpEnd;	// Edit control handle
 HWND hwndTextBoxServerLog;			// Edit control handle
 HWND hwndTextBoxPatchMem;			// Edit control handle
 HWND hwndTextBoxPatchVal;			// Edit control handle
+HWND hwndTextBoxCode1;				// Edit control handle
+HWND hwndTextBoxCode2;				// Edit control handle
 
 HWND hwndButtonEEdump;				// Button control handle
 HWND hwndButtonIOPdump;				// Button control handle
@@ -111,6 +116,8 @@ HWND hwndButtonScratchpaddump;		// Button control handle
 HWND hwndButtonHaltResume;			// Button control handle
 HWND hwndButtonPatchMem;			// Button control handle
 HWND hwndButtonUnPatchMem;			// Button control handle
+HWND hwndButtonAddCodes;			// Button control handle
+HWND hwndButtonClearCodes;			// Button control handle
 
 HWND hwndProgressBardumpState;		// Progress Bar control handle
 HWND hWndStatusbar;					// StatusBar handle
@@ -119,15 +126,17 @@ WSADATA *WsaData;
 LRESULT CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
 DWORD HexaToDecimal(const char* pszHexa);
 int SendRemoteCmd(int cmd, unsigned char *buf, int size);
+int rcvReply(void);
 int PrintLog(void *buf, int size, int ResultControlID);
 DWORD WINAPI clientThread(LPVOID lpParam);
 DWORD WINAPI rcvDataThread(LPVOID lpParam); // retrieving a packet sent by the Client
 
-//unsigned char cmdBuf[1024];
+#define MAX_PATCHES 	256
+char *patchaddr[MAX_PATCHES], *patchval[MAX_PATCHES];
 
-#define MAX_PATCHES_PER_CMD 	126
+#define MAX_CODES 	256
+char *code_1[MAX_CODES], *code_2[MAX_CODES];
 
-char *patchaddr[8192], *patchval[8192];
 
 /*<---------------------------------------------------------------------->*/
 void UpdateStatusBar(LPSTR lpszStatusString, WORD partNumber, WORD displayFlags)
@@ -220,12 +229,11 @@ HWND Createntpbclient_win32WndClassWnd(void)
 /* --- The following code comes from c:\lcc\lib\wizard\defOnCmd.tpl. */
 void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 {
-	int ln;
+	int ln, numcodes, codestosend, numcodes_sent;
 	unsigned char buf[128];
 	char startbuf[128], endbuf[128], tmp[128], tmp_file[128];
-	char patchbuf[2048];
-	char *patchaddr[32], *patchval[32];
-
+	char patchbuf[4096];
+	char cmdBuf[64];
 
 	switch(id) {
 		// ---TODO--- Add new menu commands here
@@ -396,7 +404,7 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 
 		case IDC_BUTTON_PATCHMEM:
 			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
-				remote_cmd = REMOTE_CMD_PATCHMEM;
+				remote_cmd = REMOTE_CMD_ADDMEMPATCHES;
 
 				int i, j, z, addr_count, val_count;
 
@@ -438,7 +446,7 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 				}
 				val_count = z;
 
-				if ((addr_count == val_count) && (addr_count <= MAX_PATCHES_PER_CMD)) {
+				if ((addr_count == val_count) && (addr_count <= MAX_PATCHES)) {
 					*((unsigned int *)&buf[0]) = addr_count;
 					z = 4;
 					for (i=0; i<addr_count; i++) {
@@ -446,12 +454,28 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 						*((unsigned int *)&buf[z+4]) = (unsigned int)HexaToDecimal(patchval[i]);
 						z += 8;
 					}
-					SendRemoteCmd(remote_cmd, buf, ((addr_count << 1) << 2) + 4);
-					HANDLE rcvDataThid = CreateThread(NULL, 0, rcvDataThread, NULL, 0, NULL); // no stack, 1MB by default
+
+					numcodes = addr_count;
+					numcodes_sent = 0;
+
+					while (numcodes_sent < numcodes) {
+
+						codestosend = numcodes - numcodes_sent;
+
+						if (codestosend > 6)
+							codestosend = 6;
+
+						*((unsigned int *)&cmdBuf[0]) = codestosend;
+						memcpy(&cmdBuf[4], &buf[(numcodes_sent * 8) + 4], codestosend * 8);
+
+						SendRemoteCmd(remote_cmd, cmdBuf, (codestosend * 8) + 4);
+						rcvReply();
+						numcodes_sent += codestosend;
+					}
 				}
 				else {
-					if (addr_count > MAX_PATCHES_PER_CMD)
-						MessageBox(GetActiveWindow(),"Error: too much patches for 1 command...","ntpbclient",MB_ICONERROR | MB_OK);
+					if (addr_count > MAX_PATCHES)
+						MessageBox(GetActiveWindow(),"Error: too much patches...","ntpbclient",MB_ICONERROR | MB_OK);
 					else
 						MessageBox(GetActiveWindow(),"Error: addresses items count <> val items count...","ntpbclient",MB_ICONERROR | MB_OK);
 				}
@@ -460,17 +484,115 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 					GlobalFree((HANDLE)patchaddr[i]);
 				for (i=0; i<val_count; i++)
 					GlobalFree((HANDLE)patchval[i]);
+
+				remote_cmd = REMOTE_CMD_NONE;
 			}
 			break;
 
 		case IDC_BUTTON_UNPATCHMEM:
 			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
-				remote_cmd = REMOTE_CMD_UNPATCHMEM;
+				remote_cmd = REMOTE_CMD_CLEARMEMPATCHES;
 				SendRemoteCmd(remote_cmd, NULL, 0);
-				HANDLE rcvDataThid = CreateThread(NULL, 0, rcvDataThread, NULL, 0, NULL); // no stack, 1MB by default
+				rcvReply();
+				remote_cmd = REMOTE_CMD_NONE;
 			}
 			break;
 
+		case IDC_BUTTON_ADDCODES:
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
+				remote_cmd = REMOTE_CMD_ADDRAWCODES;
+
+				int i, j, z, addr_count, val_count;
+
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_CODE1));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_CODE1, patchbuf, ln + 1);
+
+			    j = 0;
+				z = 0;
+				for (i=0; i<ln+1; i++) {
+					if ((patchbuf[i] == '\r') || (patchbuf[i] == '\0')) {
+						if (i-j > 0) {
+							code_1[z] = (char*)GlobalAlloc(GPTR, i-j+1);
+							memcpy(code_1[z], &patchbuf[j], i-j);
+							code_1[z][i-j] = 0;
+							//MessageBox(GetActiveWindow(),patchaddr[z],"ntpbclient",MB_ICONERROR | MB_OK);
+							z++;
+						}
+						j = i + 2;
+					}
+				}
+				addr_count = z;
+
+				ln = GetWindowTextLength(GetDlgItem(hwndMain, IDC_TEXTBOX_CODE2));
+				GetDlgItemText(hwndMain, IDC_TEXTBOX_CODE2, patchbuf, ln + 1);
+
+			    j = 0;
+				z = 0;
+				for (i=0; i<ln+1; i++) {
+					if ((patchbuf[i] == '\r') || (patchbuf[i] == '\0')) {
+						if (i-j > 0) {
+							code_2[z] = (char*)GlobalAlloc(GPTR, i-j+1);
+							memcpy(code_2[z], &patchbuf[j], i-j);
+							code_2[z][i-j] = 0;
+							//MessageBox(GetActiveWindow(),patchval[z],"ntpbclient",MB_ICONERROR | MB_OK);
+							z++;
+						}
+						j = i + 2;
+					}
+				}
+				val_count = z;
+
+				if ((addr_count == val_count) && (addr_count <= MAX_CODES)) {
+					*((unsigned int *)&buf[0]) = addr_count;
+					z = 4;
+					for (i=0; i<addr_count; i++) {
+						*((unsigned int *)&buf[z]) = (unsigned int)HexaToDecimal(code_1[i]);
+						*((unsigned int *)&buf[z+4]) = (unsigned int)HexaToDecimal(code_2[i]);
+						z += 8;
+					}
+
+					numcodes = addr_count;
+					numcodes_sent = 0;
+
+					while (numcodes_sent < numcodes) {
+
+						codestosend = numcodes - numcodes_sent;
+
+						if (codestosend > 6)
+							codestosend = 6;
+
+						*((unsigned int *)&cmdBuf[0]) = codestosend;
+						memcpy(&cmdBuf[4], &buf[(numcodes_sent * 8) + 4], codestosend * 8);
+
+						SendRemoteCmd(remote_cmd, cmdBuf, (codestosend * 8) + 4);
+						rcvReply();
+						numcodes_sent += codestosend;
+					}
+				}
+				else {
+					if (addr_count > MAX_CODES)
+						MessageBox(GetActiveWindow(),"Error: too much codes...","ntpbclient",MB_ICONERROR | MB_OK);
+					else
+						MessageBox(GetActiveWindow(),"Error: items count <> ...","ntpbclient",MB_ICONERROR | MB_OK);
+				}
+
+				for (i=0; i<addr_count; i++)
+					GlobalFree((HANDLE)code_1[i]);
+				for (i=0; i<val_count; i++)
+					GlobalFree((HANDLE)code_2[i]);
+
+				remote_cmd = REMOTE_CMD_NONE;
+			}
+			break;
+
+		case IDC_BUTTON_CLEARCODES:
+			if ((ClientConnected) && (remote_cmd == REMOTE_CMD_NONE)) {
+				remote_cmd = REMOTE_CMD_CLEARRAWCODES;
+				SendRemoteCmd(remote_cmd, NULL, 0);
+				rcvReply();
+				remote_cmd = REMOTE_CMD_NONE;
+			}
+			break;
 	}
 }
 
@@ -752,6 +874,83 @@ DWORD WINAPI netlogThread(LPVOID lpParam)
 
 	closesocket(udp_socket);
 
+	return 0;
+}
+
+/*<---------------------------------------------------------------------->*/
+int rcvReply(void) // retrieving reply sent by server
+{
+	int rcvSize, sndSize, packetSize, ntpbpktSize, ntpbCmd, ln, recv_size;
+	char *pbuf;
+	int endTransmit = 0;
+
+	while (1) {
+
+		pbuf = (char *)&pktbuffer[0];
+
+		// receive the first packet
+		rcvSize = recv(main_socket, &pktbuffer[0], sizeof(pktbuffer), 0);
+		if (rcvSize < 0) {
+			MessageBox(GetActiveWindow(),"Error: recv failed !","ntpbclient",MB_ICONERROR | MB_OK);
+			goto error;
+		}
+
+		// packet sanity check
+		if (!check_ntpb_header(pbuf)) {
+			MessageBox(GetActiveWindow(),"Error: not ntpb packet !","ntpbclient",MB_ICONERROR | MB_OK);
+			goto error;
+		}
+
+		ntpbpktSize = *((unsigned short *)&pbuf[6]);
+		packetSize = ntpbpktSize + ntpb_hdrSize;
+
+		recv_size = rcvSize;
+
+		// fragmented packet handling
+		while (recv_size < packetSize) {
+			rcvSize = recv(main_socket, &pktbuffer[recv_size], sizeof(pktbuffer) - recv_size, 0);
+			if (rcvSize < 0) {
+				MessageBox(GetActiveWindow(),"Error: recv failed !","ntpbclient",MB_ICONERROR | MB_OK);
+				goto error;
+			}
+			else {
+				recv_size += rcvSize;
+			}
+		}
+
+		// parses packet
+		if (check_ntpb_header(pbuf)) {
+			ntpbCmd = *((unsigned short *)&pbuf[8]);
+
+			switch(ntpbCmd) { // treat Client Request here
+
+				case NTPBCMD_END_TRANSMIT:
+					Sleep(100);
+					CloseHandle(fh_dump);
+					endTransmit = 1;
+					break;
+			}
+
+			*((unsigned short *)&pktbuffer[ntpb_hdrSize]) = 1;
+			*((unsigned short *)&pktbuffer[6]) = 0;
+			packetSize = ntpb_hdrSize + 2;
+
+			// send the response packet
+			sndSize = send(main_socket, &pktbuffer[0], packetSize, 0);
+			if (sndSize <= 0) {
+				MessageBox(GetActiveWindow(),"Error: send failed !","ntpbclient",MB_ICONERROR | MB_OK);
+				goto error;
+			}
+
+			if (endTransmit)
+				break;
+		}
+	}
+
+	//MessageBox(GetActiveWindow(),"receive data done !","ntpbclient",MB_ICONERROR | MB_OK);
+	return 1;
+
+error:
 	return 0;
 }
 
@@ -1308,22 +1507,72 @@ VOID CreateControls(HINSTANCE hInstance)
                                NULL);
 
 	hwndButtonPatchMem = CreateWindow (TEXT("button"),
-                               "Patch",
+                               "Add Patches",
                                WS_CHILD|WS_VISIBLE|WS_BORDER,
                                240,538,
-                               80,24,
+                               100,24,
                                hwndMain,
                                (HMENU)IDC_BUTTON_PATCHMEM,
                                hInstance,
                                NULL);
 
 	hwndButtonPatchMem = CreateWindow (TEXT("button"),
-                               "Unpatch",
+                               "Clear Patches",
                                WS_CHILD|WS_VISIBLE|WS_BORDER,
                                240,566,
-                               80,24,
+                               100,24,
                                hwndMain,
                                (HMENU)IDC_BUTTON_UNPATCHMEM,
+                               hInstance,
+                               NULL);
+
+	hwndLabelCodes = CreateWindow (TEXT("static"),
+                               "raw codes:",
+                               WS_CHILD|WS_VISIBLE,
+                               400,518,
+                               100,20,
+                               hwndMain,
+                               (HMENU)IDC_LABEL_CODES,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxCode1 = CreateWindow (TEXT("edit"),
+                               "",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE,
+                               400,538,
+                               100,70,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_CODE1,
+                               hInstance,
+                               NULL);
+
+	hwndTextBoxCode2 = CreateWindow (TEXT("edit"),
+                               "",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER|WS_VSCROLL|WS_HSCROLL|ES_AUTOVSCROLL|ES_MULTILINE,
+                               500,538,
+                               100,70,
+                               hwndMain,
+                               (HMENU)IDC_TEXTBOX_CODE2,
+                               hInstance,
+                               NULL);
+
+	hwndButtonAddCodes = CreateWindow (TEXT("button"),
+                               "Add Codes",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               620,538,
+                               100,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_ADDCODES,
+                               hInstance,
+                               NULL);
+
+	hwndButtonClearCodes = CreateWindow (TEXT("button"),
+                               "Clear Codes",
+                               WS_CHILD|WS_VISIBLE|WS_BORDER,
+                               620,566,
+                               100,24,
+                               hwndMain,
+                               (HMENU)IDC_BUTTON_CLEARCODES,
                                hInstance,
                                NULL);
 
