@@ -487,12 +487,10 @@ int _rpcNTPBgetRemoteCmd(void *rpc_buf)
 	g_getRemoteCmdParam_t *eP = (g_getRemoteCmdParam_t *)rpc_buf;	
 				
 	eP->cmd = remote_cmd;
+	remote_cmd = 0;
 	
-	if (remote_cmd) {
-		remote_cmd = 0;
-		memcpy(eP->buf, cmdbuf, cmdsize);
-		eP->size = cmdsize;
-	}
+	memcpy(eP->buf, cmdbuf, cmdsize);
+	eP->size = cmdsize;
 	
 	return 1;
 }

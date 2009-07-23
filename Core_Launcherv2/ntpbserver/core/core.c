@@ -43,7 +43,6 @@ RawCodes_t RawCodes[MAX_RAWCODES];
 static int num_rawcodes = 0;
 
 void *irx_mem;
-u8 cmd_buf[1024];
 
 
 #define PAD_LEFT      0x0080
@@ -955,13 +954,13 @@ int dump_mem(void *addr, int size, void *buf)
 	int i;
 	u8 *p1 = (u8 *)addr;
 	u8 *p2 = (u8 *)buf;
-	
+						
 	DIntr();
 	ee_kmode_enter();
 		
 	for (i=0; i<size; i++)
 		p2[i] = p1[i];
-		
+
 	ee_kmode_exit();	
 	EIntr();
 	
@@ -1303,72 +1302,61 @@ int getRemoteCmd(void)
 {
 	u16 remote_cmd;
 	int size;
-	int ret; 
+	int ret;
+	u8 cmd_buf[64]; 
 	
 	rpcNTPBgetRemoteCmd(&remote_cmd, cmd_buf, &size);
 	rpcSync(0, NULL, &ret);
 		
 	if (remote_cmd != REMOTE_CMD_NONE) {
 		
-		switch (remote_cmd) {
-			
-			case REMOTE_CMD_DUMPEE:
-				sendDump(EE_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
-				break;			
-
-			case REMOTE_CMD_DUMPIOP:
-				sendDump(IOP_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
-				break;
-				
-			case REMOTE_CMD_DUMPKERNEL:
-				sendDump(KERNEL_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
-				break;
-				
-			case REMOTE_CMD_DUMPSCRATCHPAD:
-				sendDump(SCRATCHPAD_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
-				break;
-				
-			case REMOTE_CMD_HALT:
-				rpcNTPBEndReply();
-				rpcSync(0, NULL, &ret);													
-				if (!haltState) {
-					haltState = 1;
-					while (haltState)
-						getRemoteCmd();
-				}					
-				break;			
-				
-			case REMOTE_CMD_RESUME:
-				rpcNTPBEndReply();
-				rpcSync(0, NULL, &ret);	
-				if (haltState) {			
-					haltState = 0; 
-				}
-				break;
-				
-			case REMOTE_CMD_ADDMEMPATCHES:
-				rpcNTPBEndReply();
-				rpcSync(0, NULL, &ret);	
-				addMemPatches(*((u32 *)&cmd_buf[0]), &cmd_buf[4]);
-				break;
-
-			case REMOTE_CMD_CLEARMEMPATCHES:
-				rpcNTPBEndReply();
-				rpcSync(0, NULL, &ret);	
-				num_patches = 0;
-				break;	
-	
-			case REMOTE_CMD_ADDRAWCODES:
-				rpcNTPBEndReply();
-				rpcSync(0, NULL, &ret);	
-				addRawCodes(*((u32 *)&cmd_buf[0]), &cmd_buf[4]);
-				break;
-
-			case REMOTE_CMD_CLEARRAWCODES:
-				rpcNTPBEndReply();
-				rpcSync(0, NULL, &ret);	
-				num_rawcodes = 0;
-				break;																								
+		if (remote_cmd == REMOTE_CMD_DUMPEE) {
+			sendDump(EE_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
+		}
+		else if (remote_cmd == REMOTE_CMD_DUMPIOP) {
+			sendDump(IOP_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
+		}
+		else if (remote_cmd == REMOTE_CMD_DUMPKERNEL) {
+			sendDump(KERNEL_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
+		}
+		else if (remote_cmd == REMOTE_CMD_DUMPSCRATCHPAD) {
+			sendDump(SCRATCHPAD_DUMP, *((u32 *)&cmd_buf[0]), *((u32 *)&cmd_buf[4]));
+		}
+		else if (remote_cmd == REMOTE_CMD_HALT) {
+			rpcNTPBEndReply();
+			rpcSync(0, NULL, &ret);													
+			if (!haltState) {
+				haltState = 1;
+				while (haltState)
+					getRemoteCmd();
+			}								
+		}
+		else if (remote_cmd == REMOTE_CMD_RESUME) {
+			rpcNTPBEndReply();
+			rpcSync(0, NULL, &ret);	
+			if (haltState) {			
+				haltState = 0; 
+			}			
+		}		
+		else if (remote_cmd == REMOTE_CMD_ADDMEMPATCHES) {
+			rpcNTPBEndReply();
+			rpcSync(0, NULL, &ret);	
+			addMemPatches(*((u32 *)&cmd_buf[0]), &cmd_buf[4]);			
+		}
+		else if (remote_cmd == REMOTE_CMD_CLEARMEMPATCHES) {
+			rpcNTPBEndReply();
+			rpcSync(0, NULL, &ret);	
+			num_patches = 0;			
+		}
+		else if (remote_cmd == REMOTE_CMD_ADDRAWCODES) {
+			rpcNTPBEndReply();
+			rpcSync(0, NULL, &ret);	
+			addRawCodes(*((u32 *)&cmd_buf[0]), &cmd_buf[4]);
+		}
+		else if (remote_cmd == REMOTE_CMD_CLEARRAWCODES) {
+			rpcNTPBEndReply();
+			rpcSync(0, NULL, &ret);	
+			num_rawcodes = 0;			
 		}
 	}
 	
@@ -1394,6 +1382,7 @@ void start_screen(void)
 //u32 old_pad;
 void padReadHook_job(void *data)
 {
+
 	if (num_patches > 0)
 		writeMemPatches();
 		

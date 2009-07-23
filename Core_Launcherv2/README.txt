@@ -2,7 +2,7 @@
 //                                                                       //
 //  Artemis Project: CoreLauncher_v2                                     //
 //  solution provided by jimmikaelkael                                   //
-//  rev 0.7	                                                         //
+//  rev 0.7b	                                                         //
 //                                                                       //
 //-----------------------------------------------------------------------//
 
