@@ -440,7 +440,7 @@ int ActivateCheats(unsigned char *codes, int numcodes)
 	remote_cmd = REMOTE_CMD_ADDMEMPATCHES;
 
 	numcodes_sent = 0;
-	while (numcodes_sent < numcodes) {
+	while ((numcodes_sent < numcodes) && (numcodes_sent < 256)) {
 
 		codestosend = numcodes - numcodes_sent;
 

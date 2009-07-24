@@ -516,6 +516,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     }
                     if (Search.Type == SEARCH_FORGOT) {
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
+                        RamInfo.NewResultsInfo.ResCount = RamInfo.OldResultsInfo.ResCount;
                         SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
                         UpdateSearchHistory(LOWORD(wParam));
                         FreeRamInfo(); return 0;
