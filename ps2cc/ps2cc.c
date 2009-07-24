@@ -163,6 +163,11 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 			        SetMenuState(hMenu, LOWORD(wParam), MFS_CHECKED);
 			        if (ResultsList) { ShowResPage(0); } //possibly make CurrResNum a global later
                 } break;
+				case MNU_RES_PAGE_DOWN: case MNU_RES_PAGE_UP:
+				{
+					HWND hwndTabCtrl = GetDlgItem(hwnd, PS2CC_TABCTRL);
+					if ((ResultsList) && (SendMessage(hwndTabCtrl, TCM_GETCURFOCUS, 0, 0) == SEARCH_RESULTS_TAB)) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], msg, wParam, lParam); }
+				} break;
 			    case MNU_CS_INPUT_HEX: case MNU_CS_INPUT_DEC: case MNU_CS_INPUT_FLOAT:
                 {
                     Settings.CS.NumBase = GetMenuItemData(hMenu, LOWORD(wParam));
@@ -214,8 +219,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
    DlgInfo.Instance = hInstance;
    DlgInfo.Main = CreateDialog(hInstance,MAKEINTRESOURCE(PS2CC_DLG),HWND_DESKTOP, MainWndProc);
    sprintf(ErrTxt, "%u", GetLastError());
-   if (!DlgInfo.Main) { MessageBox(NULL,ErrTxt, "debug",MB_OK); }
-
+   if (!DlgInfo.Main) { MessageBox(NULL,ErrTxt, "Error",MB_OK); }
 
 	// Create our controls
     INITCOMMONCONTROLSEX blah;
@@ -223,13 +227,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     blah.dwICC = -1;
     InitCommonControlsEx(&blah);
 
+   HACCEL KeyAccel = LoadAccelerators(hInstance, "PS2CC_ACCEL");
+   if (!KeyAccel) {
+	   sprintf(ErrTxt, "%u", GetLastError());
+	   MessageBox(NULL,ErrTxt, "Error",MB_OK);
+   }
+
 	ShowWindow(DlgInfo.Main,SW_SHOW);
 
 
 	// API message loop
 	while (GetMessage(&msg,NULL,0,0)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
+		if (!TranslateAccelerator(DlgInfo.Main, KeyAccel, &msg)) {
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
 	}
 
 

@@ -149,6 +149,16 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 					SendMessage(hwndActiveList,LVM_DELETEALLITEMS,0,0);
 					DeActivateCheats();
 				} break;
+				/************************************************************
+				Page Up/Down Key
+				*************************************************************/
+				case MNU_RES_PAGE_DOWN: case MNU_RES_PAGE_UP:
+				{
+					int PageNum = SendMessage(hwndResPage,CB_GETITEMDATA,SendMessage(hwndResPage,CB_GETCURSEL,0,0),0);
+					PageNum += (LOWORD(wParam) == MNU_RES_PAGE_DOWN) ? 1 : -1;
+					ComboSelFromData(hwndResPage, PageNum);
+					SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(RESULTS_PAGE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
+				} break;
 			}
 		} break;
         case WM_SHOWWINDOW:

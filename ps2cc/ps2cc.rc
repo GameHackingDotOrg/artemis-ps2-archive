@@ -146,3 +146,11 @@ BEGIN
   CONTROL "",RESULTS_PAGE_CMB,"ComboBox",WS_CHILD|WS_VISIBLE|WS_VSCROLL|WS_TABSTOP|CBS_HASSTRINGS|CBS_AUTOHSCROLL|CBS_DROPDOWNLIST,226,223,38,31
 END
 
+/****************************************************************************
+Keyboard Shortcuts
+*****************************************************************************/
+PS2CC_ACCEL ACCELERATORS
+{
+    VK_NEXT,  MNU_RES_PAGE_DOWN,       VIRTKEY
+    VK_PRIOR,  MNU_RES_PAGE_UP,       VIRTKEY
+}
