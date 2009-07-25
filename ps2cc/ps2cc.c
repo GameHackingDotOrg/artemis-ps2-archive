@@ -25,6 +25,8 @@ lock things like search area once a search has started
 fonts (default and custom)
 option to leave game halted?
 Make the goddamn tab key work on hex/value boxes
+Enter key on results list
+multi-select results list
 *****************************************************************************/
 
 #include "ps2cc.h"

@@ -38,8 +38,8 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 
             //Active Code Sizes
             SendMessage(hwndActiveResSize,CB_RESETCONTENT,0,0);
-//            ComboAddItem(hwndActiveResSize, "8-Bit" , 1);
-//            ComboAddItem(hwndActiveResSize, "16-Bit" , 2);
+            ComboAddItem(hwndActiveResSize, "8-Bit" , 1);
+            ComboAddItem(hwndActiveResSize, "16-Bit" , 2);
             ComboAddItem(hwndActiveResSize, "32-Bit" , 4);
 //            ComboAddItem(hwndActiveResSize, "64-Bit" , 8);
             //Init Active Codes List
@@ -51,8 +51,6 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
             ListViewAddCol(hwndActiveList, "Size", 2, 0x30);
             SendMessage(hwndActiveList, LVM_SETCOLUMNWIDTH, 2, LVSCW_AUTOSIZE_USEHEADER);
 
-            SendMessage(hwndActiveResSize,CB_SETCURSEL,0,0);
-            SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(ACTIVE_RES_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndActiveResSize);
 		    SendMessage(hwndActiveResAddr, EM_SETLIMITTEXT, 8, 0);
 		} break;
 		case WM_COMMAND:
@@ -92,12 +90,13 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 				*************************************************************/
                 case RES_WRITE_ONCE_CMD:
                 {
-                    unsigned char actcodes[1016];
+                    unsigned char actcodes[2052];
                     u32 address = GetHexWindow(hwndActiveResAddr);
+                    int ResSize = SendMessage(hwndActiveResSize,CB_GETITEMDATA,SendMessage(hwndActiveResSize,CB_GETCURSEL,0,0),0);
     				*((unsigned int *)&actcodes[0]) = 1;
-    				*((unsigned int *)&actcodes[4]) = address;
+    				*((unsigned int *)&actcodes[4]) = address | ((ResSize / 2) << 28);
     				*((unsigned int *)&actcodes[8]) = (u32)GetHexWindow(hwndActiveResValue);
-                    if (address % 4) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
+                    if (address % ResSize) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
     				if (!ActivateCheats(actcodes, 1)) {
     					MessageBox(NULL, ErrTxt, "Error", MB_OK); break;
     				}
@@ -110,8 +109,9 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
                 {
                     u32 address = GetHexWindow(hwndActiveResAddr);
                     u64 value = GetHexWindow(hwndActiveResValue);
-                    if (address % 4) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
-                    ListView_SetCheckState(hwndActiveList, Result2ActiveList(address, value, 4), TRUE);
+                    int ResSize = SendMessage(hwndActiveResSize,CB_GETITEMDATA,SendMessage(hwndActiveResSize,CB_GETCURSEL,0,0),0);
+                    if (address % ResSize) { MessageBox(NULL, "Address must be aligned to match the number of bytes being written, fucknut.", "Error", MB_OK); break; }
+                    ListView_SetCheckState(hwndActiveList, Result2ActiveList(address, value, ResSize), TRUE);
                     UpdateActiveCheats();
                 } break;
 				/************************************************************
@@ -163,7 +163,16 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 		} break;
         case WM_SHOWWINDOW:
         {
-            if (wParam) { LoadResultsList(); }
+            if (wParam) {
+				LoadResultsList();
+				//ResSize combo
+				HWND hwndSearchSize = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
+				int SearchSize = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
+				if (SearchSize > 4) { SearchSize = 4; }
+				ComboSelFromData(hwndActiveResSize, SearchSize);
+//          	  SendMessage(hwndActiveResSize,CB_SETCURSEL,0,0);
+            	SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(ACTIVE_RES_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndActiveResSize);
+			}
         } break;
 	}
 	return FALSE;
@@ -189,6 +198,7 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
 			HWND hwndActiveResValue = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_VALUE_TXT);
 			HWND hwndSearchSize = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
 			int SearchSize = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
+			if (SearchSize > 4) { SearchSize = 4; }
             ComboSelFromData(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_SIZE_CMB), SearchSize);
             SetHexWindow(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_ADDR_TXT), address);
             SendMessage(hwndActiveResValue, EM_SETLIMITTEXT, SearchSize*2, 0);
@@ -212,10 +222,32 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
 //            extern CurrMemAddress;
 //            if (Settings.Results.RamView == 1) { CurrMemAddress = ShowRAM(address & 0xFFFFFFF0); }
             if (message == WM_LBUTTONDBLCLK) {
-                ListView_SetCheckState(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, 4), TRUE);
+				int SelCount = SendMessage(hwnd, LVM_GETSELECTEDCOUNT, 0, 0);
+                if (SelCount == 1) { ListView_SetCheckState(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, SearchSize), TRUE); break; }
+				iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, 0, LVNI_SELECTED);
+				while (iSelected >= 0)
+				{
+					u32 address = ListViewGetHex(hwnd, iSelected, 0);
+					switch (Settings.Results.DisplayFmt)
+					{
+						case MNU_RES_SHOW_HEX:
+						{
+				            value = ListViewGetHex(hwnd, iSelected, iSubItem);
+						} break;
+						case MNU_RES_SHOW_DECU:
+						case MNU_RES_SHOW_DECS:
+						{
+				            value = ListViewGetDec(hwnd, iSelected, iSubItem);
+						} break;
+						case MNU_RES_SHOW_FLOAT:
+						{
+				            value = ListViewGetFloat(hwnd, iSelected, iSubItem, SearchSize);
+						} break;
+					}
+                	ListView_SetCheckState(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, SearchSize), FALSE);
+					iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, iSelected, LVNI_SELECTED);
+				}
             }
-//            sprintf(ErrTxt, "%08I64X: %I64X", address, value);
-//            MessageBox(NULL, ErrTxt, "Debug", MB_OK);
         } break;
         case WM_KEYDOWN:
         {
@@ -468,8 +500,9 @@ int UpdateActiveCheats()
     while ((i < iCount) && (aCount < 2052))
     {
     	if (ListView_GetCheckState(hwndActList, i)) {
-    		*((unsigned int *)&actcodes[aCount]) = ListViewGetHex(hwndActList, i, 0);
+    		*((unsigned int *)&actcodes[aCount]) = ListViewGetHex(hwndActList, i, 0) | ((ListViewGetDec(hwndActList, i, 2) / 2) << 28);
     		*((unsigned int *)&actcodes[aCount + 4]) = ListViewGetHex(hwndActList, i, 1);
+//    		actcodes[aCount + 8] = ListViewGetDec(hwndActList, i, 2) / 2;
     		aCount += 8;
     	}
     	i++;

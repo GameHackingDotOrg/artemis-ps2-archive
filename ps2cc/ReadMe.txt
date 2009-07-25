@@ -7,6 +7,9 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 16: Results testing should allow 8, 16, and 32-bit writes now. Multi-select
+	is also enabled on the results list.
+
 Rev 15: Added Page Up/Down functionality on the results display. Note that this 
 	shifts the actual page, as opposed to scroling the box, so set your page 
 	sizes as desired.
@@ -24,3 +27,7 @@ Select Result Value/Quick Activate Result: You probably noticed that clicking a
 	you might not have noticed is that the value copied is dependant on which
 	column you click in. Also, doublclicking the value will add that result
 	straight to the active codes list with that value.
+Multi-Select Results:
+	Hold Control key. Still works on doubleclick with the values from the 
+	column being clicked in. You might find you need to doubleclick a within
+	a row that's NOT highlighted in order to catch the last one you select.
