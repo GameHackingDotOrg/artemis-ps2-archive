@@ -450,7 +450,7 @@ void MainWndProc_OnCommand(HWND hwnd, int id, HWND hwndCtl, UINT codeNotify)
 					*((unsigned int *)&buf[0]) = addr_count;
 					z = 4;
 					for (i=0; i<addr_count; i++) {
-						*((unsigned int *)&buf[z]) = (unsigned int)HexaToDecimal(patchaddr[i]);
+						*((unsigned int *)&buf[z]) = (unsigned int)(HexaToDecimal(patchaddr[i]) | 0x20000000);
 						*((unsigned int *)&buf[z+4]) = (unsigned int)HexaToDecimal(patchval[i]);
 						z += 8;
 					}
