@@ -24,7 +24,7 @@ static int haltState = 0;
 
 typedef struct {
 	u32 addr;
-	u32 val;	
+	u32 val;
 } MemPatch_t;
 
 MemPatch_t MemPatches[MAX_PATCHES];
@@ -578,7 +578,7 @@ u32 HookSifSetDma(SifDmaTransfer_t *sdd, s32 len)
 			);
 		}
 	}
-		
+
 	__asm__(
 		"move $a0, %1\n\t"
 		"move $a1, %2\n\t"
@@ -1040,12 +1040,22 @@ int addMemPatches(int num, u8 *buf)
 void writeMemPatches(void)
 {
 	int i;
+	u8 patch_type;
+	u32 patch_addr;
 	
 	DIntr();
 	
 	// apply raw mem patches
-	for (i=0; i<num_patches; i++)
-		*((u32 *)MemPatches[i].addr) = MemPatches[i].val;
+	for (i=0; i<num_patches; i++) {
+		patch_type = (MemPatches[i].addr >> 28);
+		patch_addr = MemPatches[i].addr & 0x01ffffff; 
+		if (patch_type == 0)
+			_sb(MemPatches[i].val, patch_addr);
+		else if (patch_type == 1)
+			_sh(MemPatches[i].val, patch_addr);
+		else if (patch_type == 2)
+			_sw(MemPatches[i].val, patch_addr);
+	}
 			
 	EIntr();
 }
@@ -1176,7 +1186,7 @@ void writeRawCodes(void)
 				}
 				i+=2;									
 			}
-			else if (codeCmd == 0x06) {				// Pointer write
+			else if (codeCmd == 0x06) {				// Pointer constant write
 				if ((i+1) < num_rawcodes) { 
 					base = _lw(addr);
 					offset = RawCodes[i+1].code_2;
@@ -1394,7 +1404,6 @@ void start_screen(void)
 //u32 old_pad;
 void padReadHook_job(void *data)
 {
-
 	if (num_patches > 0)
 		writeMemPatches();
 		
