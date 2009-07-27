@@ -6,7 +6,7 @@ CC = gcc.exe
 WINDRES = windres
 RES  = ps2cc.res
 OBJ  = ps2cc.o tab_search.o tab_results.o lib_api.o lib_fileio.o lib_ntpb.o lib_ps2cc.o lib_misc.o lib_search.o lib_dialog.o lib_listview.o $(RES)
-LDFLAGS = -s -mwindows -lwsock32 -lcomctl32
+LDFLAGS = -s -mwindows -lwsock32 -lcomctl32 -lkernel32
 CFLAGS = -O2 -s
 
 .PHONY: all

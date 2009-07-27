@@ -161,6 +161,7 @@ typedef struct _CODE_SEARCH_SETTINGS {
     int NumBase;
     int NumBaseId;
     int DumpAccess;
+    int PS2Wait;
 } CODE_SEARCH_SETTINGS;
 
 typedef struct _SEARCH_RESULTS_SETTINGS {
@@ -180,7 +181,6 @@ typedef struct _MEMORY_EDITOR_SETTINGS {
 //Main Settings Structure
 typedef struct _MAIN_CFG {
     int CFGVersion; //to prevent loading shit from a previous version if struct has changed.
-    char ServerIp[16];
     LOGFONT ValueFontInfo;
     HFONT ValueHFont;
     CODE_SEARCH_SETTINGS CS;
@@ -197,7 +197,6 @@ typedef struct _HWND_WNDPROC_INFO {
 	int SubclassIds[MAX_SUBCLASSES];
 	LISTVIEW_ITEM_EDIT_INFO lvEdit[NUM_LSV_EDIT];
 } HWND_WNDPROC_INFO;
-
 /****************************************************************************
 Externs (Global Vars)
 *****************************************************************************/
@@ -214,7 +213,7 @@ extern u32 *ResultsList;
 //structs
 extern MAIN_CFG Settings;
 extern RAM_AND_RES_DATA RamInfo;
-HWND_WNDPROC_INFO DlgInfo;
+extern HWND_WNDPROC_INFO DlgInfo;
 
 /****************************************************************************
 Function Declarations -should also be a guidline to help people find where
@@ -224,10 +223,6 @@ any function is locatated.
 //ps2cc.c
 int InitTabControl(HWND hwnd, LPARAM lParam);
 BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam);
-int FreeShit();
-int FreeRamInfo();
-int LoadSettings();
-int SaveSettings();
 int UpdateStatusBar(const char *StatusText, int PartNum, int Flags);
 int UpdateProgressBar(unsigned int Message, WPARAM wParam, LPARAM lParam);
 
@@ -293,15 +288,21 @@ u64 FlipBytes(u64 value, int size);
 int isIPAddr(char *text);
 
 //lib_ntpb
-int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end);
-int TestConnect();
+DWORD WINAPI SendReceiveThread(LPVOID lpParam);
+DWORD WINAPI clientThread(LPVOID lpParam);
+int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end, int NotifyId, HWND NotifyHwnd);
 int ActivateCheats(unsigned char codes[128], int numcodes);
 int DeActivateCheats();
-
+int SysHalt(int halt);
+
 //lib_ps2cc
 LRESULT CALLBACK ValueEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
 WNDPROC GetSubclassProc(int ControlId);
 int SetSubclassProc(WNDPROC ControlProc, int ControlId);
+int LoadSettings();
+int SaveSettings();
+int FreeShit();
+int FreeRamInfo();
 
 //lib_search
 int CodeSearch(CODE_SEARCH_VARS Search);

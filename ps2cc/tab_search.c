@@ -26,6 +26,9 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
     HWND hwndSignedSearchChk = GetDlgItem(hwnd, SEARCH_SIGNED_CHK);
     HWND hwndExValueTxt = GetDlgItem(hwnd, EX_VALUE_TXT);
     HWND hwndSearchHistory = GetDlgItem(hwnd, SEARCH_HISTORY_TXT);
+    HWND hwndPS2Waits = GetDlgItem(hwnd, PS2_WAITS_CHK);
+    HWND hwndtabCtrl = GetDlgItem(DlgInfo.Main, PS2CC_TABCTRL);
+    HMENU hMenu = GetMenu(hwnd);
 	switch(message)
 	{
 		case WM_INITDIALOG:
@@ -176,6 +179,8 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
             SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
             SendMessage(hwndSearchArea,CB_SETCURSEL,0,0);
             SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_AREA_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchArea);
+            //PS2 Waits checkbox
+            SendMessage(hwndPS2Waits,BM_SETCHECK,Settings.CS.PS2Wait,0);
 
         } break;
 		case WM_COMMAND:
@@ -361,7 +366,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 					char dmpFileName[MAX_PATH];
                     if (!DoFileSave(hwnd, dmpFileName)) { break; }
                     //Dump the RAM
-                    if (!(DumpRAM(dmpFileName, DumpAreaLow, DumpAreaHigh))) {
+                    if (!(DumpRAM(dmpFileName, DumpAreaLow, DumpAreaHigh, 0, NULL))) {
 						MessageBox(NULL, ErrTxt, "Error", MB_OK); break;
 					}
 //					MessageBox(NULL, "Did it work? You shouldn't see this until dumping is complete.", "", MB_OK);
@@ -373,6 +378,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 			    {
                     memset(&Search,0,sizeof(CODE_SEARCH_VARS));
                     FreeRamInfo();
+                    Settings.CS.PS2Wait = SendMessage(hwndPS2Waits,BM_GETCHECK,0,0);
                     Search.Size = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
                     Search.Type = SendMessage(hwndSearchType,CB_GETITEMDATA,SendMessage(hwndSearchType,CB_GETCURSEL,0,0),0);
                     Search.CompareTo = SendMessage(hwndCompareTo,CB_GETCURSEL,0,0);
@@ -475,9 +481,12 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     	RamInfo.NewResultsInfo.ResCount = 0;
 //                    	MessageBox(NULL, RamInfo.NewResultsInfo.dmpFileName, "Debug", MB_OK); FreeRamInfo(); return 0;
 						if (!CopyBinFile(RamInfo.OldResultsInfo.dmpFileName, RamInfo.NewResultsInfo.dmpFileName)) { FreeRamInfo(); return 0; }
+						//send message to continue filter
+						SendMessage(hwnd, WM_COMMAND, SEARCH_CONTINUE_VCMD, 1);
 					} else {
+						if (Settings.CS.PS2Wait) { SendMessage(DlgInfo.Main, WM_COMMAND, MNU_HALT, 0); Sleep(100); }
 #if (SNAKE_DEBUG != 1)
-                    	if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, DumpAreaHigh))) {
+                    	if (!(DumpRAM(RamInfo.NewResultsInfo.dmpFileName, DumpAreaLow, DumpAreaHigh, SEARCH_CONTINUE_VCMD, hwnd))) {
 							MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
 						}
 #endif
@@ -487,6 +496,21 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     	RamInfo.NewResultsInfo.MapFileAddy = 0;
                     	RamInfo.NewResultsInfo.MapMemAddy = DumpAreaLow;
 					}
+					EnableWindow(hwnd, FALSE);
+					EnableWindow(hwndtabCtrl, FALSE);
+				} break;
+				/************************************************************
+				Search Continue (after dumping is complete)
+				*************************************************************/
+				case SEARCH_CONTINUE_VCMD:
+				{
+					EnableWindow(hwnd, TRUE);
+					EnableWindow(hwndtabCtrl, TRUE);
+					if (!lParam) {
+						//Dump failed, clear shit
+						goto search_end;
+					}
+                    char sdFileName[MAX_PATH];
                     //if new search, setup a fresh results file
                     if (!Search.CompareTo) {
                         Search.Count = 1;
@@ -497,12 +521,12 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                         if (!(RamInfo.Results = (unsigned char*)malloc(RamInfo.NewResultsInfo.DumpSize/Search.Size/8))) {
                             sprintf(ErrTxt, "Unable to allocate results memory (DO_SEARCH_CMD) -- Error %u", GetLastError());
-                            MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
+                            MessageBox(NULL, ErrTxt, "Error", MB_OK); goto search_end;
                         }
                         memset(RamInfo.Results, 0xFF, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8));
                         RamInfo.NewResultsInfo.ResCount = RamInfo.NewResultsInfo.DumpSize/Search.Size;
                         if (!(SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo))) {
-							FreeRamInfo(); return 0;
+							goto search_end;
 						}
                     }
                     //update the Compare To list
@@ -512,56 +536,55 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     //take care of a couple non-comparision search types
                     if (Search.Type == SEARCH_INIT) {
 						UpdateSearchHistory(LOWORD(wParam));
-                        FreeRamInfo(); return 0;
+                        goto search_end;
                     }
                     if (Search.Type == SEARCH_FORGOT) {
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                         RamInfo.NewResultsInfo.ResCount = RamInfo.OldResultsInfo.ResCount;
                         SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
                         UpdateSearchHistory(LOWORD(wParam));
-                        FreeRamInfo(); return 0;
+                        goto search_end;
                     }
                     //load the dump(s) for compare
                     RamInfo.Access = Settings.CS.DumpAccess;
                     if (RamInfo.Access == SEARCH_ACCESS_ARRAY) {
-						if (!(LoadFile(&RamInfo.NewRAM, RamInfo.NewResultsInfo.dmpFileName, 0, NULL, FALSE))) { FreeRamInfo(); return 0; }
+						if (!(LoadFile(&RamInfo.NewRAM, RamInfo.NewResultsInfo.dmpFileName, 0, NULL, FALSE))) { goto search_end; }
                     	if (Search.CompareTo) {
-							if (!LoadFile(&RamInfo.OldRAM, RamInfo.OldResultsInfo.dmpFileName, 0, NULL, FALSE)) { FreeRamInfo(); return 0; }
+							if (!LoadFile(&RamInfo.OldRAM, RamInfo.OldResultsInfo.dmpFileName, 0, NULL, FALSE)) { goto search_end; }
                     	}
 					} else {
 						//only loading file handles
                         RamInfo.NewFile = fopen(RamInfo.NewResultsInfo.dmpFileName, "rb");
                         if (!(RamInfo.NewFile)) {
                             sprintf(ErrTxt, "Unable to open ram dump (CMD_CS_SEARCH,2) -- Error %u", GetLastError());
-                            MessageBox(NULL,ErrTxt,"Error",MB_OK); return 0;
+                            MessageBox(NULL,ErrTxt,"Error",MB_OK); goto search_end;
                         }
                         RamInfo.OldFile = fopen(RamInfo.OldResultsInfo.dmpFileName, "rb");
                         if ((!RamInfo.OldFile) && Search.CompareTo) {
 							sprintf(ErrTxt, "Unable to open previous ram dump (CMD_CS_SEARCH,3) -- Error %u", GetLastError());
-                            MessageBox(NULL,ErrTxt,"Error",MB_OK); return 0;
+                            MessageBox(NULL,ErrTxt,"Error",MB_OK); goto search_end;
                         }
                     }
                     if ((RamInfo.OldResultsInfo.DumpSize > 0) && (RamInfo.OldResultsInfo.DumpSize != RamInfo.NewResultsInfo.DumpSize)) {
                         MessageBox(NULL, "RAM dumps don't match in size. Are you trying to compare files of differnet size?", "Error", MB_OK);
-                        return 0;
+                        goto search_end;
                     }
                     //init progress bar
                     UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, (RamInfo.NewResultsInfo.DumpSize/0x100000)+((RamInfo.NewResultsInfo.DumpSize % 0x100000) ? 1:0)));
                     UpdateProgressBar(PBM_SETSTEP, 1, 0);
                     UpdateStatusBar("Searching...", 0, 0);
-//					if (LOWORD(wParam) == EX_FILTER_CMD) {
-                  		CodeSearch(Search);
-//					} else { FilterSearchEX(Search); }
-
+                    //call for search
+                  	CodeSearch(Search);
+					//store results and such
                     sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count);
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
                     sprintf(sdFileName, "%d Results", RamInfo.NewResultsInfo.ResCount);
                     UpdateStatusBar(sdFileName, 0,0);
                     UpdateSearchHistory(LOWORD(wParam));
-//                    SetDecWindowU(hResCount, RamInfo.NewResultsInfo.ResCount);
+search_end:
+					if (Settings.CS.PS2Wait) { SendMessage(DlgInfo.Main, WM_COMMAND, MNU_RESUME, 0); }
                     FreeRamInfo();
 					UpdateProgressBar(PBM_SETPOS, 0, 0);
-//					UpdateStatusBar("Idle", 0, 0);
 				} break;
 				/************************************************************
 				Prep and show edit box on extended search options listview

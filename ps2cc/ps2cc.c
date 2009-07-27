@@ -5,11 +5,7 @@ Artemis - PS2 Code Creator (for lack of a better title)
 
 This is a bit of a rough start, especially without the PS2 network adaptor to
 test on right now. I've implemented the source from Jimmikaelkael's core
-dumper v2. I used the command line build because it's linear, easier to call
-on demand, and doesn't have a bunch of unneeded GUI stuff to cut out. I still
-need to add status/progress monitoring while dumping. I'm a little uneasy
-about messing around in the important part of that source without being able
-to test it, but comparing to the GUI source should make it easy enough. I'll
+dumper v2. I've reworked the threading a bit and put ym own spin on it. I'll
 try to keep things somewhat commented everywhere so the whole app can be
 followed in case anyone feels the need to mess with it later. I'm usually
 around to answer questions though.
@@ -19,14 +15,14 @@ other random dev environment. MinGW and Textpad for the win! ...even though
 MakeFiles are a little annoying to work on.
 
 To Do:
-possibly use threading for client comms
 export results
-lock things like search area once a search has started
+lock menus during search
 fonts (default and custom)
-option to leave game halted?
 Make the goddamn tab key work on hex/value boxes
 Enter key on results list
-multi-select results list
+Space key on active results
+editable active cheats list
+memory editor
 *****************************************************************************/
 
 #include "ps2cc.h"
@@ -35,7 +31,7 @@ multi-select results list
 char ErrTxt[1000];
 
 //Global structs
-MAIN_CFG Settings, Defaults;
+MAIN_CFG Settings;
 RAM_AND_RES_DATA RamInfo;
 HWND_WNDPROC_INFO DlgInfo;
 
@@ -118,6 +114,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 		    //apply settings to menus
 		    SetMenuState(hMenu, Settings.Results.DisplayFmt, MFS_CHECKED);
 		    SetMenuState(hMenu, Settings.CS.NumBaseId, MFS_CHECKED);
+			EnableMenuItem(hMenu, MNU_RESUME, MF_BYCOMMAND|MF_GRAYED);
 		    //setup statusbar
 /* This is pissing me off
             RECT StatusRect; memset(&StatusRect,0,sizeof(StatusRect));
@@ -128,7 +125,6 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
             SendMessage(hwndStatusBar, SB_SETPARTS, sizeof(statwidths)/sizeof(int), (LPARAM)statwidths);
  */
 		    //To Do: set fonts here later
-            SetMenuItemText(hMenu, MNU_DUMP_DIR, Settings.CS.DumpDir);
 		} break;
         case WM_NOTIFY:
         {
@@ -187,6 +183,16 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                 {
 					SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
 				} break;
+				case MNU_HALT: case MNU_RESUME:
+				{
+					if (SysHalt((LOWORD(wParam) == MNU_HALT))) {
+						EnableMenuItem(hMenu, MNU_HALT, MF_BYCOMMAND|MF_GRAYED);
+						EnableMenuItem(hMenu, MNU_RESUME, MF_BYCOMMAND|MF_ENABLED);
+					} else {
+						EnableMenuItem(hMenu, MNU_HALT, MF_BYCOMMAND|MF_ENABLED);
+						EnableMenuItem(hMenu, MNU_RESUME, MF_BYCOMMAND|MF_GRAYED);
+					}
+				} break;
                 case MNU_EXIT:
                 {
 					SaveSettings();
@@ -200,6 +206,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 		case WM_CLOSE:
 		{
             SaveSettings();
+            if (!ntpbShutdown()) { break; }
             DestroyWindow(hwnd);
 		} break;
 		case WM_DESTROY:
@@ -237,6 +244,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	ShowWindow(DlgInfo.Main,SW_SHOW);
 
+	extern HANDLE clientThid;
+	clientThid = CreateThread(NULL, 0, clientThread, NULL, 0, NULL); // no stack, 1MB by default
 
 	// API message loop
 	while (GetMessage(&msg,NULL,0,0)) {
@@ -246,92 +255,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 		}
 	}
 
-
 	return msg.wParam;
-}
-
-
-/****************************************************************************
-Free shit -Everything that is or might be malloc()'d should be tested and/or
-free()'d here.
-*****************************************************************************/
-int FreeShit()
-{
-    FreeRamInfo();
-    if (ResultsList) { free(ResultsList); ResultsList = NULL; }
-    return 0;
-}
-
-/****************************************************************************
-Free RAM info -Reset the RamInfo struct.
-*****************************************************************************/
-int FreeRamInfo()
-{
-    if (RamInfo.NewRAM) { free(RamInfo.NewRAM); RamInfo.NewRAM = NULL; }
-    if (RamInfo.OldRAM) { free(RamInfo.OldRAM); RamInfo.OldRAM = NULL; }
-    if (RamInfo.NewFile) { fclose(RamInfo.NewFile); RamInfo.NewFile = NULL; }
-    if (RamInfo.OldFile) { fclose(RamInfo.OldFile); RamInfo.OldFile = NULL; }
-    if (RamInfo.Results) { free(RamInfo.Results); RamInfo.Results = NULL; }
-    memset(&RamInfo.OldResultsInfo, 0, sizeof(CODE_SEARCH_RESULTS_INFO));
-    memset(&RamInfo.NewResultsInfo, 0, sizeof(CODE_SEARCH_RESULTS_INFO));
-    return 0;
-}
-
-/****************************************************************************
-LoadSettings
-*****************************************************************************/
-int LoadSettings()
-{
-    memset(&Defaults,0,sizeof(Defaults));
-    memset(&Settings,0,sizeof(Settings));
-	char CFGFile[MAX_PATH];
-    if (GetModuleFileName(NULL,CFGFile,sizeof(CFGFile)) ) {
-        char *fndchr = strrchr(CFGFile,'\\');
-        *(fndchr + 1) = '\0';
-        strcpy(Defaults.CS.DumpDir, CFGFile);
-        strcat(Defaults.CS.DumpDir, "Searches\\");
-        strcat(CFGFile,"ps2cc.cfg");
-    } else {
-        sprintf(CFGFile,"ps2cc.cfg");
-        strcpy(Defaults.CS.DumpDir, "Searches\\");
-    }
-    Defaults.CFGVersion = 4; //increment this if settings struct or sub-struct definitions in ps2cc.h change
-    sprintf(Defaults.ServerIp, "192.168.0.80");
-    Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
-    Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
-	//Search Defaults
-    Defaults.CS.NumBase = BASE_HEX;
-    Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
-    Defaults.CS.DumpAccess = SEARCH_ACCESS_ARRAY;
-	//Results Defaults
-    Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
-    Defaults.Results.PageSize = 500;
-    Defaults.Results.MaxResPages = 20;
-	if (FileExists(CFGFile)) { LoadStruct(&Settings, sizeof(MAIN_CFG), CFGFile); }
-    if (Settings.CFGVersion != Defaults.CFGVersion) {
-		MessageBox(NULL, "New CFG version. Settings are at default again.", "FYI", MB_OK);
-		memset(&Settings,0,sizeof(Settings));
-        memcpy(&Settings,&Defaults,sizeof(Defaults));
-	}
-    mkdir(Settings.CS.DumpDir);
-    return 0;
-}
-
-/****************************************************************************
-SaveSettings
-*****************************************************************************/
-int SaveSettings()
-{
-    char CFGFile[MAX_PATH];
-    if (GetModuleFileName(NULL,CFGFile,sizeof(CFGFile)) ) {
-        char *fndchr = strrchr(CFGFile,'\\');
-        *(fndchr + 1) = '\0';
-        strcat(CFGFile,"ps2cc.cfg");
-    } else {
-        sprintf(CFGFile,"ps2cc.cfg");
-    }
-    SaveStruct(&Settings, sizeof(Settings), CFGFile);
-    return 0;
 }
 
 /****************************************************************************

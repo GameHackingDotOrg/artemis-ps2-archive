@@ -17,7 +17,7 @@ LRESULT CALLBACK ValueEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LP
     {
         case WM_CHAR:
         {
-        	if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22)) { break; } //cut/copy/paste/backspace/tab
+        	if ((wParam == VK_BACK) || (wParam == 24) || (wParam == 3) || (wParam == 22) || (wParam == VK_TAB)) { break; } //cut/copy/paste/backspace
             if (wParam == 1) { SendMessage(hwnd, EM_SETSEL, 0, -1); } //select all
         	switch (GetDlgCtrlID(hwnd))
         	{
@@ -105,4 +105,89 @@ int SetSubclassProc(WNDPROC ControlProc, int ControlId)
 	}
 	MessageBox(NULL, "Out of Subclass IDs", "Error", MB_OK);
 	return -1;
+}
+
+/****************************************************************************
+LoadSettings
+*****************************************************************************/
+int LoadSettings()
+{
+	MAIN_CFG Defaults;
+    memset(&Defaults,0,sizeof(Defaults));
+    memset(&Settings,0,sizeof(Settings));
+	char CFGFile[MAX_PATH];
+    if (GetModuleFileName(NULL,CFGFile,sizeof(CFGFile)) ) {
+        char *fndchr = strrchr(CFGFile,'\\');
+        *(fndchr + 1) = '\0';
+        strcpy(Defaults.CS.DumpDir, CFGFile);
+        strcat(Defaults.CS.DumpDir, "Searches\\");
+        strcat(CFGFile,"ps2cc.cfg");
+    } else {
+        sprintf(CFGFile,"ps2cc.cfg");
+        strcpy(Defaults.CS.DumpDir, "Searches\\");
+    }
+    Defaults.CFGVersion = 5; //increment this if settings struct or sub-struct definitions in ps2cc.h change
+//    sprintf(Defaults.ServerIp, "192.168.0.80");
+    Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
+    Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
+	//Search Defaults
+    Defaults.CS.NumBase = BASE_HEX;
+    Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
+    Defaults.CS.DumpAccess = SEARCH_ACCESS_ARRAY;
+    Defaults.CS.PS2Wait = BST_UNCHECKED;
+	//Results Defaults
+    Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
+    Defaults.Results.PageSize = 500;
+    Defaults.Results.MaxResPages = 20;
+	if (FileExists(CFGFile)) { LoadStruct(&Settings, sizeof(MAIN_CFG), CFGFile); }
+    if (Settings.CFGVersion != Defaults.CFGVersion) {
+		MessageBox(NULL, "New CFG version. Settings are at default again.", "FYI", MB_OK);
+		memset(&Settings,0,sizeof(Settings));
+        memcpy(&Settings,&Defaults,sizeof(Defaults));
+	}
+    mkdir(Settings.CS.DumpDir);
+    return 0;
+}
+
+/****************************************************************************
+SaveSettings
+*****************************************************************************/
+int SaveSettings()
+{
+    char CFGFile[MAX_PATH];
+    if (GetModuleFileName(NULL,CFGFile,sizeof(CFGFile)) ) {
+        char *fndchr = strrchr(CFGFile,'\\');
+        *(fndchr + 1) = '\0';
+        strcat(CFGFile,"ps2cc.cfg");
+    } else {
+        sprintf(CFGFile,"ps2cc.cfg");
+    }
+    SaveStruct(&Settings, sizeof(Settings), CFGFile);
+    return 0;
+}
+
+/****************************************************************************
+Free shit -Everything that is or might be malloc()'d should be tested and/or
+free()'d here.
+*****************************************************************************/
+int FreeShit()
+{
+    FreeRamInfo();
+    if (ResultsList) { free(ResultsList); ResultsList = NULL; }
+    return 0;
+}
+
+/****************************************************************************
+Free RAM info -Reset the RamInfo struct.
+*****************************************************************************/
+int FreeRamInfo()
+{
+    if (RamInfo.NewRAM) { free(RamInfo.NewRAM); RamInfo.NewRAM = NULL; }
+    if (RamInfo.OldRAM) { free(RamInfo.OldRAM); RamInfo.OldRAM = NULL; }
+    if (RamInfo.NewFile) { fclose(RamInfo.NewFile); RamInfo.NewFile = NULL; }
+    if (RamInfo.OldFile) { fclose(RamInfo.OldFile); RamInfo.OldFile = NULL; }
+    if (RamInfo.Results) { free(RamInfo.Results); RamInfo.Results = NULL; }
+    memset(&RamInfo.OldResultsInfo, 0, sizeof(CODE_SEARCH_RESULTS_INFO));
+    memset(&RamInfo.NewResultsInfo, 0, sizeof(CODE_SEARCH_RESULTS_INFO));
+    return 0;
 }

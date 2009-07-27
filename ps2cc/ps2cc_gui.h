@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#define PROGRAM_NAME "PS2 Code Creator - Rev 16"
+#define PROGRAM_NAME "PS2 Code Creator - Rev 17"
 
 #define PS2CC_DLG 1000
 #define PS2CC_TABCTRL 1001
@@ -9,6 +9,8 @@
 //custom commands
 #define LSV_CS_BEGINEDIT 400
 #define LSV_CS_ENDEDIT 401
+#define SEARCH_CONTINUE_VCMD 402
+//#define SEARCH_DUMP_FAIL_VCMD 403
 //Menus
 #define PS2CC_MNU 500
 #define MNU_LOAD_SEARCH 501
@@ -29,6 +31,8 @@
 #define MNU_CS_UNDO 516
 #define MNU_RES_PAGE_DOWN 517
 #define MNU_RES_PAGE_UP 518
+#define MNU_HALT 519
+#define MNU_RESUME 520
 //search tab
 #define SEARCH_DLG 1100
 #define SEARCH_GRP1 1101
@@ -62,7 +66,8 @@
 #define SEARCH_HISTORY_GRP 1129
 #define SEARCH_HISTORY_TXT 1130
 #define EX_VALUE_TXT 1131
-//IP config dialog
+#define PS2_WAITS_CHK 1132
+//config dialog
 #define SETTINGS_DLG 1200
 #define SEARCH_ACCESS_GRP 1201
 #define IP_ADDR_TXT 1202

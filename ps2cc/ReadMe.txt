@@ -7,6 +7,17 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 17: lib_ntpb.c completely redone so the interface no longer "freezes" while 
+	dumping. You still shouldn't be trying to do anything else with it though.
+	Halt and Resume options have also been added, as well as a "PS2 Waits"
+	checkbox on the search tab. This makes the PS2 stay halted until the 
+	search is actually processed. You can also halt the system beforehand
+	and uncheck the box so the PS2 will stay halted even after searching is
+	done. Could be useful with some timers or things the end quickly and
+	need multiple dumps while letting very little time progress in the game.
+	F4 and F5 are also shortcut keys for halt and resume, as you'll notice in
+	the menu.
+
 Rev 16: Results testing should allow 8, 16, and 32-bit writes now. Multi-select
 	is also enabled on the results list.
 
