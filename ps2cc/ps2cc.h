@@ -38,6 +38,10 @@ Global Constants
 #define MEMORY_EDITOR_TAB 2
 //#define CHEAT_TAB 3
 
+//Editable Listview info
+#define LV_EX_SEARCH 0
+#define LV_ACTIVE_CHEATS 1
+
 //Search types
 #define SEARCH_INIT 0x0
 #define SEARCH_KNOWN 0x1
@@ -103,9 +107,6 @@ Global Constants
 loading them fully, or opening and reading a value at a time*/
 #define SEARCH_ACCESS_ARRAY 1
 #define SEARCH_ACCESS_FILE 2
-
-//Editable Listview info
-#define LV_EX_SEARCH 0
 
 
 /****************************************************************************
@@ -193,6 +194,7 @@ typedef struct _HWND_WNDPROC_INFO {
 	HWND Main;
 	HINSTANCE Instance;
 	HWND TabDlgs[NUM_TABS]; //an array of handles for the dialogs on each tab.
+	int ActiveTab;
 	WNDPROC SubclassProcs[MAX_SUBCLASSES];
 	int SubclassIds[MAX_SUBCLASSES];
 	LISTVIEW_ITEM_EDIT_INFO lvEdit[NUM_LSV_EDIT];
@@ -326,4 +328,4 @@ int LoadResultsList();
 s64 ShowResPage(s64 ResNum);
 int ResFormatString(char *tmpstring, int outfmt, int numbytes);
 int Result2ActiveList(u32 address, u64 value, int size);int UpdateActiveCheats();
-
+u64 GetResListValue(HWND hwndResList, int iItem, int iSubItem, int SearchSize);

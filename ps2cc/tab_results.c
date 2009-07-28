@@ -19,6 +19,8 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
     HWND hwndActiveResSize = GetDlgItem(hwnd, ACTIVE_RES_SIZE_CMB);
     HWND hwndActiveResValue = GetDlgItem(hwnd, ACTIVE_RES_VALUE_TXT);
     HWND hwndActiveList = GetDlgItem(hwnd, ACTIVE_CODES_LSV);
+    HWND hwndActiveResEdit = GetDlgItem(hwnd, ACTIVE_RES_EDIT_TXT);
+    HWND hwndUseSearchNum = GetDlgItem(hwnd, RESULTS_SEARCH_NUM_CMB);
 	switch(message)
 	{
 		case WM_INITDIALOG:
@@ -35,7 +37,8 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 		    SetWindowLongPtr (hwndResList, GWLP_WNDPROC, (LONG_PTR)ResultsListHandler);
 			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndActiveList, GWLP_WNDPROC), ACTIVE_CODES_LSV);
 		    SetWindowLongPtr (hwndActiveList, GWLP_WNDPROC, (LONG_PTR)ActiveListHandler);
-
+			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndActiveResEdit, GWLP_WNDPROC), ACTIVE_RES_EDIT_TXT);
+		    SetWindowLongPtr (hwndActiveResEdit, GWLP_WNDPROC, (LONG_PTR)ValueEditBoxHandler);
             //Active Code Sizes
             SendMessage(hwndActiveResSize,CB_RESETCONTENT,0,0);
             ComboAddItem(hwndActiveResSize, "8-Bit" , 1);
@@ -159,6 +162,53 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 					ComboSelFromData(hwndResPage, PageNum);
 					SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(RESULTS_PAGE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
 				} break;
+				/************************************************************
+				Begin Editing Active Cheat
+				*************************************************************/
+				case LSV_ACTIVE_BEGINEDIT:
+				{
+			        if (DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status) { MessageBox(NULL,"Already editing. WTF? (LSV_CS_BEGINEDIT)","Error",0); break; }
+			        DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iItem = LOWORD(lParam);
+			        DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iSubItem = HIWORD(lParam);
+		            int iSize = ListViewGetDec(hwndActiveList, DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iItem, 2);
+		            SendMessage(hwndActiveResEdit, EM_SETLIMITTEXT, iSize*2, 0);
+					char txtInput[32];
+					ListViewGetText(hwndActiveList, DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iItem, DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iSubItem, txtInput, sizeof(txtInput));
+					SetWindowText(hwndActiveResEdit,txtInput);
+					RECT lvEditRect; memset(&lvEditRect,0,sizeof(RECT));
+					lvEditRect.top = DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iSubItem;
+					lvEditRect.left = LVIR_LABEL;
+					SendMessage(hwndActiveList, LVM_GETSUBITEMRECT, DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iItem, (LPARAM)&lvEditRect);
+					WINDOWPLACEMENT lvPlace; memset(&lvPlace,0,sizeof(WINDOWPLACEMENT));
+					lvPlace.length = sizeof(WINDOWPLACEMENT);
+					GetWindowPlacement(hwndActiveList, &lvPlace);
+					POINT lvPos;
+					lvPos.x = lvPlace.rcNormalPosition.left;
+					lvPos.y = lvPlace.rcNormalPosition.top;
+					SetWindowPos(hwndActiveResEdit,HWND_TOP,lvPos.x+lvEditRect.left+3,lvPos.y+lvEditRect.top+1,(lvEditRect.right-lvEditRect.left),(lvEditRect.bottom-lvEditRect.top)+1,SWP_SHOWWINDOW);
+					SetFocus(hwndActiveResEdit);
+					SendMessage(hwndActiveResEdit, EM_SETSEL, 0, -1);
+					DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status = 1;
+				} break;
+				/************************************************************
+				End Editing Active Cheat
+				*************************************************************/
+       			case LSV_ACTIVE_ENDEDIT:
+       			{
+					if ((!DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status) || (!lParam)) {
+						DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status = 0;
+       			        SetWindowPos(hwndActiveResEdit,HWND_BOTTOM,0,0,0,0,SWP_HIDEWINDOW);
+       			        SetFocus(hwndActiveList); break;
+       			    }
+       			    char txtValue[32];
+					if (isHexWindow(hwndActiveResEdit)) { GetWindowText(hwndActiveResEdit, txtValue, sizeof(txtValue)); }
+					else { strcpy(txtValue, "0"); }
+					ListViewSetRow(hwndActiveList, DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iItem, DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iSubItem, 1, txtValue);
+            		DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status = 0;
+            		SetWindowPos(hwndActiveResEdit,HWND_BOTTOM,0,0,0,0,SWP_HIDEWINDOW);
+            		SetFocus(hwndActiveList);
+            		UpdateActiveCheats();
+				} break;
 			}
 		} break;
         case WM_SHOWWINDOW:
@@ -194,7 +244,6 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
             int iSubItem = ListViewHitTst(hwnd, GetMessagePos(), iSelected);
             if (iSubItem <= 0) { iSubItem = 1; }
             u32 address = ListViewGetHex(hwnd, iSelected, 0);
-			u64 value = 0;
 			HWND hwndActiveResValue = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_VALUE_TXT);
 			HWND hwndSearchSize = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
 			int SearchSize = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
@@ -202,54 +251,22 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
             ComboSelFromData(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_SIZE_CMB), SearchSize);
             SetHexWindow(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_ADDR_TXT), address);
             SendMessage(hwndActiveResValue, EM_SETLIMITTEXT, SearchSize*2, 0);
-			switch (Settings.Results.DisplayFmt)
-			{
-				case MNU_RES_SHOW_HEX:
-				{
-		            value = ListViewGetHex(hwnd, iSelected, iSubItem);
-				} break;
-				case MNU_RES_SHOW_DECU:
-				case MNU_RES_SHOW_DECS:
-				{
-		            value = ListViewGetDec(hwnd, iSelected, iSubItem);
-				} break;
-				case MNU_RES_SHOW_FLOAT:
-				{
-		            value = ListViewGetFloat(hwnd, iSelected, iSubItem, SearchSize);
-				} break;
-			}
+			u64 value = GetResListValue(hwnd, iSelected, iSubItem, SearchSize);
 			SetHexWindow(hwndActiveResValue, value);
 //            extern CurrMemAddress;
 //            if (Settings.Results.RamView == 1) { CurrMemAddress = ShowRAM(address & 0xFFFFFFF0); }
             if (message == WM_LBUTTONDBLCLK) {
-				int SelCount = SendMessage(hwnd, LVM_GETSELECTEDCOUNT, 0, 0);
-                if (SelCount == 1) { ListView_SetCheckState(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, SearchSize), TRUE); break; }
-				iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, 0, LVNI_SELECTED);
+				iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, -1, LVNI_SELECTED);
 				while (iSelected >= 0)
 				{
-					u32 address = ListViewGetHex(hwnd, iSelected, 0);
-					switch (Settings.Results.DisplayFmt)
-					{
-						case MNU_RES_SHOW_HEX:
-						{
-				            value = ListViewGetHex(hwnd, iSelected, iSubItem);
-						} break;
-						case MNU_RES_SHOW_DECU:
-						case MNU_RES_SHOW_DECS:
-						{
-				            value = ListViewGetDec(hwnd, iSelected, iSubItem);
-						} break;
-						case MNU_RES_SHOW_FLOAT:
-						{
-				            value = ListViewGetFloat(hwnd, iSelected, iSubItem, SearchSize);
-						} break;
-					}
-                	ListView_SetCheckState(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, SearchSize), FALSE);
+					address = ListViewGetHex(hwnd, iSelected, 0);
+					value = GetResListValue(hwnd, iSelected, iSubItem, SearchSize);
+                	ListView_SetCheckState(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, SearchSize), TRUE);
 					iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, iSelected, LVNI_SELECTED);
 				}
             }
         } break;
-        case WM_KEYDOWN:
+        case WM_KEYUP:
         {
             switch (wParam)
             {
@@ -268,6 +285,63 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
                     }
                     ListView_SetItemState(hwnd, iSelected, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
                 } return 0;
+                case VK_LEFT: case VK_RIGHT:
+                {
+					HWND hwndUseSearchNum = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_SEARCH_NUM_CMB);
+					int sNum = SendMessage(hwndUseSearchNum,CB_GETCURSEL,0,0);
+					int sMax = SendMessage(hwndUseSearchNum,CB_GETCOUNT,0,0);
+					sNum += (wParam == VK_LEFT) ? -1 : 1;
+					if ((sNum < 0) || (sNum >= sMax)) { return 0; }
+					SendMessage(hwndUseSearchNum,CB_SETCURSEL,sNum,0);
+					//update value/address boxes in active cheats window
+					int iSelected = SendMessage(hwnd, LVM_GETSELECTIONMARK, 0, 0);
+					int iSubItem = SendMessage(hwndUseSearchNum,CB_GETCURSEL,0,0) + 1;
+					u32 address = ListViewGetHex(hwnd, iSelected, 0);
+					HWND hwndSearchSize = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
+					int SearchSize = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
+					if (SearchSize > 4) { SearchSize = 4; }
+					u64 value = GetResListValue(hwnd, iSelected, iSubItem, SearchSize);
+					HWND hwndActiveResValue = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_VALUE_TXT);
+            		SendMessage(hwndActiveResValue, EM_SETLIMITTEXT, SearchSize*2, 0);
+					SetHexWindow(hwndActiveResValue, value);
+            		SetHexWindow(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_ADDR_TXT), address);
+            		ComboSelFromData(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_SIZE_CMB), SearchSize);
+				} return 0;
+				case VK_UP: case VK_DOWN:
+				{
+					int iSelected = SendMessage(hwnd, LVM_GETSELECTIONMARK, 0, 0);
+					HWND hwndUseSearchNum = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_SEARCH_NUM_CMB);
+					int iSubItem = SendMessage(hwndUseSearchNum,CB_GETCURSEL,0,0) + 1;
+					u32 address = ListViewGetHex(hwnd, iSelected, 0);
+					HWND hwndSearchSize = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
+					int SearchSize = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
+					if (SearchSize > 4) { SearchSize = 4; }
+					u64 value = GetResListValue(hwnd, iSelected, iSubItem, SearchSize);
+					HWND hwndActiveResValue = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_VALUE_TXT);
+            		SendMessage(hwndActiveResValue, EM_SETLIMITTEXT, SearchSize*2, 0);
+					SetHexWindow(hwndActiveResValue, value);
+            		SetHexWindow(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_ADDR_TXT), address);
+            		ComboSelFromData(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_RES_SIZE_CMB), SearchSize);
+				} break;
+				case VK_RETURN:
+				{
+					HWND hwndUseSearchNum = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_SEARCH_NUM_CMB);
+					int iSubItem = SendMessage(hwndUseSearchNum,CB_GETCURSEL,0,0) + 1;
+					HWND hwndSearchSize = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIZE_CMB);
+					int SearchSize = SendMessage(hwndSearchSize,CB_GETITEMDATA,SendMessage(hwndSearchSize,CB_GETCURSEL,0,0),0);
+					if (SearchSize > 4) { SearchSize = 4; }
+					u32 address;
+					u64 value;
+					int iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, -1, LVNI_SELECTED);
+					while (iSelected >= 0)
+					{
+						address = ListViewGetHex(hwnd, iSelected, 0);
+						value = GetResListValue(hwnd, iSelected, iSubItem, SearchSize);
+                		ListView_SetCheckState(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], ACTIVE_CODES_LSV), Result2ActiveList(address, value, SearchSize), TRUE);
+						iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, iSelected, LVNI_SELECTED);
+					}
+
+				} return 0;
             }
         } break;
     }
@@ -278,20 +352,38 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
 /****************************************************************************
 Active List Handler
 *****************************************************************************/
-//LRESULT CALLBACK ActiveListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 LRESULT CALLBACK ActiveListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	WNDPROC wpOriginalProc = GetSubclassProc(GetDlgCtrlID(hwnd));
     switch (message)
     {
+        case WM_VSCROLL: case WM_MOUSEWHEEL:
+        {
+            if (DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, LSV_ACTIVE_ENDEDIT, 0); }
+        } break;
 		case WM_LBUTTONUP:
 		{
 			UpdateActiveCheats();
 		} break;
+        case WM_LBUTTONDBLCLK:
+        {
+            if (DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, LSV_ACTIVE_ENDEDIT, 0); }
+            int iSelected = SendMessage(hwnd, LVM_GETSELECTIONMARK, 0, 0);
+            if (iSelected < 0) { break; }
+            int iSubItem = ListViewHitTst(hwnd, GetMessagePos(), iSelected);
+            if (iSubItem > 1) { break; }
+            SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, LSV_ACTIVE_BEGINEDIT, MAKELPARAM(iSelected, iSubItem));
+        } return 0;
 		case WM_KEYUP:
 		{
 			if (wParam == VK_DELETE) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, RES_DEL_ACTIVE_CMD, 0); }
+			if (wParam == VK_SPACE) { UpdateActiveCheats(); }
 		} break;
+        case WM_NOTIFY:
+        {
+                if (((NMHDR*)lParam)->code == HDN_BEGINTRACKW) { return TRUE; }
+                if (((NMHDR*)lParam)->code == HDN_BEGINTRACKA) { return TRUE; }
+        } break;
 	}
    if (wpOriginalProc) { return CallWindowProc (wpOriginalProc, hwnd, message, wParam, lParam); }
    else { return DefWindowProc (hwnd, message, wParam, lParam); }
@@ -309,12 +401,14 @@ int LoadResultsList()
     HWND hwndResList = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_LSV);
     HWND hwndCompareTo = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], COMPARE_TO_CMB);
     HWND hwndResPage = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_CMB);
+    HWND hwndUseSearchNum = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_SEARCH_NUM_CMB);
     int SearchCount = SendMessage(hwndCompareTo,CB_GETCOUNT,0,0) - 1;
     u32 PageSize = Settings.Results.PageSize ? Settings.Results.PageSize : SendMessage(hwndResList,LVM_GETCOUNTPERPAGE,0,0);
     if (!SearchCount) { return 0; }
 	//reset columns and pages
 	SendMessage(hwndResList,LVM_DELETEALLITEMS,0,0);
 	SendMessage(hwndResPage,CB_RESETCONTENT,0,0);
+	SendMessage(hwndUseSearchNum,CB_RESETCONTENT,0,0);
 	ComboAddItem(hwndResPage, "1" , 0);
 	i = 1;
     while (SendMessage(hwndResList,LVM_DELETECOLUMN,i,0)) { i++; }
@@ -327,6 +421,7 @@ int LoadResultsList()
     for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {
 	    sprintf(txtValue, "%u", SearchCount - DumpNum);
 	    ListViewAddCol(hwndResList, txtValue, DumpNum + 1, 0x80);
+	    ComboAddItem(hwndUseSearchNum, txtValue, SearchCount - DumpNum);
     }
 	//allocate results list memory;
     if (ResultsList) { free(ResultsList); ResultsList = NULL; }
@@ -349,6 +444,7 @@ int LoadResultsList()
 		}
     }
 	SendMessage(hwndResPage,CB_SETCURSEL,0,0);
+    SendMessage(hwndUseSearchNum,CB_SETCURSEL,0,0);
 
 	//cleanup
 	FreeRamInfo();
@@ -516,4 +612,25 @@ int UpdateActiveCheats()
     	MessageBox(NULL, ErrTxt, "Error", MB_OK); return 0;
     }
     return 1;
+}
+
+u64 GetResListValue(HWND hwndResList, int iItem, int iSubItem, int SearchSize)
+{
+	switch (Settings.Results.DisplayFmt)
+	{
+		case MNU_RES_SHOW_HEX:
+		{
+			return ListViewGetHex(hwndResList, iItem, iSubItem);
+		} break;
+		case MNU_RES_SHOW_DECU:
+		case MNU_RES_SHOW_DECS:
+		{
+			return ListViewGetDec(hwndResList, iItem, iSubItem);
+		} break;
+		case MNU_RES_SHOW_FLOAT:
+		{
+			return ListViewGetFloat(hwndResList, iItem, iSubItem, SearchSize);
+		} break;
+	}
+	return 0;
 }

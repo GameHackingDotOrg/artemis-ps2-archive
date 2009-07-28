@@ -58,20 +58,6 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 			SetSubclassProc((WNDPROC)GetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC), EX_VALUE_TXT);
 		    SetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC, (LONG_PTR)ValueEditBoxHandler);
 
-
-/*
-		    wpHexEditBoxes = (WNDPROC)GetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC);
-		    SetWindowLongPtr (hwndSearchAreaLow, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
-		    SetWindowLongPtr (hwndSearchAreaHigh, GWLP_WNDPROC, (LONG_PTR)HexEditBoxHandler);
-		    wpSearchValueBoxProc = (WNDPROC)GetWindowLongPtr (hwndSearchValue1, GWLP_WNDPROC);
-		    SetWindowLongPtr (hwndSearchValue1, GWLP_WNDPROC, (LONG_PTR)SearchValueBoxHandler);
-		    SetWindowLongPtr (hwndSearchValue2, GWLP_WNDPROC, (LONG_PTR)SearchValueBoxHandler);
-
-		    wpExSearchListProc = (WNDPROC)GetWindowLongPtr (hwndExSearchList, GWLP_WNDPROC);
-		    SetWindowLongPtr (hwndExSearchList, GWLP_WNDPROC, (LONG_PTR)ExSearchListHandler);
-		    wpExValueProc = (WNDPROC)GetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC);
-		    SetWindowLongPtr (hwndExValueTxt, GWLP_WNDPROC, (LONG_PTR)ExValueHandler);
-*/
             //Search Sizes
             SendMessage(hwndSearchSize,CB_RESETCONTENT,0,0);
             ComboAddItem(hwndSearchSize, "8-Bit (1 Byte)" , 1);

@@ -1,16 +1,17 @@
 #include <windows.h>
 
-#define PROGRAM_NAME "PS2 Code Creator - Rev 17"
+#define PROGRAM_NAME "PS2 Code Creator - Rev 18"
 
 #define PS2CC_DLG 1000
 #define PS2CC_TABCTRL 1001
 #define NTPB_STATUS_BAR 1002
 #define DUMPSTATE_PRB 1003
-//custom commands
+//custom commands - these might need different values if any of them use the same as a predefined command ID
 #define LSV_CS_BEGINEDIT 400
 #define LSV_CS_ENDEDIT 401
 #define SEARCH_CONTINUE_VCMD 402
-//#define SEARCH_DUMP_FAIL_VCMD 403
+#define LSV_ACTIVE_BEGINEDIT 403
+#define LSV_ACTIVE_ENDEDIT 404
 //Menus
 #define PS2CC_MNU 500
 #define MNU_LOAD_SEARCH 501
@@ -89,10 +90,12 @@
 //results tab
 #define RESULTS_DLG 1300
 #define RESULTS_LIST_GRP 1301
-#define ACTIVE_CODES_GRP 1307
 #define RESULTS_LSV 1302
 #define RESULTS_PAGE_LBL 1303
 #define RESULTS_PAGE_CMB 1304
+#define ACTIVE_RES_EDIT_TXT 1305
+#define RESULTS_SEACH_NUM_LBL 1306
+#define ACTIVE_CODES_GRP 1307
 #define ACTIVE_CODES_LSV 1308
 #define ACTIVE_RES_ADDR_TXT 1309
 #define ACTIVE_RES_VALUE_TXT 1310
@@ -106,4 +109,4 @@
 #define RES_ALL_ON_CMD 1318
 #define RES_ALL_OFF_CMD 1319
 #define RES_CLEAR_ALL_CMD 1320
-#define RESULTS_PGDOWN_CMD 1321
+#define RESULTS_SEARCH_NUM_CMB 1321

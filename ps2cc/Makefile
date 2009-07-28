@@ -47,7 +47,7 @@ lib_misc.o: lib_misc.c _types.h
 lib_ntpb.o: lib_ntpb.c _types.h
 	$(CC) -c lib_ntpb.c -o lib_ntpb.o $(CFLAGS)	
 
-lib_ps2cc.o: lib_ps2cc.c ps2cc.h _types.h
+lib_ps2cc.o: lib_ps2cc.c ps2cc.h ps2cc_gui.h _types.h
 	$(CC) -c lib_ps2cc.c -o lib_ps2cc.o $(CFLAGS)	
 
 lib_search.o: lib_search.c ps2cc.h _types.h

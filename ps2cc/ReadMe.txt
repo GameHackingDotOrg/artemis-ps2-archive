@@ -7,6 +7,16 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 18: I added a few of the little things from the list today, as well as 
+	solving an issue that's plagued my apps since I started writing Win32 
+	API. Yes, the goddamn tab key works! You'll notice a "Use Result Number" 
+	combo box on the results tab now. The highlighted code(s) in the list 
+	will be added to the active list with the value from that search number 
+	if you hit Enter. Pressing Left/Right while navigating the results list 
+	will scroll that search number box as well. The active cheats list is 
+	now editable (doubleclick, enter to commit change), and toggling the 
+	checkboxes using Space should update the list on the console side.
+
 Rev 17: lib_ntpb.c completely redone so the interface no longer "freezes" while 
 	dumping. You still shouldn't be trying to do anything else with it though.
 	Halt and Resume options have also been added, as well as a "PS2 Waits"
@@ -31,14 +41,23 @@ Rev 14: 'I Fogot' search type was reporting 0 results. Luckily, it just seemed t
 /****************************************************************************
 Keyboard Shortcuts and little known features (ones that I remember)
 *****************************************************************************/
-Page Up/Down: Advance the results page (the # in the combo box) up or down.
+Page Up/Down:
+	Advance the results page (the # in the combo box) up or down.
 
 Select Result Value/Quick Activate Result: You probably noticed that clicking a 
 	result copies the address and value to the input boxes for testing. What 
 	you might not have noticed is that the value copied is dependant on which
 	column you click in. Also, doublclicking the value will add that result
 	straight to the active codes list with that value.
+
 Multi-Select Results:
 	Hold Control key. Still works on doubleclick with the values from the 
 	column being clicked in. You might find you need to doubleclick a within
 	a row that's NOT highlighted in order to catch the last one you select.
+	Enter key also sends selected results to active list, but it uses the 
+	value from the search number in the box at the bottom. This box can also
+	be scrolled using the Left/Right keys while inside the results list view.
+
+Editable Active Cheats List:
+	Doubleclick address/value to edit. Press Enter to commit changes. Press 
+	ESC or click elsewhere to cancel.

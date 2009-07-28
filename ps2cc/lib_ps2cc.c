@@ -23,6 +23,7 @@ LRESULT CALLBACK ValueEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LP
         	{
         		case SEARCH_AREA_LOW_TXT: case SEARCH_AREA_HIGH_TXT: case EX_VALUE_TXT:
         		case ACTIVE_RES_ADDR_TXT: case ACTIVE_RES_VALUE_TXT:
+        		case ACTIVE_RES_EDIT_TXT:
         		{
                 	wParam = FilterHexChar(wParam);
                 } break;
@@ -59,6 +60,11 @@ LRESULT CALLBACK ValueEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LP
             		if (wParam == VK_RETURN) { SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 1); }
             		if (wParam == VK_ESCAPE) { SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0); }
             	} break;
+            	case ACTIVE_RES_EDIT_TXT:
+            	{
+            		if (wParam == VK_RETURN) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, LSV_ACTIVE_ENDEDIT, 1); }
+            		if (wParam == VK_ESCAPE) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, LSV_ACTIVE_ENDEDIT, 0); }
+				} break;
             }
         } break;
         case WM_KILLFOCUS:
@@ -69,6 +75,10 @@ LRESULT CALLBACK ValueEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LP
                 {
             		SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], WM_COMMAND, LSV_CS_ENDEDIT, 0);
             	} return 0;
+            	case ACTIVE_RES_EDIT_TXT:
+            	{
+            		SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, LSV_ACTIVE_ENDEDIT, 0);
+				} break;
             }
         } break;
    }

@@ -3,12 +3,10 @@ Artemis - PS2 Code Creator (for lack of a better title)
 -PS2 dumping/communication functions by Jimmikaelkael
 -Code searching by Viper187
 
-This is a bit of a rough start, especially without the PS2 network adaptor to
-test on right now. I've implemented the source from Jimmikaelkael's core
-dumper v2. I've reworked the threading a bit and put ym own spin on it. I'll
-try to keep things somewhat commented everywhere so the whole app can be
-followed in case anyone feels the need to mess with it later. I'm usually
-around to answer questions though.
+I've implemented the source from Jimmikaelkael's core dumper v2. I've reworked
+the threading a bit and put my own spin on it. I'll try to keep things somewhat
+commented everywhere so the whole app can be followed in case anyone feels the
+need to mess with it later. I'm usually around to answer questions though.
 
 p.s. Please don't screw up my source with Visual Stupid 6.0/.net/2008 or any
 other random dev environment. MinGW and Textpad for the win! ...even though
@@ -18,10 +16,6 @@ To Do:
 export results
 lock menus during search
 fonts (default and custom)
-Make the goddamn tab key work on hex/value boxes
-Enter key on results list
-Space key on active results
-editable active cheats list
 memory editor
 *****************************************************************************/
 
@@ -132,7 +126,10 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
             if (hdr->code == TCN_SELCHANGING || hdr->code == TCN_SELCHANGE)  //switching tabs
             {
                 int index = TabCtrl_GetCurSel(hdr->hwndFrom);
-                if (index >= 0 && index < NUM_TABS) ShowWindow(DlgInfo.TabDlgs[index], (hdr->code == TCN_SELCHANGE) ? SW_SHOW : SW_HIDE);
+                if (index >= 0 && index < NUM_TABS) {
+					ShowWindow(DlgInfo.TabDlgs[index], (hdr->code == TCN_SELCHANGE) ? SW_SHOW : SW_HIDE);
+					DlgInfo.ActiveTab = index;
+				}
             }
         } break;
 		case WM_COMMAND:
@@ -225,6 +222,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 	MSG msg;
 
    memset(&DlgInfo, 0, sizeof(HWND_WNDPROC_INFO));
+   DlgInfo.ActiveTab = 0;
    DlgInfo.Instance = hInstance;
    DlgInfo.Main = CreateDialog(hInstance,MAKEINTRESOURCE(PS2CC_DLG),HWND_DESKTOP, MainWndProc);
    sprintf(ErrTxt, "%u", GetLastError());
@@ -249,7 +247,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 	// API message loop
 	while (GetMessage(&msg,NULL,0,0)) {
-		if (!TranslateAccelerator(DlgInfo.Main, KeyAccel, &msg)) {
+		if ((!IsDialogMessage(DlgInfo.TabDlgs[DlgInfo.ActiveTab], &msg)) && (!TranslateAccelerator(DlgInfo.Main, KeyAccel, &msg)) ) {
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
