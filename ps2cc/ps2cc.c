@@ -51,10 +51,10 @@ int InitTabControl(HWND hwnd, LPARAM lParam)
 
     tabitem.pszText = "Results";
     SendMessage(hTab, TCM_INSERTITEM, SEARCH_RESULTS_TAB, (LPARAM)&tabitem);
-/*
+
     tabitem.pszText = "Memory Editor";
     SendMessage(hTab, TCM_INSERTITEM, MEMORY_EDITOR_TAB, (LPARAM)&tabitem);
-*/
+
 //    tabitem.pszText = "Cheat";
 //    SendMessage(hTab, TCM_INSERTITEM, CHEAT_TAB, (LPARAM)&tabitem);
 
@@ -70,16 +70,16 @@ int InitTabControl(HWND hwnd, LPARAM lParam)
 	// Create the dialogs modelessly and move them appropriately
     DlgInfo.TabDlgs[CODE_SEARCH_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)SEARCH_DLG, hTab, (DLGPROC)CodeSearchProc);
     DlgInfo.TabDlgs[SEARCH_RESULTS_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)RESULTS_DLG, hTab, (DLGPROC)SearchResultsProc);
-/*
-    hTabDlgs[MEMORY_EDITOR_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_MEMORY_EDITOR, hTab, (DLGPROC)MemoryEditorProc);
-    hTabDlgs[CHEAT_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_CHEAT, hTab, (DLGPROC)CheatProc);
-*/
+
+    DlgInfo.TabDlgs[MEMORY_EDITOR_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)MEMORY_EDITOR_DLG, hTab, (DLGPROC)MemoryEditorProc);
+//    hTabDlgs[CHEAT_TAB] = CreateDialog((HINSTANCE)lParam, (LPSTR)DLG_CHEAT, hTab, (DLGPROC)CheatProc);
+
     MoveWindow(DlgInfo.TabDlgs[CODE_SEARCH_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
     MoveWindow(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
-/*
-    MoveWindow(hTabDlgs[MEMORY_EDITOR_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
-    MoveWindow(hTabDlgs[CHEAT_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
-*/
+
+    MoveWindow(DlgInfo.TabDlgs[MEMORY_EDITOR_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
+//    MoveWindow(hTabDlgs[CHEAT_TAB], rt.left, rt.top, rt.right, rt.bottom, 0);
+
     // Show the default dialog
     ShowWindow(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SW_SHOW);
 //    SendMessage(hTab, TCM_SETCURSEL, CODE_SEARCH_TAB, 0);
@@ -100,14 +100,17 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
  		case WM_INITDIALOG:
         {
 			LoadSettings();
-		    InitTabControl(hwnd, lParam);
 		    //init menus
 		    SetMenuItemData(hMenu, MNU_CS_INPUT_HEX, BASE_HEX);
 		    SetMenuItemData(hMenu, MNU_CS_INPUT_DEC, BASE_DEC);
 		    SetMenuItemData(hMenu, MNU_CS_INPUT_FLOAT, BASE_FLOAT);
+		    SetMenuItemData(hMenu, MNU_MEM_SHOW_BYTES, 1);
+		    SetMenuItemData(hMenu, MNU_MEM_SHOW_SHORTS, 2);
+		    SetMenuItemData(hMenu, MNU_MEM_SHOW_WORDS, 4);
 		    //apply settings to menus
 		    SetMenuState(hMenu, Settings.Results.DisplayFmt, MFS_CHECKED);
 		    SetMenuState(hMenu, Settings.CS.NumBaseId, MFS_CHECKED);
+		    SetMenuState(hMenu, Settings.MemEdit.EditSizeId, MFS_CHECKED);
 			EnableMenuItem(hMenu, MNU_RESUME, MF_BYCOMMAND|MF_GRAYED);
 		    //setup statusbar
 /* This is pissing me off
@@ -119,6 +122,8 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
             SendMessage(hwndStatusBar, SB_SETPARTS, sizeof(statwidths)/sizeof(int), (LPARAM)statwidths);
  */
 		    //To Do: set fonts here later
+
+		    InitTabControl(hwnd, lParam);
 		} break;
         case WM_NOTIFY:
         {
@@ -189,6 +194,22 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 						EnableMenuItem(hMenu, MNU_HALT, MF_BYCOMMAND|MF_ENABLED);
 						EnableMenuItem(hMenu, MNU_RESUME, MF_BYCOMMAND|MF_GRAYED);
 					}
+				} break;
+                case MNU_MEM_SHOW_BYTES: case MNU_MEM_SHOW_SHORTS: case MNU_MEM_SHOW_WORDS:
+                {
+                    Settings.MemEdit.EditSize = GetMenuItemData(hMenu, LOWORD(wParam));
+                    Settings.MemEdit.EditSizeId = LOWORD(wParam);
+                    SetMenuState(hMenu, MNU_MEM_SHOW_BYTES, MFS_UNCHECKED);
+                    SetMenuState(hMenu, MNU_MEM_SHOW_SHORTS, MFS_UNCHECKED);
+                    SetMenuState(hMenu, MNU_MEM_SHOW_WORDS, MFS_UNCHECKED);
+                    SetMenuState(hMenu, LOWORD(wParam), MFS_CHECKED);
+					SendMessage(DlgInfo.TabDlgs[MEMORY_EDITOR_TAB], msg, wParam, lParam);
+				} break;
+				case MNU_MEM_GOTO:
+				{
+					if (DlgInfo.ActiveTab != MEMORY_EDITOR_TAB) { break; }
+					SendMessage(DlgInfo.TabDlgs[MEMORY_EDITOR_TAB], WM_COMMAND, LSV_MEM_EDIT_ENDEDIT, 0);
+					SendMessage(DlgInfo.TabDlgs[MEMORY_EDITOR_TAB], WM_COMMAND, LSV_MEM_EDIT_BEGINEDIT, 0);
 				} break;
                 case MNU_EXIT:
                 {

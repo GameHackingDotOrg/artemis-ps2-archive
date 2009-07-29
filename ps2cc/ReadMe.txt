@@ -7,6 +7,11 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 19: Memory VIEWER is now available. Editing is planned, but I think there 
+	should be an update to the PS2 side to make this a little cleaner. I'm 
+	also having navigational issues with the shit. Go To works so you can 
+	view everything, but keyboard navigation once you're editing is a problem.
+
 Rev 18: I added a few of the little things from the list today, as well as 
 	solving an issue that's plagued my apps since I started writing Win32 
 	API. Yes, the goddamn tab key works! You'll notice a "Use Result Number" 
@@ -61,3 +66,8 @@ Multi-Select Results:
 Editable Active Cheats List:
 	Doubleclick address/value to edit. Press Enter to commit changes. Press 
 	ESC or click elsewhere to cancel.
+
+Memory Editor:
+	Viewer only at the moment. Go To works in any address, not just the top
+	one. Hit enter to go to address or commit value changes. Up/Down will
+	move the selection up/down.

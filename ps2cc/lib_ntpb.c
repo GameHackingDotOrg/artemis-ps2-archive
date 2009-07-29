@@ -41,7 +41,7 @@ static int haltState = 0;
 
 //unsigned int dump_size;
 //unsigned int dump_wpos;
-FILE *fh_dump;
+//FILE *fh_dump;
 FILE *NetLog;
 
 // NTPB header magic
@@ -82,6 +82,8 @@ typedef struct _NTPB_IO {
 	unsigned char cmdBuf[64];	//cmd buffer
 	int NotifyId;		//ID of the command to be sent to a window (NotifyHwnd) when done
 	HWND NotifyHwnd;	//window handle to send a message to when finished, if desired.
+	FILE *fh_dump; //dump file
+	unsigned char *outBuffer; //buffer for returned data
 } NTPB_IO;
 
 
@@ -255,7 +257,8 @@ DWORD WINAPI SendReceiveThread(LPVOID lpParam) // retrieving datas sent by serve
 						goto error;
 					}
 
-					fwrite(&pktbuffer[ntpb_hdrSize], 1, ntpbpktSize, fh_dump);
+					if (cmdInfo->fh_dump) { fwrite(&pktbuffer[ntpb_hdrSize], 1, ntpbpktSize, cmdInfo->fh_dump); }
+					else { memcpy(cmdInfo->outBuffer, &pktbuffer[ntpb_hdrSize], ntpbpktSize); }
 					dump_wpos += ntpbpktSize;
 
 					// stepping progress bar
@@ -264,7 +267,7 @@ DWORD WINAPI SendReceiveThread(LPVOID lpParam) // retrieving datas sent by serve
 
 				case NTPBCMD_END_TRANSMIT:
 					Sleep(100);
-					if(fh_dump) fclose(fh_dump);
+					if(cmdInfo->fh_dump) fclose(cmdInfo->fh_dump);
 					endTransmit = 1;
 					break;
 			}
@@ -299,7 +302,7 @@ error:
 	UpdateProgressBar(PBM_SETPOS, 0, 0);
 	UpdateStatusBar("Client disconnected...", 0, 0);
 	if (main_socket) closesocket(main_socket);
-	if (fh_dump) fclose(fh_dump);
+	if (cmdInfo->fh_dump) fclose(cmdInfo->fh_dump);
 	ClientConnected = 0;
 	//Notify main thread (1 on success, 0 on failure)
 	if (cmdInfo->NotifyId) SendMessage(cmdInfo->NotifyHwnd, WM_COMMAND, cmdInfo->NotifyId, 0);
@@ -477,8 +480,8 @@ int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end, int
 	}
 
 	// create the dump file
-	fh_dump = fopen(dump_file, "wb");
-	if (!fh_dump) {
+	cmdInfo.fh_dump = fopen(dump_file, "wb");
+	if (!cmdInfo.fh_dump) {
 		sprintf(ErrTxt, "Failed to create dump file! (DumpRAM");
 		return 0;
 	}
@@ -576,3 +579,50 @@ int SysHalt(int halt)
 	return haltState;
 }
 
+/****************************************************************************
+ReadMem - Read memory into a buffer
+*****************************************************************************/
+int ReadMem(unsigned char *read_buffer, unsigned int dump_start, unsigned int dump_end)
+{
+	static NTPB_IO cmdInfo; memset(&cmdInfo, 0, sizeof(NTPB_IO));
+	unsigned int dump_size;
+
+	//checking address range to determine course of action
+	cmdInfo.RemoteCMD = REMOTE_CMD_NONE;
+	if (dump_start > dump_end) {
+		sprintf(ErrTxt, "Read area start (%08X) is higher than end (%08X).(ReadMem)", dump_start, dump_end);
+		return 0;
+	}
+	if ((dump_start >= 00100000) && (dump_end <= 0x02000000)) { //EE Dump
+		cmdInfo.RemoteCMD = REMOTE_CMD_DUMPEE;
+	} else if ((dump_start >= 0) && (dump_end <= 0x00200000)) { //IOP Dump
+		cmdInfo.RemoteCMD = REMOTE_CMD_DUMPIOP;
+	} else if ((dump_start >= 0x80000000) && (dump_end <= 0x82000000)) { //Kernel Dump
+		cmdInfo.RemoteCMD = REMOTE_CMD_DUMPKERNEL;
+	} else if ((dump_start >= 0x70000000) && (dump_end <= 0x70004000)) { //ScratchPad Dump
+		cmdInfo.RemoteCMD = REMOTE_CMD_DUMPSCRATCHPAD;
+	}
+	//Check that we're trying to dump a valid area
+	if (cmdInfo.RemoteCMD == REMOTE_CMD_NONE) {
+		sprintf(ErrTxt, "Memory area specifed. (ReadMem)");
+		return 0;
+	}
+
+	// fill remote cmd buffer
+	*((unsigned int *)&cmdInfo.cmdBuf[0]) = dump_start;
+	*((unsigned int *)&cmdInfo.cmdBuf[4]) = dump_end;
+	cmdInfo.cmdSize = 8;
+	cmdInfo.outBuffer = read_buffer;
+	cmdInfo.NotifyId = 0;
+
+	//init progress bar
+	dump_size = dump_end - dump_start;
+	UpdateProgressBar(PBM_SETRANGE, 0, MAKELPARAM(0, dump_size/8192));
+	UpdateProgressBar(PBM_SETSTEP, 1, 0);
+	UpdateStatusBar("Dumping Memory...", 0, 0);
+
+	// send remote cmd
+	if(!SendReceiveThread(&cmdInfo)) { return 0; }
+
+	return 1;
+}

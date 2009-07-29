@@ -46,6 +46,16 @@ BEGIN
   		MENUITEM "Float",MNU_RES_SHOW_FLOAT
     END
   END
+  POPUP "Memory Editor"
+  BEGIN
+  	POPUP "View"
+  	BEGIN
+  		MENUITEM "Bytes (8-Bit)",MNU_MEM_SHOW_BYTES
+  		MENUITEM "Halfwords (16-Bit)",MNU_MEM_SHOW_SHORTS
+  		MENUITEM "Words (32-Bit)",MNU_MEM_SHOW_WORDS
+    END
+    MENUITEM "Go To\tCtrl+G",MNU_MEM_GOTO
+  END
   POPUP "Options"
   BEGIN
     MENUITEM "Settings",MNU_SHOW_CONFIG
@@ -150,6 +160,17 @@ BEGIN
 END
 
 /****************************************************************************
+Memory Editor tab
+*****************************************************************************/
+MEMORY_EDITOR_DLG DIALOGEX MOVEABLE PURE LOADONCALL DISCARDABLE 4,4,404,247
+FONT 10,"MS Sans Serif",0,0,0
+STYLE 0x0004 | WS_CHILD
+BEGIN
+  CONTROL "",MEM_EDIT_LSV,"SysListView32",WS_CHILD|WS_VISIBLE|WS_BORDER|LVS_SINGLESEL|LVS_REPORT,0,0,407,260,WS_EX_CLIENTEDGE
+  CONTROL "",MEM_EDIT_TXT,"Edit",NOT WS_VISIBLE|WS_CHILD|ES_AUTOHSCROLL,35,26,37,10,WS_EX_CLIENTEDGE
+END
+
+/****************************************************************************
 Keyboard Shortcuts
 *****************************************************************************/
 PS2CC_ACCEL ACCELERATORS
@@ -158,4 +179,5 @@ PS2CC_ACCEL ACCELERATORS
     VK_PRIOR,  MNU_RES_PAGE_UP,       VIRTKEY
     VK_F4,  MNU_HALT,       VIRTKEY
     VK_F5,  MNU_RESUME,       VIRTKEY
+    "G",  MNU_MEM_GOTO, CONTROL, VIRTKEY
 }

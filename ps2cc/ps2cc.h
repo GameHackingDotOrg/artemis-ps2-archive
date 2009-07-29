@@ -27,7 +27,7 @@ Artemis - PS2 Code Creator (for lack of a better title) - Main Header
 /****************************************************************************
 Global Constants
 *****************************************************************************/
-#define NUM_TABS 2
+#define NUM_TABS 3
 #define MAX_SEARCHES 100
 #define MAX_SUBCLASSES 100
 #define NUM_LSV_EDIT 3
@@ -41,6 +41,7 @@ Global Constants
 //Editable Listview info
 #define LV_EX_SEARCH 0
 #define LV_ACTIVE_CHEATS 1
+#define LV_MEM_EDIT 2
 
 //Search types
 #define SEARCH_INIT 0x0
@@ -176,6 +177,8 @@ typedef struct _SEARCH_RESULTS_SETTINGS {
 //assuming there's a memory editor/viewer
 typedef struct _MEMORY_EDITOR_SETTINGS {
     int RefreshRate;
+    int EditSize;
+    int EditSizeId;
     int ByteSwap;
 } MEMORY_EDITOR_SETTINGS;
 
@@ -202,12 +205,7 @@ typedef struct _HWND_WNDPROC_INFO {
 /****************************************************************************
 Externs (Global Vars)
 *****************************************************************************/
-
-//extern HINSTANCE hInst;
-//extern HWND hwndMain;
-//extern HWND hTabDlgs[NUM_TABS];
 extern char ErrTxt[1000];
-//extern WNDPROC wpHexEditBoxes;
 
 //tab_results
 extern u32 *ResultsList;
@@ -296,6 +294,7 @@ int DumpRAM(char *dump_file, unsigned int dump_start, unsigned int dump_end, int
 int ActivateCheats(unsigned char codes[128], int numcodes);
 int DeActivateCheats();
 int SysHalt(int halt);
+int ReadMem(unsigned char *read_buffer, unsigned int dump_start, unsigned int dump_end);
 
 //lib_ps2cc
 LRESULT CALLBACK ValueEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -314,11 +313,11 @@ u64 GetExSearchValue(u64 *exValues, u64 exType);
 int CodeSearchEx(u32 address, u64 NewValue, u64 OldValue, CODE_SEARCH_VARS Search);
 int FilterResultsEx(CODE_SEARCH_VARS Search);
 
-//tab_search
-BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
-int ClearDumpsFolder();
-int UpdateSearchHistory(int ActionType);
+//tab_memedit
+BOOL CALLBACK MemoryEditorProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK MemDataHandler(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK MemEditHandler(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+u32 ShowMem(u32 address);
 
 //tab_results
 BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
@@ -329,3 +328,9 @@ s64 ShowResPage(s64 ResNum);
 int ResFormatString(char *tmpstring, int outfmt, int numbytes);
 int Result2ActiveList(u32 address, u64 value, int size);int UpdateActiveCheats();
 u64 GetResListValue(HWND hwndResList, int iItem, int iSubItem, int SearchSize);
+
+//tab_search
+BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK ExSearchListHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);
+int ClearDumpsFolder();
+int UpdateSearchHistory(int ActionType);

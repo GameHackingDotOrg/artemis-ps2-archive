@@ -1,17 +1,19 @@
 #include <windows.h>
 
-#define PROGRAM_NAME "PS2 Code Creator - Rev 18"
+#define PROGRAM_NAME "PS2 Code Creator - Rev 19"
 
 #define PS2CC_DLG 1000
 #define PS2CC_TABCTRL 1001
 #define NTPB_STATUS_BAR 1002
 #define DUMPSTATE_PRB 1003
-//custom commands - these might need different values if any of them use the same as a predefined command ID
+//custom commands
 #define LSV_CS_BEGINEDIT 400
 #define LSV_CS_ENDEDIT 401
 #define SEARCH_CONTINUE_VCMD 402
 #define LSV_ACTIVE_BEGINEDIT 403
 #define LSV_ACTIVE_ENDEDIT 404
+#define LSV_MEM_EDIT_BEGINEDIT 405
+#define LSV_MEM_EDIT_ENDEDIT 406
 //Menus
 #define PS2CC_MNU 500
 #define MNU_LOAD_SEARCH 501
@@ -34,6 +36,10 @@
 #define MNU_RES_PAGE_UP 518
 #define MNU_HALT 519
 #define MNU_RESUME 520
+#define MNU_MEM_SHOW_BYTES 521
+#define MNU_MEM_SHOW_SHORTS 522
+#define MNU_MEM_SHOW_WORDS 523
+#define MNU_MEM_GOTO 524
 //search tab
 #define SEARCH_DLG 1100
 #define SEARCH_GRP1 1101
@@ -86,7 +92,6 @@
 #define RESULTS_PAGE_MAX_GRP 1214
 #define RESULTS_PAGE_MAX_TXT 1215
 #define RESULTS_PAGE_MAX_LBL 1216
-
 //results tab
 #define RESULTS_DLG 1300
 #define RESULTS_LIST_GRP 1301
@@ -110,3 +115,7 @@
 #define RES_ALL_OFF_CMD 1319
 #define RES_CLEAR_ALL_CMD 1320
 #define RESULTS_SEARCH_NUM_CMB 1321
+//memory editor
+#define MEMORY_EDITOR_DLG 1400
+#define MEM_EDIT_LSV 1401
+#define MEM_EDIT_TXT 1402

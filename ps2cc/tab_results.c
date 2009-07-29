@@ -167,7 +167,7 @@ BOOL CALLBACK SearchResultsProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM l
 				*************************************************************/
 				case LSV_ACTIVE_BEGINEDIT:
 				{
-			        if (DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status) { MessageBox(NULL,"Already editing. WTF? (LSV_CS_BEGINEDIT)","Error",0); break; }
+			        if (DlgInfo.lvEdit[LV_ACTIVE_CHEATS].Status) { MessageBox(NULL,"Already editing. WTF? (LSV_ACTIVE_BEGINEDIT)","Error",0); break; }
 			        DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iItem = LOWORD(lParam);
 			        DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iSubItem = HIWORD(lParam);
 		            int iSize = ListViewGetDec(hwndActiveList, DlgInfo.lvEdit[LV_ACTIVE_CHEATS].iItem, 2);
@@ -385,8 +385,8 @@ LRESULT CALLBACK ActiveListHandler (HWND hwnd, UINT message, WPARAM wParam, LPAR
                 if (((NMHDR*)lParam)->code == HDN_BEGINTRACKA) { return TRUE; }
         } break;
 	}
-   if (wpOriginalProc) { return CallWindowProc (wpOriginalProc, hwnd, message, wParam, lParam); }
-   else { return DefWindowProc (hwnd, message, wParam, lParam); }
+    if (wpOriginalProc) { return CallWindowProc (wpOriginalProc, hwnd, message, wParam, lParam); }
+    else { return DefWindowProc (hwnd, message, wParam, lParam); }
 }
 
 /****************************************************************************
@@ -580,7 +580,10 @@ int Result2ActiveList(u32 address, u64 value, int size)
             return i;
         }
     }
-    return ListViewAddRow(hwndActList, 3, txtAddress, txtValue, txtSize);
+    i = ListViewAddRow(hwndActList, 3, txtAddress, txtValue, txtSize);
+    SendMessage(hwndActList, LVM_SETCOLUMNWIDTH, 0, LVSCW_AUTOSIZE);
+    SendMessage(hwndActList, LVM_SETCOLUMNWIDTH, 1, LVSCW_AUTOSIZE);
+    return i;
 }
 /****************************************************************************
 Update Active Cheats - Make array of cheats to send to PS2 and calls said function
@@ -614,6 +617,9 @@ int UpdateActiveCheats()
     return 1;
 }
 
+/****************************************************************************
+GetResListValue - Get value from results listview based on location and display type
+*****************************************************************************/
 u64 GetResListValue(HWND hwndResList, int iItem, int iSubItem, int SearchSize)
 {
 	switch (Settings.Results.DisplayFmt)
