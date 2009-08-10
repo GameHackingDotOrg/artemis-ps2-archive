@@ -314,6 +314,12 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
 			        SendMessage(hwnd, WM_COMMAND, DO_SEARCH_CMD, 0);
 			    } break;
+			    case QS_FORGOT_CMD:
+			    {
+                    ComboSelFromData(hwndSearchType, SEARCH_FORGOT);
+			        SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_TYPE_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchType);
+			        SendMessage(hwnd, WM_COMMAND, DO_SEARCH_CMD, 0);
+				} break;
 			    case QS_EQUAL_CMD:
 			    {
                     ComboSelFromData(hwndSearchType, SEARCH_EQUAL);

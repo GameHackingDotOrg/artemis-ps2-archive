@@ -7,6 +7,8 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 21: I Forgot("?") button added to Quick Search options.
+
 Rev 20: Search labels added. Now you can name each search before executing so
 	you'll know what it was.
 
