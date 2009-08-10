@@ -27,6 +27,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
     HWND hwndExValueTxt = GetDlgItem(hwnd, EX_VALUE_TXT);
     HWND hwndSearchHistory = GetDlgItem(hwnd, SEARCH_HISTORY_TXT);
     HWND hwndPS2Waits = GetDlgItem(hwnd, PS2_WAITS_CHK);
+    HWND hwndSearchLabel = GetDlgItem(hwnd, SEARCH_LABEL_TXT);
     HWND hwndtabCtrl = GetDlgItem(DlgInfo.Main, PS2CC_TABCTRL);
     HMENU hMenu = GetMenu(hwnd);
 	switch(message)
@@ -167,6 +168,8 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
             SendMessage(hwnd, WM_COMMAND, MAKEWPARAM(SEARCH_AREA_CMB, CBN_SELCHANGE),(LPARAM)hwndSearchArea);
             //PS2 Waits checkbox
             SendMessage(hwndPS2Waits,BM_SETCHECK,Settings.CS.PS2Wait,0);
+
+            SendMessage(hwndSearchLabel, EM_SETLIMITTEXT, SEARCH_LABEL_MAX, 0);
 
         } break;
 		case WM_COMMAND:
@@ -457,6 +460,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     sprintf(RamInfo.NewResultsInfo.dmpFileName, "%sdump%u.raw", Settings.CS.DumpDir, Search.Count);
                     RamInfo.NewResultsInfo.Endian = LITTLE_ENDIAN_SYS;
                     RamInfo.NewResultsInfo.SearchSize = Search.Size;
+                    GetWindowText(hwndSearchLabel, RamInfo.NewResultsInfo.SearchLabel, sizeof(RamInfo.NewResultsInfo.SearchLabel));
 					//get start and end address
 					u32 DumpAreaLow = GetHexWindow(hwndSearchAreaLow);
 					u32 DumpAreaHigh = GetHexWindow(hwndSearchAreaHigh);
@@ -516,7 +520,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 						}
                     }
                     //update the Compare To list
-                    sprintf(sdFileName, "Search %u", Search.Count);
+                    sprintf(sdFileName, "#%u: %s", Search.Count, RamInfo.NewResultsInfo.SearchLabel);
                     ComboAddItem(hwndCompareTo, sdFileName , Search.Count);
                     SendMessage(hwndCompareTo,CB_SETCURSEL,Search.Count,0);
                     //take care of a couple non-comparision search types
@@ -768,7 +772,7 @@ int UpdateSearchHistory(int ActionType)
     HWND hwndSearchValue2 = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_VALUE2_TXT);
     HWND hwndSignedSearchChk = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], SEARCH_SIGNED_CHK);
 	char SearchTypeText[1000];
-	char HistoryText[1000];
+	char HistoryText[1500];
 	char ValuesText[200];
 	char Value1Text[50];
 	char Value2Text[50];
@@ -777,7 +781,6 @@ int UpdateSearchHistory(int ActionType)
 	strcpy(SignedText, "");
 	GetWindowText(hwndSearchValue1, Value1Text, sizeof(Value1Text));
 	GetWindowText(hwndSearchValue2, Value2Text, sizeof(Value2Text));
-	//if undo (or load?) process here and return?
 
 	switch (ActionType) {
 		case EX_FILTER_CMD: { strcpy(SearchTypeText, "EX Filter"); } break;
@@ -798,8 +801,7 @@ int UpdateSearchHistory(int ActionType)
 			}
 		} break;
 	}
-
-	sprintf(HistoryText, "(%u) %s%s%s\n", RamInfo.NewResultsInfo.ResCount, SearchTypeText, SignedText, ValuesText);
+	sprintf(HistoryText, "[%s] (%u) %s%s%s\n", RamInfo.NewResultsInfo.SearchLabel, RamInfo.NewResultsInfo.ResCount, SearchTypeText, SignedText, ValuesText);
 	SendMessage(hwndSearchHistory, EM_SETSEL, -1, -1);
 	SendMessage(hwndSearchHistory, EM_REPLACESEL, TRUE, (LPARAM)HistoryText);
 	return 0;

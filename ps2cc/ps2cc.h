@@ -31,6 +31,7 @@ Global Constants
 #define MAX_SEARCHES 100
 #define MAX_SUBCLASSES 100
 #define NUM_LSV_EDIT 3
+#define SEARCH_LABEL_MAX 200
 
 //Tab IDs
 #define CODE_SEARCH_TAB 0
@@ -136,6 +137,7 @@ typedef struct CODE_SEARCH_RESULTS_INFO {
     u32 ResHigh; //highest result file address
     u32 MapFileAddy; //file address
     u32 MapMemAddy; //memory address
+    char SearchLabel[SEARCH_LABEL_MAX];
 } CODE_SEARCH_RESULTS_INFO;
 
 //dump data and results during searches

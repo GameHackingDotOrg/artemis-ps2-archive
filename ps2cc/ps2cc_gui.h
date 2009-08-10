@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#define PROGRAM_NAME "PS2 Code Creator - Rev 19"
+#define PROGRAM_NAME "PS2 Code Creator - Rev 20"
 
 #define PS2CC_DLG 1000
 #define PS2CC_TABCTRL 1001
@@ -74,6 +74,8 @@
 #define SEARCH_HISTORY_TXT 1130
 #define EX_VALUE_TXT 1131
 #define PS2_WAITS_CHK 1132
+#define SEARCH_LABEL_LBL 1133
+#define SEARCH_LABEL_TXT 1134
 //config dialog
 #define SETTINGS_DLG 1200
 #define SEARCH_ACCESS_GRP 1201

@@ -7,6 +7,9 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 20: Search labels added. Now you can name each search before executing so
+	you'll know what it was.
+
 Rev 19: Memory VIEWER is now available. Editing is planned, but I think there 
 	should be an update to the PS2 side to make this a little cleaner. I'm 
 	also having navigational issues with the shit. Go To works so you can 
