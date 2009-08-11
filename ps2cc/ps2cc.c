@@ -96,6 +96,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 {
 	HMENU hMenu = GetMenu(hwnd);
 	HWND hwndStatusBar = GetDlgItem(hwnd, NTPB_STATUS_BAR);
+	HWND hwndTabCtrl = GetDlgItem(hwnd, PS2CC_TABCTRL);
 	switch (msg) {
  		case WM_INITDIALOG:
         {
@@ -165,7 +166,6 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                 } break;
 				case MNU_RES_PAGE_DOWN: case MNU_RES_PAGE_UP:
 				{
-					HWND hwndTabCtrl = GetDlgItem(hwnd, PS2CC_TABCTRL);
 					if ((ResultsList) && (SendMessage(hwndTabCtrl, TCM_GETCURFOCUS, 0, 0) == SEARCH_RESULTS_TAB)) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], msg, wParam, lParam); }
 				} break;
 			    case MNU_CS_INPUT_HEX: case MNU_CS_INPUT_DEC: case MNU_CS_INPUT_FLOAT:
@@ -194,6 +194,12 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 						EnableMenuItem(hMenu, MNU_HALT, MF_BYCOMMAND|MF_ENABLED);
 						EnableMenuItem(hMenu, MNU_RESUME, MF_BYCOMMAND|MF_GRAYED);
 					}
+				} break;
+				case MNU_RECONNECT:
+				{
+					EnableWindow(DlgInfo.TabDlgs[CODE_SEARCH_TAB], TRUE);
+					EnableWindow(hwndTabCtrl, TRUE);
+					ClientReconnect();
 				} break;
                 case MNU_MEM_SHOW_BYTES: case MNU_MEM_SHOW_SHORTS: case MNU_MEM_SHOW_WORDS:
                 {

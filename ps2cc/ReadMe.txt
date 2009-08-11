@@ -7,6 +7,11 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 23: Automatic connection/reconnection failure issues should be resolved.
+	I added a manual Reconnect option under the Run menu just in case.
+	For auto reconnecting, expect a command error followed by the status
+	bar updating connection info.
+
 Rev 22: Results can now be removed from the list with the Delete key.
 
 Rev 21: I Forgot("?") button added to Quick Search options.

@@ -25,6 +25,7 @@ BEGIN
   BEGIN
   	MENUITEM "Halt\tF4",MNU_HALT
     MENUITEM "Resume\tF5",MNU_RESUME
+    MENUITEM "Reconnect",MNU_RECONNECT
   END
   POPUP "Search"
   BEGIN

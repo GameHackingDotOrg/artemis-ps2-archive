@@ -195,14 +195,14 @@ DWORD WINAPI SendReceiveThread(LPVOID lpParam) // retrieving datas sent by serve
 	sndSize = send(main_socket, &pktbuffer[0], ntpbpktSize, 0);
 	if (sndSize <= 0) {
 		MessageBox(GetActiveWindow(),"Error: send failed !","ntpbclient",MB_ICONERROR | MB_OK);
-		return -1;
+		goto error;
 	}
 	//I'm guessing the server sends a packet back just to acknowledge the request?
 	//This looked redundant, but it wasn't working without it.
 	rcvSize = recv(main_socket, &pktbuffer[0], sizeof(pktbuffer), 0);
 	if (rcvSize <= 0) {
 		MessageBox(GetActiveWindow(),"Error: recv failed !","ntpbclient",MB_ICONERROR | MB_OK);
-		return -1;
+		goto error;
 	}
 
 
@@ -304,6 +304,8 @@ error:
 	if (main_socket) closesocket(main_socket);
 	if (cmdInfo->fh_dump) fclose(cmdInfo->fh_dump);
 	ClientConnected = 0;
+	ntpbShutdown();
+	clientThid = CreateThread(NULL, 0, clientThread, NULL, 0, NULL); // no stack, 1MB by default
 	//Notify main thread (1 on success, 0 on failure)
 	if (cmdInfo->NotifyId) SendMessage(cmdInfo->NotifyHwnd, WM_COMMAND, cmdInfo->NotifyId, 0);
 	return 0;
@@ -624,5 +626,20 @@ int ReadMem(unsigned char *read_buffer, unsigned int dump_start, unsigned int du
 	// send remote cmd
 	if(!SendReceiveThread(&cmdInfo)) { return 0; }
 
+	return 1;
+}
+
+/****************************************************************************
+Client Reconnect
+*****************************************************************************/
+int ClientReconnect()
+{
+	remote_cmd = REMOTE_CMD_NONE;
+	UpdateProgressBar(PBM_SETPOS, 0, 0);
+	UpdateStatusBar("Client disconnected...", 0, 0);
+	if (main_socket) closesocket(main_socket);
+	ClientConnected = 0;
+	if (!ntpbShutdown()) { return 0; }
+	clientThid = CreateThread(NULL, 0, clientThread, NULL, 0, NULL); // no stack, 1MB by default
 	return 1;
 }

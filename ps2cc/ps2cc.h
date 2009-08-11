@@ -297,6 +297,7 @@ int ActivateCheats(unsigned char codes[128], int numcodes);
 int DeActivateCheats();
 int SysHalt(int halt);
 int ReadMem(unsigned char *read_buffer, unsigned int dump_start, unsigned int dump_end);
+int ClientReconnect();
 
 //lib_ps2cc
 LRESULT CALLBACK ValueEditBoxHandler (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);

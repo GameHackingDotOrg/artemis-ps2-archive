@@ -1,6 +1,6 @@
 #include <windows.h>
 
-#define PROGRAM_NAME "PS2 Code Creator - Rev 22"
+#define PROGRAM_NAME "PS2 Code Creator - Rev 23"
 
 #define PS2CC_DLG 1000
 #define PS2CC_TABCTRL 1001
@@ -40,6 +40,7 @@
 #define MNU_MEM_SHOW_SHORTS 522
 #define MNU_MEM_SHOW_WORDS 523
 #define MNU_MEM_GOTO 524
+#define MNU_RECONNECT 525
 //search tab
 #define SEARCH_DLG 1100
 #define SEARCH_GRP1 1101
