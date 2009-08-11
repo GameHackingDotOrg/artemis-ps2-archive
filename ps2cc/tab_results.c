@@ -342,6 +342,32 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
 					}
 
 				} return 0;
+				case VK_DELETE:
+				{
+					if (!(ResultsList)) { break; }
+		            u32 address;
+    				HWND hwndCompareTo = GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], COMPARE_TO_CMB);
+    				int SearchCount = SendMessage(hwndCompareTo,CB_GETCOUNT,0,0) - 1;
+    				char resFileName[MAX_PATH];
+    				sprintf(resFileName,"%ssearch%u.bin",Settings.CS.DumpDir, SearchCount);
+    				if (!(LoadStruct(&RamInfo.NewResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), resFileName))) { FreeRamInfo(); return 0; }
+    				if (!(LoadFile(&RamInfo.Results, resFileName, sizeof(CODE_SEARCH_RESULTS_INFO), NULL, FALSE))) { FreeRamInfo(); return 0; }
+
+					int iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, -1, LVNI_SELECTED);
+					while (iSelected >= 0)
+					{
+						address = ListViewGetHex(hwnd, iSelected, 0);
+						SetBitFlag(RamInfo.Results, (address - RamInfo.NewResultsInfo.MapMemAddy)/RamInfo.NewResultsInfo.SearchSize, 0);
+						iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, iSelected, LVNI_SELECTED);
+					}
+                    SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/RamInfo.NewResultsInfo.SearchSize/8), resFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
+                    HWND hwndResPage = GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_PAGE_CMB);
+                    int ResPage = SendMessage(hwndResPage,CB_GETCURSEL,0,0);
+                    LoadResultsList();
+                    SendMessage(hwndResPage,CB_SETCURSEL,ResPage,0);
+		            SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, MAKEWPARAM(RESULTS_PAGE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
+
+				} return 0;
             }
         } break;
     }
