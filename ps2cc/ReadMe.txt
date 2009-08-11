@@ -70,6 +70,9 @@ Multi-Select Results:
 	value from the search number in the box at the bottom. This box can also
 	be scrolled using the Left/Right keys while inside the results list view.
 
+Delete Result(s):
+	Result(s) can be removed by highlighting and pressing the Delete key.
+
 Editable Active Cheats List:
 	Doubleclick address/value to edit. Press Enter to commit changes. Press 
 	ESC or click elsewhere to cancel.
