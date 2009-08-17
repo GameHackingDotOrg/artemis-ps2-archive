@@ -460,6 +460,7 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
                     if (Search.CompareTo) {
                         sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.CompareTo);
                         if (!(LoadStruct(&RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), sdFileName))) { FreeRamInfo(); return 0; }
+                        sprintf(sdFileName, "%ssearch%u.bin", Settings.CS.DumpDir, Search.Count - 1);
                         if (!(LoadFile(&RamInfo.Results, sdFileName, sizeof(CODE_SEARCH_RESULTS_INFO), NULL, FALSE))) { FreeRamInfo(); return 0; }
                     }
 					//setup new results info
@@ -474,7 +475,6 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 					if (LOWORD(wParam) == EX_FILTER_CMD) {
 						memcpy(&RamInfo.NewResultsInfo, &RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO));
                     	sprintf(RamInfo.NewResultsInfo.dmpFileName, "%sdump%u.raw", Settings.CS.DumpDir, Search.Count);
-                    	RamInfo.NewResultsInfo.ResCount = 0;
 //                    	MessageBox(NULL, RamInfo.NewResultsInfo.dmpFileName, "Debug", MB_OK); FreeRamInfo(); return 0;
 						if (!CopyBinFile(RamInfo.OldResultsInfo.dmpFileName, RamInfo.NewResultsInfo.dmpFileName)) { FreeRamInfo(); return 0; }
 						//send message to continue filter
@@ -486,7 +486,6 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 							MessageBox(NULL, ErrTxt, "Error", MB_OK); FreeRamInfo(); return 0;
 						}
 #endif
-
                     	RamInfo.NewResultsInfo.DumpSize = DumpAreaHigh - DumpAreaLow;
 						//keep track of the memory address the file really starts on for displaying results
                     	RamInfo.NewResultsInfo.MapFileAddy = 0;
@@ -682,7 +681,7 @@ search_end:
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), ResFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
                     SendMessage(hwndCompareTo,CB_RESETCONTENT,0,0);
                     ComboAddItem(hwndCompareTo, "New Search" , 0);
-                    ComboAddItem(hwndCompareTo, "Search 1" , 0);
+                    ComboAddItem(hwndCompareTo, "#1:" , 0);
                     SendMessage(hwndCompareTo,CB_SETCURSEL,1,0);
                     sprintf(ResFileName, "%u", RamInfo.NewResultsInfo.ResCount);
                     UpdateStatusBar(ResFileName, 0,0);

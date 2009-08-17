@@ -7,6 +7,9 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 24: Hopefully resolved a couple of issues with comparing to old searches
+	and removing results.
+
 Rev 23: Automatic connection/reconnection failure issues should be resolved.
 	I added a manual Reconnect option under the Run menu just in case.
 	For auto reconnecting, expect a command error followed by the status

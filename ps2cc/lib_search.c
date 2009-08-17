@@ -23,7 +23,7 @@ int CodeSearch(CODE_SEARCH_VARS Search)
     u32 address;
     u64 NewValue;
     u64 OldValue;
-//    RamInfo.NewResultsInfo.ResCount = 0;
+    RamInfo.NewResultsInfo.ResCount = 0;
     if (Search.TypeEx & EXCS_SIGNED) {
         int i;
         for (i = 0; i < 10; i++) { Search.Values[i] = SignExtend64(Search.Values[i], Search.Size); }

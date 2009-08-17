@@ -358,6 +358,7 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
 					{
 						address = ListViewGetHex(hwnd, iSelected, 0);
 						SetBitFlag(RamInfo.Results, (address - RamInfo.NewResultsInfo.MapMemAddy)/RamInfo.NewResultsInfo.SearchSize, 0);
+						RamInfo.NewResultsInfo.ResCount--;
 						iSelected = SendMessage(hwnd, LVM_GETNEXTITEM, iSelected, LVNI_SELECTED);
 					}
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/RamInfo.NewResultsInfo.SearchSize/8), resFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
