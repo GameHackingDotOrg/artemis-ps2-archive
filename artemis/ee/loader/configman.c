@@ -29,8 +29,17 @@
 static const char *setting_paths[] = {
 	"loader.iop_reset",
 	"loader.sbv_patches",
+	"engine.install",
 	"engine.addr",
 	"engine.file",
+	"debugger.install",
+	"debugger.addr",
+	"debugger.auto_hook",
+	"debugger.rpc_mode",
+	"sdklibs.install",
+	"sdklibs.addr",
+	"elfldr.install",
+	"elfldr.addr",
 	"cheats.file",
 	NULL
 };
@@ -133,20 +142,28 @@ void config_build(config_t *config)
 	config_init(config);
 	root = config_root_setting(config);
 
-	/* build "loader" group */
+	/*
+	 * loader section
+	 */
 	group = config_setting_add(root, "loader", CONFIG_TYPE_GROUP);
 
 	set = config_setting_add(group, "iop_reset", CONFIG_TYPE_BOOL);
-#ifdef _IOPRESET
+#ifndef _NO_IOPRESET
 	config_setting_set_bool(set, 1);
 #endif
 	set = config_setting_add(group, "sbv_patches", CONFIG_TYPE_BOOL);
 #ifndef _NO_SBV
 	config_setting_set_bool(set, 1);
 #endif
-	/* build "engine" group */
+	/*
+	 * engine section
+	 */
 	group = config_setting_add(root, "engine", CONFIG_TYPE_GROUP);
 
+	set = config_setting_add(group, "install", CONFIG_TYPE_BOOL);
+#ifdef ENGINE_INSTALL
+	config_setting_set_bool(set, 1);
+#endif
 	set = config_setting_add(group, "addr", CONFIG_TYPE_INT);
 #ifdef ENGINE_ADDR
 	config_setting_set_int(set, ENGINE_ADDR);
@@ -155,7 +172,56 @@ void config_build(config_t *config)
 #ifdef ENGINE_FILE
 	config_setting_set_string(set, ENGINE_FILE);
 #endif
-	/* build "cheats" group */
+	/*
+	 * debugger section
+	 */
+	group = config_setting_add(root, "debugger", CONFIG_TYPE_GROUP);
+
+	set = config_setting_add(group, "install", CONFIG_TYPE_BOOL);
+#ifdef DEBUGGER_INSTALL
+	config_setting_set_bool(set, 1);
+#endif
+	set = config_setting_add(group, "addr", CONFIG_TYPE_INT);
+#ifdef DEBUGGER_ADDR
+	config_setting_set_int(set, DEBUGGER_ADDR);
+#endif
+	set = config_setting_add(group, "auto_hook", CONFIG_TYPE_BOOL);
+#ifdef DEBUGGER_AUTO_HOOK
+	config_setting_set_bool(set, 1);
+#endif
+	set = config_setting_add(group, "rpc_mode", CONFIG_TYPE_INT);
+#ifdef DEBUGGER_RPC_MODE
+	config_setting_set_int(set, DEBUGGER_RPC_MODE);
+#endif
+	/*
+	 * sdklibs section
+	 */
+	group = config_setting_add(root, "sdklibs", CONFIG_TYPE_GROUP);
+
+	set = config_setting_add(group, "install", CONFIG_TYPE_BOOL);
+#ifdef SDKLIBS_INSTALL
+	config_setting_set_bool(set, 1);
+#endif
+	set = config_setting_add(group, "addr", CONFIG_TYPE_INT);
+#ifdef SDKLIBS_ADDR
+	config_setting_set_int(set, SDKLIBS_ADDR);
+#endif
+	/*
+	 * elfldr section
+	 */
+	group = config_setting_add(root, "elfldr", CONFIG_TYPE_GROUP);
+
+	set = config_setting_add(group, "install", CONFIG_TYPE_BOOL);
+#ifdef ELFLDR_INSTALL
+	config_setting_set_bool(set, 1);
+#endif
+	set = config_setting_add(group, "addr", CONFIG_TYPE_INT);
+#ifdef ELFLDR_ADDR
+	config_setting_set_int(set, ELFLDR_ADDR);
+#endif
+	/*
+	 * cheats section
+	 */
 	group = config_setting_add(root, "cheats", CONFIG_TYPE_GROUP);
 
 	set = config_setting_add(group, "file", CONFIG_TYPE_STRING);
@@ -165,7 +231,7 @@ void config_build(config_t *config)
 }
 
 /**
- * config_print - Print out config.
+ * config_print - Print out all config settings.
  * @config: ptr to config
  */
 void config_print(const config_t *config)
@@ -173,23 +239,44 @@ void config_print(const config_t *config)
 	u32 value;
 	const char *s = NULL;
 
-	if (config == NULL)
-		return;
-
 	printf("config values:\n");
 
-	_config_lookup_bool(config, SET_IOP_RESET, (int*)&value);
-	printf("%s = %i\n", setting_paths[SET_IOP_RESET], value);
+#define PRINT_BOOL(key) \
+	_config_lookup_bool(config, key, (int*)&value); \
+	printf("%s = %i\n", setting_paths[key], value)
+#define PRINT_INT(key) \
+	_config_lookup_int(config, key, (long*)&value); \
+	printf("%s = %i\n", setting_paths[key], value)
+#define PRINT_U32(key) \
+	_config_lookup_u32(config, key, &value); \
+	printf("%s = %08x\n", setting_paths[key], value)
+#define PRINT_STRING(key) \
+	_config_lookup_string(config, key, &s); \
+	printf("%s = %s\n", setting_paths[key], s)
 
-	_config_lookup_bool(config, SET_SBV_PATCHES, (int*)&value);
-	printf("%s = %i\n", setting_paths[SET_SBV_PATCHES], value);
+	/* loader */
+	PRINT_BOOL(SET_IOP_RESET);
+	PRINT_BOOL(SET_SBV_PATCHES);
 
-	_config_lookup_u32(config, SET_ENGINE_ADDR, &value);
-	printf("%s = %08x\n", setting_paths[SET_ENGINE_ADDR], value);
+	/* engine */
+	PRINT_BOOL(SET_ENGINE_INSTALL);
+	PRINT_U32(SET_ENGINE_ADDR);
+	PRINT_STRING(SET_ENGINE_FILE);
 
-	_config_lookup_string(config, SET_ENGINE_FILE, &s);
-	printf("%s = %s\n", setting_paths[SET_ENGINE_FILE], s);
+	/* debugger */
+	PRINT_BOOL(SET_DEBUGGER_INSTALL);
+	PRINT_U32(SET_DEBUGGER_ADDR);
+	PRINT_BOOL(SET_DEBUGGER_AUTO_HOOK);
+	PRINT_INT(SET_DEBUGGER_RPC_MODE);
 
-	_config_lookup_string(config, SET_CHEATS_FILE, &s);
-	printf("%s = %s\n", setting_paths[SET_CHEATS_FILE], s);
+	/* sdklibs */
+	PRINT_BOOL(SET_SDKLIBS_INSTALL);
+	PRINT_U32(SET_SDKLIBS_ADDR);
+
+	/* elfldr */
+	PRINT_BOOL(SET_ELFLDR_INSTALL);
+	PRINT_U32(SET_ELFLDR_ADDR);
+
+	/* cheats */
+	PRINT_STRING(SET_CHEATS_FILE);
 }

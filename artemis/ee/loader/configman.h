@@ -26,12 +26,52 @@
 #include <fileio.h>
 #include <libconfig.h>
 
+/* Define some default settings */
+#define ENGINE_INSTALL
+#define DEBUGGER_INSTALL
+#define SDKLIBS_INSTALL
+#define ELFLDR_INSTALL
+
+#ifndef ENGINE_ADDR
+#define ENGINE_ADDR		0x00080000
+#endif
+#ifndef DEBUGGER_ADDR
+#define DEBUGGER_ADDR		0x00090000
+#endif
+#ifndef DEBUGGER_RPC_MODE
+#define DEBUGGER_RPC_MODE	1
+#endif
+#ifndef SDKLIBS_ADDR
+#define SDKLIBS_ADDR		0x000c0000
+#endif
+#ifndef ELFLDR_ADDR
+#define ELFLDR_ADDR		0x000ff000
+#endif
+#ifndef CHEATS_FILE
+#define CHEATS_FILE		"cheats.txt"
+#endif
+
 /* Keys to access different settings in configuration */
 enum setting_key {
+	/* loader */
 	SET_IOP_RESET = 0,
 	SET_SBV_PATCHES,
+	/* engine */
+	SET_ENGINE_INSTALL,
 	SET_ENGINE_ADDR,
 	SET_ENGINE_FILE,
+	/* debugger */
+	SET_DEBUGGER_INSTALL,
+	SET_DEBUGGER_ADDR,
+	SET_DEBUGGER_AUTO_HOOK,
+	SET_DEBUGGER_RPC_MODE,
+	/* sdklibs */
+	SET_SDKLIBS_INSTALL,
+	SET_SDKLIBS_ADDR,
+	/* elfldr */
+	SET_ELFLDR_INSTALL,
+	SET_ELFLDR_ADDR,
+	/* cheats */
 	SET_CHEATS_FILE
 };
 
@@ -50,4 +90,4 @@ const char *config_get_string(const config_t *config, enum setting_key key);
 void config_build(config_t *config);
 void config_print(const config_t *config);
 
-#endif /*_CONFIGMAN_H_*/
+#endif /* _CONFIGMAN_H_ */

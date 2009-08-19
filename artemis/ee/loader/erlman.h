@@ -1,5 +1,5 @@
 /*
- * test.c - Simple test driver for debugger
+ * erlman.h - ERL file manager
  *
  * Copyright (C) 2009 misfire <misfire@xploderfreax.de>
  *
@@ -19,13 +19,13 @@
  * along with Artemis.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <tamtypes.h>
+#ifndef _ERLMAN_H_
+#define _ERLMAN_H_
 
-/*
- * TODO: implement test cases for debugger here.
- */
+#include "configman.h"
+#include "engineman.h"
 
-int main(int argc, char *argv[])
-{
-	return 0;
-}
+int install_erls(const config_t *config, engine_t *engine);
+void uninstall_erls(void);
+
+#endif /* _ERLMAN_H_ */

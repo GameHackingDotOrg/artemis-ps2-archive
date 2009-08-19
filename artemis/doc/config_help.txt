@@ -1,3 +1,5 @@
+$Id$
+
 Artemis uses libconfig to read and store its configuration:
 http://www.hyperrealm.com/libconfig/libconfig_manual.html
 
@@ -9,7 +11,7 @@ Here is a list of the available settings:
 Section "loader"
 ----------------
 
-* iop_reset [bool, false by default]
+* iop_reset [bool, true by default]
 
   Set 'iop_reset' to true to reset the IOP on startup.
 
@@ -24,6 +26,10 @@ Section "loader"
 Section "engine"
 ----------------
 
+* install [bool, true by default]
+
+  Set it to true if you want to install the cheat engine on startup.
+
 * addr [32-bit offset, 0x00080000 by default]
 
   Specifies the load address of the cheat engine. This address must belong
@@ -33,6 +39,52 @@ Section "engine"
 
   If you don't want to use the built-in cheat engine, you can specify the
   filename of an external engine instead.
+
+
+Section "debugger"
+------------------
+
+* install [bool, true by default]
+
+  Set it to true if you want to install the debugger on startup.
+
+* addr [32-bit offset, 0x00090000 by default]
+
+  Specifies the load address of the debugger.
+
+* auto_hook [bool, false by default]
+
+  Enable automatic hooking to hack games without the need for hook codes.
+
+* rpc_mode [integer, 1 by default]
+
+  Set SIF RPC mode to blocking (0) or non-blocking (1).
+
+
+Section "sdklibs"
+-----------------
+
+* install [bool, true by default]
+
+  Set to true to install the SDK libraries like libkernel.erl.
+  NOTE: Must be true for debugger and ELF loader to work.
+
+* addr [32-bit offset, 0x000c0000 by default]
+
+  Specifies the load address of the SDK libraries.
+
+
+Section "elfldr"
+----------------
+
+* install [bool, true by default]
+
+  Install the ELF loader to replace the original (evil) LoadExecPS2() syscall.
+  NOTE: Must be true for the debugger to work.
+
+* addr [32-bit offset, 0x000ff000 by default]
+
+  Specifies the load address of the ELF loader.
 
 
 Section "cheats"
