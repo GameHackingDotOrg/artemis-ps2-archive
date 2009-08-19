@@ -29,7 +29,7 @@ for grabbing a few bytes at a time--like for the display in a memory editor.
 
 #define SERVER_TCP_PORT 4234
 #define SERVER_UDP_PORT 4244
-#define SERVER_IP		"192.168.0.80"
+//#define SERVER_IP		"192.168.0.80"
 
 static int main_socket = -1;
 static int udp_socket = -1;
@@ -337,7 +337,7 @@ DWORD WINAPI clientThread(LPVOID lpParam)
 
 	peer.sin_family = AF_INET;
 	peer.sin_port = htons(SERVER_TCP_PORT);
-	peer.sin_addr.s_addr = inet_addr(SERVER_IP);
+	peer.sin_addr.s_addr = inet_addr(Settings.ServerIp);
 	ClientConnected = 0;
 
 	//UDP

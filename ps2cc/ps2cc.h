@@ -189,6 +189,7 @@ typedef struct _MAIN_CFG {
     int CFGVersion; //to prevent loading shit from a previous version if struct has changed.
     LOGFONT ValueFontInfo;
     HFONT ValueHFont;
+    char ServerIp[16];
     CODE_SEARCH_SETTINGS CS;
     SEARCH_RESULTS_SETTINGS Results;
     MEMORY_EDITOR_SETTINGS MemEdit;

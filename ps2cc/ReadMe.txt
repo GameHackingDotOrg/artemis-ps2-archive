@@ -7,6 +7,8 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 25: Re-added the server IP setting.
+
 Rev 24: Hopefully resolved a couple of issues with comparing to old searches
 	and removing results.
 
@@ -55,7 +57,7 @@ Rev 15: Added Page Up/Down functionality on the results display. Note that this
 	shifts the actual page, as opposed to scroling the box, so set your page 
 	sizes as desired.
 
-Rev 14: 'I Fogot' search type was reporting 0 results. Luckily, it just seemed to 
+Rev 14: 'I Forgot' search type was reporting 0 results. Luckily, it just seemed to 
 	be a lack of the count itself being copied over.
 
 /****************************************************************************
