@@ -2,6 +2,11 @@ Artemis Commit Policy
 written by misfire <misfire@xploderfreax.de>
 
 
+HUGE NOTE: This document is obsolete. All future development of Artemis will
+take place at http://bitbucket.org/misfire/artemis/
+
+
+
 Stable trunk strategy
 ---------------------
 
