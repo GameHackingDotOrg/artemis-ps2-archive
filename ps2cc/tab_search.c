@@ -479,6 +479,22 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 						if (!CopyBinFile(RamInfo.OldResultsInfo.dmpFileName, RamInfo.NewResultsInfo.dmpFileName)) { FreeRamInfo(); return 0; }
 						//send message to continue filter
 						SendMessage(hwnd, WM_COMMAND, SEARCH_CONTINUE_VCMD, 1);
+						break;
+					} else if (Settings.CS.FileMode == MFS_CHECKED) {
+						if (!DoFileOpen(hwnd, RamInfo.NewResultsInfo.dmpFileName)) { break; }
+                        RamInfo.NewFile = fopen(RamInfo.NewResultsInfo.dmpFileName, "rb");
+                        if (!(RamInfo.NewFile)) {
+                            sprintf(ErrTxt, "Unable to open ram dump (DO_SEARCH_CMD) -- Error %u", GetLastError());
+                            MessageBox(NULL,ErrTxt,"Error",MB_OK); return 0;
+                        }
+                        fseek(RamInfo.NewFile,0,SEEK_END);
+                        RamInfo.NewResultsInfo.DumpSize = ftell(RamInfo.NewFile);
+                        fclose(RamInfo.NewFile);
+						//keep track of the memory address the file really starts on for displaying results
+                    	RamInfo.NewResultsInfo.MapFileAddy = 0;
+                    	RamInfo.NewResultsInfo.MapMemAddy = DumpAreaLow;
+						SendMessage(hwnd, WM_COMMAND, SEARCH_CONTINUE_VCMD, 1);
+						break;
 					} else {
 						if (Settings.CS.PS2Wait) { SendMessage(DlgInfo.Main, WM_COMMAND, MNU_HALT, 0); Sleep(100); }
 #if (SNAKE_DEBUG != 1)

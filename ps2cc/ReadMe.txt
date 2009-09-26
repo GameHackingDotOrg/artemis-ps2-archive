@@ -7,6 +7,8 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 26: File Mode option added (Search > File Mode).
+
 Rev 25: Re-added the server IP setting.
 
 Rev 24: Hopefully resolved a couple of issues with comparing to old searches
@@ -91,3 +93,8 @@ Memory Editor:
 	Viewer only at the moment. Go To works in any address, not just the top
 	one. Hit enter to go to address or commit value changes. Up/Down will
 	move the selection up/down.
+
+File Mode:
+	Enable File Mode in the Search menu, then search as you normally would.
+	Each time you click the Search button, it should prompt for a file. Start
+	with a Known Value or Initial Dump just as you would with dumping directly.

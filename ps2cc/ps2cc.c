@@ -113,6 +113,7 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 		    SetMenuState(hMenu, Settings.CS.NumBaseId, MFS_CHECKED);
 		    SetMenuState(hMenu, Settings.MemEdit.EditSizeId, MFS_CHECKED);
 			EnableMenuItem(hMenu, MNU_RESUME, MF_BYCOMMAND|MF_GRAYED);
+			SetMenuState(hMenu, MNU_CS_FILE_MODE, Settings.CS.FileMode);
 		    //setup statusbar
 /* This is pissing me off
             RECT StatusRect; memset(&StatusRect,0,sizeof(StatusRect));
@@ -180,6 +181,16 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
                 case MNU_CS_UNDO:
                 {
 					SendMessage(DlgInfo.TabDlgs[CODE_SEARCH_TAB], msg, wParam, lParam);
+				} break;
+				case MNU_CS_FILE_MODE:
+				{
+					if (GetMenuState(hMenu, MNU_CS_FILE_MODE, MF_BYCOMMAND) & MFS_CHECKED) {
+						SetMenuState(hMenu, MNU_CS_FILE_MODE, MFS_UNCHECKED);
+						Settings.CS.FileMode = MFS_UNCHECKED;
+					} else {
+						SetMenuState(hMenu, MNU_CS_FILE_MODE, MFS_CHECKED);
+						Settings.CS.FileMode = MFS_CHECKED;
+					}
 				} break;
                 case MNU_LOAD_SEARCH:
                 {

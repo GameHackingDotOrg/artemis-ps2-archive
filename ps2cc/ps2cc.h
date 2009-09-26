@@ -166,6 +166,7 @@ typedef struct _CODE_SEARCH_SETTINGS {
     int NumBaseId;
     int DumpAccess;
     int PS2Wait;
+    int FileMode;
 } CODE_SEARCH_SETTINGS;
 
 typedef struct _SEARCH_RESULTS_SETTINGS {

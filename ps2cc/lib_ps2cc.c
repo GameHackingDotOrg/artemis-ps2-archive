@@ -136,7 +136,7 @@ int LoadSettings()
         sprintf(CFGFile,"ps2cc.cfg");
         strcpy(Defaults.CS.DumpDir, "Searches\\");
     }
-    Defaults.CFGVersion = 7; //increment this if settings struct or sub-struct definitions in ps2cc.h change
+    Defaults.CFGVersion = 8; //increment this if settings struct or sub-struct definitions in ps2cc.h change
     sprintf(Defaults.ServerIp, "192.168.0.80");
     Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
     Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
@@ -145,6 +145,7 @@ int LoadSettings()
     Defaults.CS.NumBaseId = MNU_CS_INPUT_HEX;
     Defaults.CS.DumpAccess = SEARCH_ACCESS_ARRAY;
     Defaults.CS.PS2Wait = BST_UNCHECKED;
+    Defaults.CS.FileMode = MFS_UNCHECKED;
 	//Results Defaults
     Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
     Defaults.Results.PageSize = 500;
