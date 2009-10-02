@@ -232,6 +232,8 @@ u32 ShowMem(u32 address)
     if (Settings.MemEdit.EditSize <= 4) { sprintf(fmtString, "%%0%uX", Settings.MemEdit.EditSize*2); }
     else { strcpy(fmtString, "%16I64X"); }
     //loop - outer loop by row, inner loop to fill columns
+//    sprintf(ErrTxt, "%i",Settings.MemEdit.EditSize);
+//    MessageBox(NULL,ErrTxt, "Debug", MB_OK);
     for (iRow = 0; iRow <= PageSize; iRow++)
     {
 		offset = iRow * 0x10;

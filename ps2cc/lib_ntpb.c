@@ -606,7 +606,7 @@ int ReadMem(unsigned char *read_buffer, unsigned int dump_start, unsigned int du
 	}
 	//Check that we're trying to dump a valid area
 	if (cmdInfo.RemoteCMD == REMOTE_CMD_NONE) {
-		sprintf(ErrTxt, "Memory area specifed. (ReadMem)");
+		sprintf(ErrTxt, "Memory area not recognized. (ReadMem)");
 		return 0;
 	}
 

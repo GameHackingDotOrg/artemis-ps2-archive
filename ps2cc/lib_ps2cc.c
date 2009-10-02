@@ -136,7 +136,7 @@ int LoadSettings()
         sprintf(CFGFile,"ps2cc.cfg");
         strcpy(Defaults.CS.DumpDir, "Searches\\");
     }
-    Defaults.CFGVersion = 8; //increment this if settings struct or sub-struct definitions in ps2cc.h change
+    Defaults.CFGVersion = 9; //increment this if settings struct or sub-struct definitions in ps2cc.h change
     sprintf(Defaults.ServerIp, "192.168.0.80");
     Defaults.ValueFontInfo = (LOGFONT){ 0, 10, 0, 0, 10, FALSE, FALSE, FALSE, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, FF_MODERN, "Terminal"} ;
     Defaults.ValueHFont = CreateFontIndirect(&Defaults.ValueFontInfo);
@@ -150,8 +150,8 @@ int LoadSettings()
     Defaults.Results.DisplayFmt = MNU_RES_SHOW_HEX;
     Defaults.Results.PageSize = 500;
     Defaults.Results.MaxResPages = 20;
-    Settings.MemEdit.EditSize = 1;
-    Settings.MemEdit.EditSizeId = MNU_MEM_SHOW_BYTES;
+    Defaults.MemEdit.EditSize = 1;
+    Defaults.MemEdit.EditSizeId = MNU_MEM_SHOW_BYTES;
 	if (FileExists(CFGFile)) { LoadStruct(&Settings, sizeof(MAIN_CFG), CFGFile); }
     if (Settings.CFGVersion != Defaults.CFGVersion) {
 		MessageBox(NULL, "New CFG version. Settings are at default again.", "FYI", MB_OK);

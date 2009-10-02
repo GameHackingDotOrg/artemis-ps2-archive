@@ -7,6 +7,8 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 27: Settings fix
+
 Rev 26: File Mode option added (Search > File Mode).
 
 Rev 25: Re-added the server IP setting.
