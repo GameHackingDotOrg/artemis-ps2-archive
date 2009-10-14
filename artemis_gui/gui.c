@@ -13,9 +13,11 @@ extern void logo_ghost;
 extern void gshi_full;
 extern void icon_start;
 extern void icon_cheats;
+extern void icon_options;
 extern void icon_about;
 extern void desc_start;
 extern void desc_cheats;
+extern void desc_options;
 extern void desc_about;
 extern void font_verdana;
 
@@ -25,9 +27,11 @@ extern u32 size_logo_ghost;
 extern u32 size_gshi_full;
 extern u32 size_icon_start;
 extern u32 size_icon_cheats;
+extern u32 size_icon_options;
 extern u32 size_icon_about;
 extern u32 size_desc_start;
 extern u32 size_desc_cheats;
+extern u32 size_desc_options;
 extern u32 size_desc_about;
 extern u32 size_font_verdana;
 
@@ -49,8 +53,8 @@ void Render_GUI(void);
 
 GSGLOBAL *gsGlobal;
 GSTEXTURE tex_background, tex_logo, tex_logo_ghost, tex_gshi_full;
-GSTEXTURE tex_icon_start, tex_icon_cheats, tex_icon_about;
-GSTEXTURE tex_desc_start, tex_desc_cheats, tex_desc_about;
+GSTEXTURE tex_icon_start, tex_icon_cheats, tex_icon_options, tex_icon_about;
+GSTEXTURE tex_desc_start, tex_desc_cheats, tex_desc_options, tex_desc_about;
 GSTEXTURE tex_font_verdana;
 
 /* screen defaults for NTSC, just in case */
@@ -84,12 +88,15 @@ int gshi_x;
 int icon_start_y;
 int icon_cheats_y;
 int icon_about_y;
+int icon_options_y;
 int icon_start_alpha;
 int icon_cheats_alpha;
 int icon_about_alpha;
+int icon_options_alpha;
 int desc_start_alpha;
 int desc_cheats_alpha;
 int desc_about_alpha;
+int desc_options_alpha;
 int highlight_alpha;
 int amount;
 int pause_pulse;
@@ -460,6 +467,24 @@ void draw_about_icon(int x, int y, int alpha)
 }
 
 /*
+ * Draw options icon
+ */
+void draw_options_icon(int x, int y, int alpha)
+{
+	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_options,
+							x, 				/* X1 */
+							y,					/* Y1 */
+							0,  				/* U1 */
+							0,  				/* V1 */
+							x + tex_icon_options.Width, /* X2 */
+							y + (tex_icon_options.Height * Y_RATIO), /* Y2 */
+							tex_icon_options.Width, 	/* U2 */
+							tex_icon_options.Height,	/* V2 */
+							0,
+							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
+}
+
+/*
  * Draw start desc
  */
 void draw_start_desc(int x, int y, int alpha)
@@ -509,6 +534,24 @@ void draw_about_desc(int x, int y, int alpha)
 							y + (tex_desc_about.Height * Y_RATIO), /* Y2 */
 							tex_desc_about.Width, 	/* U2 */
 							tex_desc_about.Height,	/* V2 */
+							0,
+							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
+}
+
+/*
+ * Draw options desc
+ */
+void draw_options_desc(int x, int y, int alpha)
+{
+	gsKit_prim_sprite_texture(gsGlobal, &tex_desc_options,
+							x, 				/* X1 */
+							y,					/* Y1 */
+							0,  				/* U1 */
+							0,  				/* V1 */
+							x + tex_desc_options.Width, /* X2 */
+							y + (tex_desc_options.Height * Y_RATIO), /* Y2 */
+							tex_desc_options.Width, 	/* U2 */
+							tex_desc_options.Height,	/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -696,7 +739,31 @@ void load_mainmenu_Textures(void)
 			free(pImgData);
 		}
 	}
-	
+
+	if ((pPng = pngOpenRAW(&icon_options, size_icon_options)) > 0) { /* tex size = */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_icon_options.PSM 	  = GS_PSM_CT32;
+				tex_icon_options.Mem 	  = (u32 *)pImgData;
+				tex_icon_options.VramClut = 0;
+				tex_icon_options.Clut	  = NULL;
+				tex_icon_options.Width    = pPng->width;
+				tex_icon_options.Height   = pPng->height;
+				tex_icon_options.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_icon_options.Vram 	  = gsKit_vram_alloc(gsGlobal,
+	 						  			gsKit_texture_size(tex_icon_options.Width, tex_icon_options.Height, tex_icon_options.PSM),
+	 						  			GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_icon_options);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}
+		
 	if ((pPng = pngOpenRAW(&desc_start, size_desc_start)) > 0) { /* tex size = */
 		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
 			if (pngReadImage( pPng, pImgData ) != -1) {
@@ -768,7 +835,31 @@ void load_mainmenu_Textures(void)
 			free(pImgData);
 		}
 	}
-		
+
+	if ((pPng = pngOpenRAW(&desc_options, size_desc_options)) > 0) { /* tex size = */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_desc_options.PSM 	  = GS_PSM_CT32;
+				tex_desc_options.Mem 	  = (u32 *)pImgData;
+				tex_desc_options.VramClut = 0;
+				tex_desc_options.Clut	  = NULL;
+				tex_desc_options.Width    = pPng->width;
+				tex_desc_options.Height   = pPng->height;
+				tex_desc_options.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_desc_options.Vram 	  = gsKit_vram_alloc(gsGlobal,
+	 						  			gsKit_texture_size(tex_desc_options.Width, tex_desc_options.Height, tex_desc_options.PSM),
+	 						  			GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_desc_options);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}
+			
 	#ifdef DEBUG
 		printf("Load_GUI last VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
 	#endif
@@ -785,15 +876,18 @@ void gfx_set_defaults(void)
 	logo_alpha = 0;
 	gshi_alpha = 0;
 	gshi_x = 378;
-	icon_start_y = SCREEN_HEIGHT + 80;
+	icon_start_y = SCREEN_HEIGHT + 60;
 	icon_cheats_y = SCREEN_HEIGHT + 40;
-	icon_about_y = SCREEN_HEIGHT;
+	icon_options_y = SCREEN_HEIGHT + 20;	
+	icon_about_y = SCREEN_HEIGHT;	
 	icon_start_alpha = 0;
 	icon_cheats_alpha = 0;
 	icon_about_alpha = 0;
+	icon_options_alpha = 0;	
 	desc_start_alpha = 0;
 	desc_cheats_alpha = 0;
 	desc_about_alpha = 0;
+	desc_options_alpha = 0;	
 	stop_pulse_done = 0;
 	background_alpha = 128;
 	highlight_alpha = 32;
@@ -936,14 +1030,17 @@ int Draw_INTRO_part2(void)
 	int gshi_fadein_done = 0;
 	int icon_start_fadein_done = 0;
 	int icon_cheats_fadein_done = 0;
-	int icon_about_fadein_done = 0;	
+	int icon_options_fadein_done = 0;			
+	int icon_about_fadein_done = 0;		
 	int desc_start_fadein_done = 0;
 	int desc_cheats_fadein_done = 0;
+	int desc_options_fadein_done = 0;	
 	int desc_about_fadein_done = 0;		
 	int ghsi_logo_move_done = 0;
 	int icon_start_move_done = 0;
 	int icon_cheats_move_done = 0;
-	int icon_about_move_done = 0;	
+	int icon_options_move_done = 0;		
+	int icon_about_move_done = 0;		
 
 	/* Clear screen	*/
 	gsKit_clear(gsGlobal, Black);
@@ -964,7 +1061,7 @@ int Draw_INTRO_part2(void)
 
 	/* Alpha calculation to control gshi fade-in */
 	if (gshi_alpha < 128) {
-		gshi_alpha += 1;
+		gshi_alpha += 2;
 		if (gshi_alpha >= 128) {
 			gshi_alpha = 128;
 			gshi_fadein_done = 1;
@@ -975,7 +1072,7 @@ int Draw_INTRO_part2(void)
 	
 	/* X coordinate calculation to gshi moving */
 	if (gshi_x > 226) {
-		gshi_x -= 3;
+		gshi_x -= 4;
 		if (gshi_x <= 226) {
 			gshi_x = 226;
 			ghsi_logo_move_done = 1;
@@ -1010,6 +1107,17 @@ int Draw_INTRO_part2(void)
 	else
 		icon_cheats_move_done = 1;
 
+	/* Y coordinate calculation to options icon moving */
+	if (icon_options_y > min_y) {
+		icon_options_y -= 4;
+		if (icon_options_y <= min_y) {
+			icon_options_y = min_y;
+			icon_options_move_done = 1;
+		}
+	}
+	else
+		icon_options_move_done = 1;		
+		
 	/* Y coordinate calculation to about icon moving */
 	if (icon_about_y > min_y) {
 		icon_about_y -= 4;
@@ -1046,7 +1154,20 @@ int Draw_INTRO_part2(void)
 		else
 			icon_cheats_fadein_done = 1;
 	}
-					
+
+	/* Alpha calculation to control icon options fade-in */
+	if (icon_options_y <= SCREEN_HEIGHT) {	
+		if (icon_options_alpha < 128) {
+			icon_options_alpha += 2;
+			if (icon_options_alpha >= 128) {
+				icon_options_alpha = 128;
+				icon_options_fadein_done = 1;
+			}
+		}
+		else
+			icon_options_fadein_done = 1;
+	}
+						
 	/* Alpha calculation to control icon about fade-in */
 	if (icon_start_y <= SCREEN_HEIGHT) {
 		if (icon_about_alpha < 128) {
@@ -1061,9 +1182,10 @@ int Draw_INTRO_part2(void)
 	}
 				
 	/* Draw icons */
-	draw_start_icon(180, icon_start_y, icon_start_alpha);
-	draw_cheats_icon((SCREEN_WIDTH / 2) - (tex_icon_cheats.Width / 2), icon_cheats_y, icon_cheats_alpha);
-	draw_about_icon(460 - tex_icon_about.Width, icon_about_y, icon_about_alpha);	
+	draw_start_icon(148, icon_start_y, icon_start_alpha);
+	draw_cheats_icon(242, icon_cheats_y, icon_cheats_alpha);
+	draw_options_icon(344, icon_options_y, icon_options_alpha);	
+	draw_about_icon(442, icon_about_y, icon_about_alpha);	
 			
 	/* Alpha calculation to control desc start fade-in */
 	if (icon_start_fadein_done) {
@@ -1091,8 +1213,21 @@ int Draw_INTRO_part2(void)
 			desc_cheats_fadein_done = 1;
 	}	
 
-	/* Alpha calculation to control desc about fade-in */
+	/* Alpha calculation to control desc options fade-in */
 	if (desc_cheats_alpha > 8) {
+		if (desc_options_alpha < 32) {
+			desc_options_alpha += 2;
+			if (desc_options_alpha >= 32) {
+				desc_options_alpha = 32;
+				desc_options_fadein_done = 1;
+			}
+		}
+		else
+			desc_options_fadein_done = 1;
+	}	
+	
+	/* Alpha calculation to control desc about fade-in */
+	if (desc_options_alpha > 8) {
 		if (desc_about_alpha < 32) {
 			desc_about_alpha += 2;
 			if (desc_about_alpha >= 32) {
@@ -1105,9 +1240,10 @@ int Draw_INTRO_part2(void)
 	}	
 			
 	/* Draw descs */
-	draw_start_desc(175, SCREEN_HEIGHT - (93 * Y_RATIO), desc_start_alpha);
-	draw_cheats_desc((SCREEN_WIDTH / 2) - (tex_desc_cheats.Width / 2) - 2, SCREEN_HEIGHT - (93 * Y_RATIO), desc_cheats_alpha);
-	draw_about_desc(482 - tex_desc_about.Width, SCREEN_HEIGHT - (96 * Y_RATIO), desc_about_alpha);
+	draw_start_desc(142, SCREEN_HEIGHT - (93 * Y_RATIO), desc_start_alpha);
+	draw_cheats_desc(239, SCREEN_HEIGHT - (93 * Y_RATIO), desc_cheats_alpha);
+	draw_options_desc(334, SCREEN_HEIGHT - (93 * Y_RATIO), desc_options_alpha);	
+	draw_about_desc(436, SCREEN_HEIGHT - (96 * Y_RATIO), desc_about_alpha);
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
@@ -1116,8 +1252,8 @@ int Draw_INTRO_part2(void)
 
     if ((gshi_fadein_done) && (ghsi_logo_move_done) && \
     	(icon_start_move_done) && (icon_cheats_move_done) && (icon_about_move_done) && \
-    	(icon_start_fadein_done) && (icon_cheats_fadein_done) && (icon_about_fadein_done) && \
-    	(desc_start_fadein_done) && (desc_cheats_fadein_done) && (desc_about_fadein_done))
+    	(icon_start_fadein_done) && (icon_cheats_fadein_done) && (icon_about_fadein_done) && (icon_options_fadein_done) && \
+    	(desc_start_fadein_done) && (desc_cheats_fadein_done) && (desc_about_fadein_done) && (desc_options_fadein_done))
     	intro_done = 1;
 
     /* Return 1 if intro have finished playing */
@@ -1157,9 +1293,10 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	draw_gshi(gshi_x, (169 * Y_RATIO), gshi_alpha);
 				
 	/* Draw icons */
-	draw_start_icon(180, icon_start_y, icon_start_alpha);
-	draw_cheats_icon((SCREEN_WIDTH / 2) - (tex_icon_cheats.Width / 2), icon_cheats_y, icon_cheats_alpha);
-	draw_about_icon(460 - tex_icon_about.Width, icon_about_y, icon_about_alpha);	
+	draw_start_icon(148, icon_start_y, icon_start_alpha);
+	draw_cheats_icon(242, icon_cheats_y, icon_cheats_alpha);
+	draw_options_icon(344, icon_options_y, icon_options_alpha);	
+	draw_about_icon(442, icon_about_y, icon_about_alpha);	
 						
 	/* Alpha calculation to control Highlight pulse	*/
 	if (highlight_pulse) {
@@ -1190,26 +1327,29 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 		
 	desc_start_alpha = 32;
 	desc_cheats_alpha = 32;
+	desc_options_alpha = 32;	
 	desc_about_alpha = 32;
 	
 	switch (selected_button) {
 		case 1:
 			desc_start_alpha = highlight_alpha;
 			break;
-			
 		case 2:
 			desc_cheats_alpha = highlight_alpha;
 			break;
-			
 		case 3:
-			desc_about_alpha = highlight_alpha;
+			desc_options_alpha = highlight_alpha;
 			break;
+		case 4:
+			desc_about_alpha = highlight_alpha;
+			break;			
 	}
 	
 	/* Draw descs */
-	draw_start_desc(175, SCREEN_HEIGHT - (93 * Y_RATIO), desc_start_alpha);
-	draw_cheats_desc((SCREEN_WIDTH / 2) - (tex_desc_cheats.Width / 2) - 2, SCREEN_HEIGHT - (93 * Y_RATIO), desc_cheats_alpha);
-	draw_about_desc(482 - tex_desc_about.Width, SCREEN_HEIGHT - (96 * Y_RATIO), desc_about_alpha);
+	draw_start_desc(142, SCREEN_HEIGHT - (93 * Y_RATIO), desc_start_alpha);
+	draw_cheats_desc(239, SCREEN_HEIGHT - (93 * Y_RATIO), desc_cheats_alpha);
+	draw_options_desc(334, SCREEN_HEIGHT - (93 * Y_RATIO), desc_options_alpha);	
+	draw_about_desc(436, SCREEN_HEIGHT - (96 * Y_RATIO), desc_about_alpha);
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     

@@ -22,7 +22,7 @@ extern u32 size_elf_loader;
 
 //#define PCSX2_DEBUG
 
-// gui.c
+/* gui.c */
 extern void Setup_GS(int gs_vmode);
 extern void gfx_set_defaults(void);
 extern void load_mainmenu_Textures(void);
@@ -42,18 +42,18 @@ extern int FONT_SPACING;
 extern int FONT_Y;
 extern float Y_RATIO;
 
-// timer.c
+/* timer.c */
 extern void TimerInit(void);
 extern u64  Timer(void);
 extern void TimerEnd(void);
 
-// pad.c
+/* pad.c */
 extern u32  new_pad;
 extern int  readPad(void);
 extern void waitAnyPadReady(void);
 extern int  setupPad(void);
 
-// main
+/* main */
 #define MAX_PATH 	1024
 
 int TV_mode;
@@ -63,7 +63,7 @@ int highlight_pulse;
 
 char run_path[MAX_PATH];
 	
-// functions prototypes
+/* functions prototypes */
 void load_elf(char *elf_path);
 void IOP_Reset(void);
 void CleanUp(void);
@@ -72,7 +72,7 @@ int  load_USB_modules(void);
 void launch_OSDSYS(void);
 void Update_GUI(void);
 
-// ELF-header structures and identifiers
+/* ELF-header structures and identifiers */
 #define ELF_MAGIC	0x464c457f
 #define ELF_PT_LOAD	1
 
@@ -411,7 +411,7 @@ int main(int argc, char *argv[])
 					#endif		
 								
 					selected_button--;
-					if (selected_button < 1) selected_button = 3;
+					if (selected_button < 1) selected_button = 4;
 				}				
 			}
 			else if(new_pad & PAD_RIGHT)
@@ -430,7 +430,7 @@ int main(int argc, char *argv[])
 					#endif
 								
 					selected_button++;
-					if (selected_button > 3) selected_button = 1;				
+					if (selected_button > 4) selected_button = 1;				
 				}
 			}			
 		}
