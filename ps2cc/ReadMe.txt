@@ -7,6 +7,8 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 28: NTPB comms changes
+
 Rev 27: Settings fix
 
 Rev 26: File Mode option added (Search > File Mode).

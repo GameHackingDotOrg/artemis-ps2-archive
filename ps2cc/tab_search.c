@@ -196,8 +196,8 @@ BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPar
 								} break;
                             	case 1: //IOP
                             	{
-									SetWindowText(hwndSearchAreaLow, "00000000");
-									SetWindowText(hwndSearchAreaHigh, "00200000");
+									SetWindowText(hwndSearchAreaLow, "BC000000");
+									SetWindowText(hwndSearchAreaHigh, "BC200000");
 									EnableWindow (hwndSearchAreaLow, FALSE);
 									EnableWindow (hwndSearchAreaHigh, FALSE);
 								} break;
