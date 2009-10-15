@@ -67,7 +67,7 @@ int FONT_WIDTH    = 16;
 int FONT_HEIGHT   = 15;
 int FONT_SPACING  = 1;
 int FONT_Y        = 75;
-float Y_RATIO	  = 0.876f;
+float Y_RATIO	  = 0.875f;
 
 /* define colors */
 #define Black  		GS_SETREG_RGBAQ(0x00,0x00,0x00,0x00,0x00)
@@ -342,26 +342,23 @@ void draw_background(int alpha)
 /*
  * Draw Artemis logo
  */
-void draw_logo(int width, int height, int alpha)
+void draw_logo(int alpha)
 {
-	int x1, x2, y1, y2;
+	int x, y;
 
-	/* Calculates coordinates to center the logo */
-	x1 = (SCREEN_WIDTH - width) / 2;
-	x2 = x1 + width;
-	y1 = ((SCREEN_HEIGHT - height) / 2) - 50;
-	y2 = y1 + height;
+	x = (SCREEN_WIDTH - tex_logo.Width) / 2;
+	y = 28 * Y_RATIO;
 
 	/* Draw logo */
 	gsKit_prim_sprite_texture(gsGlobal, &tex_logo,
-							x1, 				/* X1 */
-							y1,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x2, 				/* X2 */
-							y2,					/* Y2 */
-							tex_logo.Width, 	/* U2 */
-							tex_logo.Height,	/* V2 */
+							x, 								/* X1 */
+							y,								/* Y1 */
+							0,  							/* U1 */
+							0,  							/* V1 */
+							x + tex_logo.Width, 			/* X2 */
+							y + (tex_logo.Height * Y_RATIO),/* Y2 */
+							tex_logo.Width, 				/* U2 */
+							tex_logo.Height,				/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -369,26 +366,23 @@ void draw_logo(int width, int height, int alpha)
 /*
  * Draw Artemis ghost logo
  */
-void draw_logo_ghost(int width, int height, int alpha)
+void draw_logo_ghost(int alpha)
 {
-	int x1, x2, y1, y2;
+	int x, y;
 
-	/* Calculates coordinates to center the logo */
-	x1 = (SCREEN_WIDTH - width) / 2;
-	x2 = x1 + width;
-	y1 = ((SCREEN_HEIGHT - height) / 2) - 46;
-	y2 = y1 + height;
+	x = (SCREEN_WIDTH - tex_logo_ghost.Width) / 2;
+	y = 2 * Y_RATIO;
 
 	/* Draw logo */
 	gsKit_prim_sprite_texture(gsGlobal, &tex_logo_ghost,
-							x1, 				/* X1 */
-							y1,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x2, 				/* X2 */
-							y2,					/* Y2 */
-							tex_logo_ghost.Width, 	/* U2 */
-							tex_logo_ghost.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_logo_ghost.Width, 				/* X2 */
+							y + (tex_logo_ghost.Height * Y_RATIO),	/* Y2 */
+							tex_logo_ghost.Width, 					/* U2 */
+							tex_logo_ghost.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -400,14 +394,14 @@ void draw_gshi(int x, int y, int alpha)
 {
 	/* Draw gshi */
 	gsKit_prim_sprite_texture(gsGlobal, &tex_gshi_full,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_gshi_full.Width, /* X2 */
-							y + (tex_gshi_full.Height * Y_RATIO), /* Y2 */
-							tex_gshi_full.Width, 	/* U2 */
-							tex_gshi_full.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_gshi_full.Width, 				/* X2 */
+							y + (tex_gshi_full.Height * Y_RATIO), 	/* Y2 */
+							tex_gshi_full.Width, 					/* U2 */
+							tex_gshi_full.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -418,14 +412,14 @@ void draw_gshi(int x, int y, int alpha)
 void draw_start_icon(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_start,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_icon_start.Width, /* X2 */
-							y + (tex_icon_start.Height * Y_RATIO), /* Y2 */
-							tex_icon_start.Width, 	/* U2 */
-							tex_icon_start.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_icon_start.Width, 				/* X2 */
+							y + (tex_icon_start.Height * Y_RATIO), 	/* Y2 */
+							tex_icon_start.Width, 					/* U2 */
+							tex_icon_start.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -436,14 +430,14 @@ void draw_start_icon(int x, int y, int alpha)
 void draw_cheats_icon(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_cheats,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_icon_cheats.Width, /* X2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_icon_cheats.Width, 				/* X2 */
 							y + (tex_icon_cheats.Height * Y_RATIO), /* Y2 */
-							tex_icon_cheats.Width, 	/* U2 */
-							tex_icon_cheats.Height,	/* V2 */
+							tex_icon_cheats.Width, 					/* U2 */
+							tex_icon_cheats.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -454,14 +448,14 @@ void draw_cheats_icon(int x, int y, int alpha)
 void draw_about_icon(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_about,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_icon_about.Width, /* X2 */
-							y + (tex_icon_about.Height * Y_RATIO), /* Y2 */
-							tex_icon_about.Width, 	/* U2 */
-							tex_icon_about.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_icon_about.Width, 				/* X2 */
+							y + (tex_icon_about.Height * Y_RATIO), 	/* Y2 */
+							tex_icon_about.Width, 					/* U2 */
+							tex_icon_about.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -472,14 +466,14 @@ void draw_about_icon(int x, int y, int alpha)
 void draw_options_icon(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_options,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_icon_options.Width, /* X2 */
-							y + (tex_icon_options.Height * Y_RATIO), /* Y2 */
-							tex_icon_options.Width, 	/* U2 */
-							tex_icon_options.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_icon_options.Width, 			/* X2 */
+							y + (tex_icon_options.Height * Y_RATIO),/* Y2 */
+							tex_icon_options.Width, 				/* U2 */
+							tex_icon_options.Height,				/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -490,14 +484,14 @@ void draw_options_icon(int x, int y, int alpha)
 void draw_start_desc(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_desc_start,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_desc_start.Width, /* X2 */
-							y + (tex_desc_start.Height * Y_RATIO), /* Y2 */
-							tex_desc_start.Width, 	/* U2 */
-							tex_desc_start.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_desc_start.Width, 				/* X2 */
+							y + (tex_desc_start.Height * Y_RATIO), 	/* Y2 */
+							tex_desc_start.Width, 					/* U2 */
+							tex_desc_start.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -508,14 +502,14 @@ void draw_start_desc(int x, int y, int alpha)
 void draw_cheats_desc(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_desc_cheats,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_desc_cheats.Width, /* X2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_desc_cheats.Width,				/* X2 */
 							y + (tex_desc_cheats.Height * Y_RATIO), /* Y2 */
-							tex_desc_cheats.Width, 	/* U2 */
-							tex_desc_cheats.Height,	/* V2 */
+							tex_desc_cheats.Width, 					/* U2 */
+							tex_desc_cheats.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -526,14 +520,14 @@ void draw_cheats_desc(int x, int y, int alpha)
 void draw_about_desc(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_desc_about,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_desc_about.Width, /* X2 */
-							y + (tex_desc_about.Height * Y_RATIO), /* Y2 */
-							tex_desc_about.Width, 	/* U2 */
-							tex_desc_about.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_desc_about.Width, 				/* X2 */
+							y + (tex_desc_about.Height * Y_RATIO), 	/* Y2 */
+							tex_desc_about.Width, 					/* U2 */
+							tex_desc_about.Height,					/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -544,14 +538,14 @@ void draw_about_desc(int x, int y, int alpha)
 void draw_options_desc(int x, int y, int alpha)
 {
 	gsKit_prim_sprite_texture(gsGlobal, &tex_desc_options,
-							x, 				/* X1 */
-							y,					/* Y1 */
-							0,  				/* U1 */
-							0,  				/* V1 */
-							x + tex_desc_options.Width, /* X2 */
-							y + (tex_desc_options.Height * Y_RATIO), /* Y2 */
-							tex_desc_options.Width, 	/* U2 */
-							tex_desc_options.Height,	/* V2 */
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_desc_options.Width, 			/* X2 */
+							y + (tex_desc_options.Height * Y_RATIO),/* Y2 */
+							tex_desc_options.Width, 				/* U2 */
+							tex_desc_options.Height,				/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
 }
@@ -876,9 +870,9 @@ void gfx_set_defaults(void)
 	logo_alpha = 0;
 	gshi_alpha = 0;
 	gshi_x = 378;
-	icon_start_y = SCREEN_HEIGHT + 60;
-	icon_cheats_y = SCREEN_HEIGHT + 40;
-	icon_options_y = SCREEN_HEIGHT + 20;	
+	icon_start_y = SCREEN_HEIGHT + (120 * Y_RATIO);
+	icon_cheats_y = SCREEN_HEIGHT + (80 * Y_RATIO);
+	icon_options_y = SCREEN_HEIGHT + (40 * Y_RATIO);	
 	icon_about_y = SCREEN_HEIGHT;	
 	icon_start_alpha = 0;
 	icon_cheats_alpha = 0;
@@ -995,10 +989,10 @@ int Draw_INTRO_part1(void)
 	draw_background(background_alpha);
 
 	/* Draw ghost logo */
-	draw_logo_ghost(tex_logo_ghost.Width, tex_logo_ghost.Height * Y_RATIO, logo_alpha);
+	draw_logo_ghost(logo_alpha);
 				
 	/* Draw logo */
-	draw_logo(tex_logo.Width, tex_logo.Height * Y_RATIO, logo_alpha);
+	draw_logo(logo_alpha);
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
@@ -1054,10 +1048,10 @@ int Draw_INTRO_part2(void)
 	draw_background(background_alpha);
 
 	/* Draw ghost logo */
-	draw_logo_ghost(tex_logo_ghost.Width, tex_logo_ghost.Height * Y_RATIO, logo_alpha);
+	draw_logo_ghost(logo_alpha);
 				
 	/* Draw logo */
-	draw_logo(tex_logo.Width, tex_logo.Height * Y_RATIO, logo_alpha);
+	draw_logo(logo_alpha);
 
 	/* Alpha calculation to control gshi fade-in */
 	if (gshi_alpha < 128) {
@@ -1082,9 +1076,9 @@ int Draw_INTRO_part2(void)
 		ghsi_logo_move_done = 1;
 		
 	/* Draw gshi */
-	draw_gshi(gshi_x, (169 * Y_RATIO), gshi_alpha);
+	draw_gshi(gshi_x, (116 * Y_RATIO), gshi_alpha);
 
-	int min_y = SCREEN_HEIGHT - (150 * Y_RATIO);
+	int min_y = 310 * Y_RATIO;
 	/* Y coordinate calculation to start icon moving */
 	if (icon_start_y > min_y) {
 		icon_start_y -= 4;
@@ -1240,10 +1234,10 @@ int Draw_INTRO_part2(void)
 	}	
 			
 	/* Draw descs */
-	draw_start_desc(142, SCREEN_HEIGHT - (93 * Y_RATIO), desc_start_alpha);
-	draw_cheats_desc(239, SCREEN_HEIGHT - (93 * Y_RATIO), desc_cheats_alpha);
-	draw_options_desc(334, SCREEN_HEIGHT - (93 * Y_RATIO), desc_options_alpha);	
-	draw_about_desc(436, SCREEN_HEIGHT - (96 * Y_RATIO), desc_about_alpha);
+	draw_start_desc(143, 367 * Y_RATIO, desc_start_alpha);
+	draw_cheats_desc(240, 367 * Y_RATIO, desc_cheats_alpha);
+	draw_options_desc(335, 367 * Y_RATIO, desc_options_alpha);	
+	draw_about_desc(436, 364 * Y_RATIO, desc_about_alpha);
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
@@ -1284,13 +1278,13 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	draw_background(background_alpha);
 
 	/* Draw ghost logo */
-	draw_logo_ghost(tex_logo_ghost.Width, tex_logo_ghost.Height * Y_RATIO, logo_alpha);
+	draw_logo_ghost(logo_alpha);
 				
 	/* Draw logo */
-	draw_logo(tex_logo.Width, tex_logo.Height * Y_RATIO, logo_alpha);
+	draw_logo(logo_alpha);
 
 	/* Draw gshi */
-	draw_gshi(gshi_x, (169 * Y_RATIO), gshi_alpha);
+	draw_gshi(gshi_x, (116 * Y_RATIO), gshi_alpha);
 				
 	/* Draw icons */
 	draw_start_icon(148, icon_start_y, icon_start_alpha);
@@ -1346,10 +1340,10 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	}
 	
 	/* Draw descs */
-	draw_start_desc(142, SCREEN_HEIGHT - (93 * Y_RATIO), desc_start_alpha);
-	draw_cheats_desc(239, SCREEN_HEIGHT - (93 * Y_RATIO), desc_cheats_alpha);
-	draw_options_desc(334, SCREEN_HEIGHT - (93 * Y_RATIO), desc_options_alpha);	
-	draw_about_desc(436, SCREEN_HEIGHT - (96 * Y_RATIO), desc_about_alpha);
+	draw_start_desc(143, 367 * Y_RATIO, desc_start_alpha);
+	draw_cheats_desc(240, 367 * Y_RATIO, desc_cheats_alpha);
+	draw_options_desc(335, 367 * Y_RATIO, desc_options_alpha);	
+	draw_about_desc(436, 364 * Y_RATIO, desc_about_alpha);
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     

@@ -332,7 +332,7 @@ int main(int argc, char *argv[])
 		FONT_HEIGHT   = 15;
 		FONT_SPACING  = 1;
 		FONT_Y        = 75;
-		Y_RATIO	  	  = 0.876f;		
+		Y_RATIO	  	  = 0.875f;
 	}
 
 	/* needed before to init pads */
