@@ -1,7 +1,7 @@
-#ifndef _FONT_VERDANA_H_
-#define _FONT_VERDANA_H_
+#ifndef _FONT_NEUROPOL_H_
+#define _FONT_NEUROPOL_H_
 
-int font_verdana_width[128] = {
+int font_neuropol_width[128] = {
 	 6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  // row 1
 	 6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  6,  // row 2
 	 4,  6,  7, 11,  9, 16, 11,  4,  7,  7,  9, 11,  5,  7,  5,  9,  // row 3		

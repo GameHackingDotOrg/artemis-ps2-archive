@@ -4,7 +4,7 @@ EE_BIN_PACKED = packed_ARTEMIS_GUI.ELF
 EE_BIN_DIR = bin
 
 EE_OBJS = main.o gui.o timer.o pad.o usbd.o usbhdfsd.o
-EE_OBJS += font_verdana.o
+EE_OBJS += font_neuropol.o
 EE_OBJS += background.o logo.o logo_ghost.o gshi_full.o
 EE_OBJS += icon_start.o icon_cheats.o icon_about.o icon_options.o 
 EE_OBJS += desc_start.o desc_cheats.o desc_about.o desc_options.o
@@ -13,7 +13,7 @@ EE_OBJS += menu_bar.o sel_bar1.o sel_bar2.o
 EE_OBJS += elf_loader.o
 
 EE_SRC = usbd.s usbhdfsd.s
-EE_SRC += font_verdana.s
+EE_SRC += font_neuropol.s
 EE_SRC += background.s logo.s logo_ghost.s gshi_full.s
 EE_SRC += icon_start.s icon_cheats.s icon_about.s icon_options.s
 EE_SRC += desc_start.s desc_cheats.s desc_about.s desc_options.s
@@ -41,8 +41,8 @@ usbd.s:
 usbhdfsd.s:
 	bin2s $(PS2DEV)/usbhdfsd/bin/usbhdfsd.irx usbhdfsd.s usb_mass_irx
 	
-font_verdana.s:
-	bin2s gui/font_verdana.png font_verdana.s font_verdana
+font_neuropol.s:
+	bin2s gui/font_neuropol.png font_neuropol.s font_neuropol
  
 background.s:
 	bin2s gui/background.png background.s background

@@ -27,6 +27,7 @@ extern void Setup_GS(int gs_vmode);
 extern void gfx_set_defaults(void);
 extern void load_mainmenu_Textures(void);
 extern void load_menu_Textures(void);
+extern void load_Font(void);
 extern void Clear_Screen(void);
 extern int  Draw_INTRO_part1(void);
 extern int  Draw_INTRO_part2(void);
@@ -348,6 +349,9 @@ int main(int argc, char *argv[])
 	/* Load Textures into VRAM */
 	load_mainmenu_Textures();
 	load_menu_Textures();
+	
+	/* Load Font */
+	load_Font();
 
 	/* Prior to call any of the gfx functions */
 	gfx_set_defaults();

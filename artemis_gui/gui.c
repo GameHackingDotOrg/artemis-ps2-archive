@@ -25,7 +25,7 @@ extern void sel_bar2;
 extern void icon_cheats_mini;
 extern void icon_about_mini;
 extern void icon_options_mini;
-extern void font_verdana;
+extern void font_neuropol;
 
 extern u32 size_background;
 extern u32 size_logo;
@@ -45,10 +45,10 @@ extern u32 size_sel_bar2;
 extern u32 size_icon_cheats_mini;
 extern u32 size_icon_about_mini;
 extern u32 size_icon_options_mini;
-extern u32 size_font_verdana;
+extern u32 size_font_neuropol;
 
 /* include font specific datas */
-#include "font_verdana.h"
+#include "font_neuropol.h"
 
 /* #define DEBUG */
 
@@ -58,6 +58,7 @@ void gfx_set_defaults(void);
 void vram_free(void);
 void load_mainmenu_Textures(void);
 void load_menu_Textures(void);
+void load_Font(void);
 void Clear_Screen(void);
 int  Draw_INTRO_part1(void);
 int  Draw_INTRO_part2(void);
@@ -71,7 +72,7 @@ GSTEXTURE tex_icon_start, tex_icon_cheats, tex_icon_options, tex_icon_about;
 GSTEXTURE tex_desc_start, tex_desc_cheats, tex_desc_options, tex_desc_about;
 GSTEXTURE tex_icon_cheats_mini, tex_icon_about_mini, tex_icon_options_mini;
 GSTEXTURE tex_menu_bar, tex_sel_bar1, tex_sel_bar2;
-GSTEXTURE tex_font_verdana;
+GSTEXTURE tex_font_neuropol;
 
 /* screen defaults for NTSC, just in case */
 int TV_mode       = 2;
@@ -260,9 +261,9 @@ void pngClose(pngData *png)
 }
 
 /*
- * Draw a character with verdana font
+ * Draw a character with neuropol font
  */
-void drawChar_verdana(u32 x, u32 y, u32 width, u32 height, u64 color, u32 c)
+void drawChar_neuropol(u32 x, u32 y, u32 width, u32 height, u64 color, u32 c)
 {
 	int x1, x2, y1, y2;
 	int u1, u2, v1, v2;
@@ -272,14 +273,14 @@ void drawChar_verdana(u32 x, u32 y, u32 width, u32 height, u64 color, u32 c)
 	y1 = y;
 	y2 = y1 + height;
 
-	/* Calculate char coordinates int verdana texture */
-	u1 = (c % (tex_font_verdana.Width/16)) * (tex_font_verdana.Width/16);
+	/* Calculate char coordinates int neuropol texture */
+	u1 = (c % (tex_font_neuropol.Width/16)) * (tex_font_neuropol.Width/16);
 	u2 = u1 + 16;
-	v1 = c - (c % (tex_font_verdana.Height/8)); /* careful: 8 rows only !!! */
+	v1 = c - (c % (tex_font_neuropol.Height/8)); /* careful: 8 rows only !!! */
 	v2 = v1 + 16;
 
-	/* Draw a char using verdana texture */
-	gsKit_prim_sprite_texture(gsGlobal, &tex_font_verdana,
+	/* Draw a char using neuropol texture */
+	gsKit_prim_sprite_texture(gsGlobal, &tex_font_neuropol,
 							x1, /* X1 */
 							y1,	/* Y1 */
 							u1, /* U1 */
@@ -293,9 +294,9 @@ void drawChar_verdana(u32 x, u32 y, u32 width, u32 height, u64 color, u32 c)
 }
 
 /*
- * Draw a string with verdana font
+ * Draw a string with neuropol font
  */
-void drawString_verdana(u32 x, u32 y, u64 color, const char *string)
+void drawString_neuropol(u32 x, u32 y, u64 color, const char *string)
 {
 	int l, i, cx;
 	int c;
@@ -309,17 +310,17 @@ void drawString_verdana(u32 x, u32 y, u64 color, const char *string)
 		if (c > 127) c = 127; /* security check as the font is incomplete */
 
 		/* Draw the string character by character */
-		drawChar_verdana(cx, y, FONT_WIDTH, FONT_HEIGHT, color, c);
+		drawChar_neuropol(cx, y, FONT_WIDTH, FONT_HEIGHT, color, c);
 
-		/* Uses width informations for verdana font header file */
-		cx += font_verdana_width[c] + FONT_SPACING;
+		/* Uses width informations for neuropol font header file */
+		cx += font_neuropol_width[c] + FONT_SPACING;
 	}
 }
 
 /*
- * Calculate and return width in pixels of a string using verdana font
+ * Calculate and return width in pixels of a string using neuropol font
  */
-int getStringWidth_verdana(const char *string)
+int getStringWidth_neuropol(const char *string)
 {
 	int i, l, c, size;
 
@@ -331,7 +332,7 @@ int getStringWidth_verdana(const char *string)
 		c = (u8)string[i];
 		if (c >= 128) c = 127; /* security check as the font is incomplete */
 
-		size += font_verdana_width[c] + FONT_SPACING;
+		size += font_neuropol_width[c] + FONT_SPACING;
 	}
 
 	return size;
@@ -1044,6 +1045,51 @@ void load_menu_Textures(void)
 		}
 	}	
 			
+	#ifdef DEBUG
+		printf("Load_GUI last VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
+	#endif
+	//SleepThread();
+}
+
+/*
+ * Load permanently menu textures into VRAM
+ */
+void load_Font(void)
+{
+	pngData *pPng;
+	u8		*pImgData;
+
+	//init_scr();
+	
+	#ifdef DEBUG
+		printf("1st VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
+	#endif
+
+	/* gsGlobal->CurrentPointer = vram_pointer; */
+
+	if ((pPng = pngOpenRAW(&font_neuropol, size_font_neuropol)) > 0) { /* tex size = 0x140000 */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_font_neuropol.PSM 		= GS_PSM_CT32;
+				tex_font_neuropol.Mem 		= (u32 *)pImgData;
+				tex_font_neuropol.VramClut = 0;
+				tex_font_neuropol.Clut		= NULL;
+				tex_font_neuropol.Width    = pPng->width;
+				tex_font_neuropol.Height   = pPng->height;
+				tex_font_neuropol.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_font_neuropol.Vram 	= gsKit_vram_alloc(gsGlobal,
+			 						  		gsKit_texture_size(tex_font_neuropol.Width, tex_font_neuropol.Height, tex_font_neuropol.PSM),
+			 						  		GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_font_neuropol);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}
 	#ifdef DEBUG
 		printf("Load_GUI last VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
 	#endif
