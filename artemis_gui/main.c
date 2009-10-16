@@ -26,6 +26,7 @@ extern u32 size_elf_loader;
 extern void Setup_GS(int gs_vmode);
 extern void gfx_set_defaults(void);
 extern void load_mainmenu_Textures(void);
+extern void load_menu_Textures(void);
 extern void Clear_Screen(void);
 extern int  Draw_INTRO_part1(void);
 extern int  Draw_INTRO_part2(void);
@@ -344,8 +345,9 @@ int main(int argc, char *argv[])
 	/* Initializes pads */
 	setupPad();
 
-	/* Load Main Menu Textures into VRAM */
+	/* Load Textures into VRAM */
 	load_mainmenu_Textures();
+	load_menu_Textures();
 
 	/* Prior to call any of the gfx functions */
 	gfx_set_defaults();

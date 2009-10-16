@@ -19,6 +19,12 @@ extern void desc_start;
 extern void desc_cheats;
 extern void desc_options;
 extern void desc_about;
+extern void menu_bar;
+extern void sel_bar1;
+extern void sel_bar2;
+extern void icon_cheats_mini;
+extern void icon_about_mini;
+extern void icon_options_mini;
 extern void font_verdana;
 
 extern u32 size_background;
@@ -33,6 +39,12 @@ extern u32 size_desc_start;
 extern u32 size_desc_cheats;
 extern u32 size_desc_options;
 extern u32 size_desc_about;
+extern u32 size_menu_bar;
+extern u32 size_sel_bar1;
+extern u32 size_sel_bar2;
+extern u32 size_icon_cheats_mini;
+extern u32 size_icon_about_mini;
+extern u32 size_icon_options_mini;
 extern u32 size_font_verdana;
 
 /* include font specific datas */
@@ -45,6 +57,7 @@ void Setup_GS(int gs_vmode);
 void gfx_set_defaults(void);
 void vram_free(void);
 void load_mainmenu_Textures(void);
+void load_menu_Textures(void);
 void Clear_Screen(void);
 int  Draw_INTRO_part1(void);
 int  Draw_INTRO_part2(void);
@@ -56,6 +69,8 @@ GSGLOBAL *gsGlobal;
 GSTEXTURE tex_background, tex_logo, tex_logo_ghost, tex_gshi_full;
 GSTEXTURE tex_icon_start, tex_icon_cheats, tex_icon_options, tex_icon_about;
 GSTEXTURE tex_desc_start, tex_desc_cheats, tex_desc_options, tex_desc_about;
+GSTEXTURE tex_icon_cheats_mini, tex_icon_about_mini, tex_icon_options_mini;
+GSTEXTURE tex_menu_bar, tex_sel_bar1, tex_sel_bar2;
 GSTEXTURE tex_font_verdana;
 
 /* screen defaults for NTSC, just in case */
@@ -560,7 +575,7 @@ void vram_free(void)
 }
 
 /*
- * Load permanently needed textures into VRAM
+ * Load permanently mainmenu textures into VRAM
  */
 void load_mainmenu_Textures(void)
 {
@@ -862,6 +877,172 @@ void load_mainmenu_Textures(void)
 			free(pImgData);
 		}
 	}
+			
+	#ifdef DEBUG
+		printf("Load_GUI last VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
+	#endif
+	//SleepThread();
+}
+
+/*
+ * Load permanently menu textures into VRAM
+ */
+void load_menu_Textures(void)
+{
+	pngData *pPng;
+	u8		*pImgData;
+
+	//init_scr();
+	
+	#ifdef DEBUG
+		printf("1st VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
+	#endif
+
+	/* gsGlobal->CurrentPointer = vram_pointer; */
+
+	if ((pPng = pngOpenRAW(&icon_cheats_mini, size_icon_cheats_mini)) > 0) { /* tex size = 0x140000 */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_icon_cheats_mini.PSM 		= GS_PSM_CT32;
+				tex_icon_cheats_mini.Mem 		= (u32 *)pImgData;
+				tex_icon_cheats_mini.VramClut = 0;
+				tex_icon_cheats_mini.Clut		= NULL;
+				tex_icon_cheats_mini.Width    = pPng->width;
+				tex_icon_cheats_mini.Height   = pPng->height;
+				tex_icon_cheats_mini.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_icon_cheats_mini.Vram 	= gsKit_vram_alloc(gsGlobal,
+			 						  		gsKit_texture_size(tex_icon_cheats_mini.Width, tex_icon_cheats_mini.Height, tex_icon_cheats_mini.PSM),
+			 						  		GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_icon_cheats_mini);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}
+
+	if ((pPng = pngOpenRAW(&icon_about_mini, size_icon_about_mini)) > 0) { /* tex size = 0x140000 */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_icon_about_mini.PSM 		= GS_PSM_CT32;
+				tex_icon_about_mini.Mem 		= (u32 *)pImgData;
+				tex_icon_about_mini.VramClut = 0;
+				tex_icon_about_mini.Clut		= NULL;
+				tex_icon_about_mini.Width    = pPng->width;
+				tex_icon_about_mini.Height   = pPng->height;
+				tex_icon_about_mini.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_icon_about_mini.Vram 	= gsKit_vram_alloc(gsGlobal,
+			 						  		gsKit_texture_size(tex_icon_about_mini.Width, tex_icon_about_mini.Height, tex_icon_about_mini.PSM),
+			 						  		GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_icon_about_mini);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}
+		
+	if ((pPng = pngOpenRAW(&icon_options_mini, size_icon_options_mini)) > 0) { /* tex size = 0x140000 */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_icon_options_mini.PSM 		= GS_PSM_CT32;
+				tex_icon_options_mini.Mem 		= (u32 *)pImgData;
+				tex_icon_options_mini.VramClut = 0;
+				tex_icon_options_mini.Clut		= NULL;
+				tex_icon_options_mini.Width    = pPng->width;
+				tex_icon_options_mini.Height   = pPng->height;
+				tex_icon_options_mini.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_icon_options_mini.Vram 	= gsKit_vram_alloc(gsGlobal,
+			 						  		gsKit_texture_size(tex_icon_options_mini.Width, tex_icon_options_mini.Height, tex_icon_options_mini.PSM),
+			 						  		GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_icon_options_mini);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}
+
+	if ((pPng = pngOpenRAW(&menu_bar, size_menu_bar)) > 0) { /* tex size = 0x140000 */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_menu_bar.PSM 		= GS_PSM_CT32;
+				tex_menu_bar.Mem 		= (u32 *)pImgData;
+				tex_menu_bar.VramClut = 0;
+				tex_menu_bar.Clut		= NULL;
+				tex_menu_bar.Width    = pPng->width;
+				tex_menu_bar.Height   = pPng->height;
+				tex_menu_bar.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_menu_bar.Vram 	= gsKit_vram_alloc(gsGlobal,
+			 						  		gsKit_texture_size(tex_menu_bar.Width, tex_menu_bar.Height, tex_menu_bar.PSM),
+			 						  		GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_menu_bar);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}
+	
+	if ((pPng = pngOpenRAW(&sel_bar1, size_sel_bar1)) > 0) { /* tex size = 0x140000 */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_sel_bar1.PSM 		= GS_PSM_CT32;
+				tex_sel_bar1.Mem 		= (u32 *)pImgData;
+				tex_sel_bar1.VramClut = 0;
+				tex_sel_bar1.Clut		= NULL;
+				tex_sel_bar1.Width    = pPng->width;
+				tex_sel_bar1.Height   = pPng->height;
+				tex_sel_bar1.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_sel_bar1.Vram 	= gsKit_vram_alloc(gsGlobal,
+			 						  		gsKit_texture_size(tex_sel_bar1.Width, tex_sel_bar1.Height, tex_sel_bar1.PSM),
+			 						  		GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_sel_bar1);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}	
+
+	if ((pPng = pngOpenRAW(&sel_bar2, size_sel_bar2)) > 0) { /* tex size = 0x140000 */
+		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
+			if (pngReadImage( pPng, pImgData ) != -1) {
+				tex_sel_bar2.PSM 		= GS_PSM_CT32;
+				tex_sel_bar2.Mem 		= (u32 *)pImgData;
+				tex_sel_bar2.VramClut = 0;
+				tex_sel_bar2.Clut		= NULL;
+				tex_sel_bar2.Width    = pPng->width;
+				tex_sel_bar2.Height   = pPng->height;
+				tex_sel_bar2.Filter   = GS_FILTER_NEAREST;
+				#ifdef DEBUG
+					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
+					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
+				#endif
+				tex_sel_bar2.Vram 	= gsKit_vram_alloc(gsGlobal,
+			 						  		gsKit_texture_size(tex_sel_bar2.Width, tex_sel_bar2.Height, tex_sel_bar2.PSM),
+			 						  		GSKIT_ALLOC_USERBUFFER);
+				gsKit_texture_upload(gsGlobal, &tex_sel_bar2);
+			}
+			pngClose(pPng);
+			free(pImgData);
+		}
+	}	
 			
 	#ifdef DEBUG
 		printf("Load_GUI last VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
