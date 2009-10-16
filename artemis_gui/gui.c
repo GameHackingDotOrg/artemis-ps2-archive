@@ -80,22 +80,14 @@ int	SCREEN_WIDTH  = 640;
 int	SCREEN_HEIGHT = 448;
 int SCREEN_X	  = 632;
 int SCREEN_Y	  = 50;
-int FONT_WIDTH    = 16;
-int FONT_HEIGHT   = 15;
-int FONT_SPACING  = 1;
-int FONT_Y        = 75;
 float Y_RATIO	  = 0.875f;
 
 /* define colors */
-#define Black  		GS_SETREG_RGBAQ(0x00,0x00,0x00,0x00,0x00)
+#define Black  		GS_SETREG_RGBAQ(0x00,0x00,0x00,0x80,0x00)
 #define Blue  		GS_SETREG_RGBAQ(0x18,0x23,0xFF,0x80,0x00)
 #define White  		GS_SETREG_RGBAQ(0xFF,0xFF,0xFF,0x80,0x00)
 #define Gray  		GS_SETREG_RGBAQ(0x33,0x33,0x33,0x80,0x00)
 #define TexCol 		GS_SETREG_RGBAQ(0x80,0x80,0x80,0x80,0x00)
-
-/* Common to both GUI & INTRO */
-int bar_delimiter_x[7];
-int option_x[6];
 
 /* For GUI */
 int background_alpha;
@@ -296,7 +288,7 @@ void drawChar_neuropol(u32 x, u32 y, u32 width, u32 height, u64 color, u32 c)
 /*
  * Draw a string with neuropol font
  */
-void drawString_neuropol(u32 x, u32 y, u64 color, const char *string)
+void drawString_neuropol(u32 x, u32 y, int fontsize, int fontspacing, u64 color, const char *string)
 {
 	int l, i, cx;
 	int c;
@@ -310,17 +302,17 @@ void drawString_neuropol(u32 x, u32 y, u64 color, const char *string)
 		if (c > 127) c = 127; /* security check as the font is incomplete */
 
 		/* Draw the string character by character */
-		drawChar_neuropol(cx, y, FONT_WIDTH, FONT_HEIGHT, color, c);
+		drawChar_neuropol(cx, y, fontsize, fontsize-1, color, c);
 
 		/* Uses width informations for neuropol font header file */
-		cx += font_neuropol_width[c] + FONT_SPACING;
+		cx += font_neuropol_width[c] + fontspacing;
 	}
 }
 
 /*
  * Calculate and return width in pixels of a string using neuropol font
  */
-int getStringWidth_neuropol(const char *string)
+int getStringWidth_neuropol(const char *string, int fontspacing)
 {
 	int i, l, c, size;
 
@@ -332,7 +324,7 @@ int getStringWidth_neuropol(const char *string)
 		c = (u8)string[i];
 		if (c >= 128) c = 127; /* security check as the font is incomplete */
 
-		size += font_neuropol_width[c] + FONT_SPACING;
+		size += font_neuropol_width[c] + fontspacing;
 	}
 
 	return size;
@@ -1580,6 +1572,15 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	draw_cheats_desc(240, 357 * Y_RATIO, desc_cheats_alpha);
 	draw_options_desc(335, 357 * Y_RATIO, desc_options_alpha);	
 	draw_about_desc(436, 354 * Y_RATIO, desc_about_alpha);
+	
+	drawString_neuropol(20, 10 * Y_RATIO, 16, 0, Black, "abcdefghijklmnopqrstuvwxyza");
+	drawString_neuropol(20, 26 * Y_RATIO, 16, 0, Black, "ABCDEFGHIJKLMNOPQRSTUVWXYZA");
+	drawString_neuropol(20, 42 * Y_RATIO, 16, 0, Black, "Neuropol NEUROPOL");	
+	drawString_neuropol(20, 58 * Y_RATIO, 16, 0, Black, "0123456789-+\\/*=0\"ok\" ',;:()[]{}=&$#|@^%!?0");	
+	drawString_neuropol(20, 410 * Y_RATIO, 16, 0, Black, "Final Fantasy XI: Chains of Promathia Online Pack");
+	drawString_neuropol(20, 426 * Y_RATIO, 16, 0, Black, "Altana no Kamlhel Girade no Genei Treasures of");
+	drawString_neuropol(20, 442 * Y_RATIO, 16, 0, Black, "Aht Urhgan A Moogle Kupo d'Etat Vana'dlel");
+	drawString_neuropol(20, 458 * Y_RATIO, 20, 3, Black, "Choose Cheats - Options - About");
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     

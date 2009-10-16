@@ -320,20 +320,12 @@ int main(int argc, char *argv[])
 		SCREEN_HEIGHT = 512;
 		SCREEN_X	  = 692;
 		SCREEN_Y	  = 72;
-		FONT_WIDTH    = 16;
-		FONT_HEIGHT   = 17;
-		FONT_SPACING  = 1;
-		FONT_Y        = 85;
 		Y_RATIO	  	  = 1.0f;
 	} else { /* NTSC values can be adjusted, altought it fit fine too on my TV */
 		SCREEN_WIDTH  = 640;
 		SCREEN_HEIGHT = 448;
 		SCREEN_X 	  = 672;
 		SCREEN_Y	  = 50;
-		FONT_WIDTH    = 16;
-		FONT_HEIGHT   = 15;
-		FONT_SPACING  = 1;
-		FONT_Y        = 75;
 		Y_RATIO	  	  = 0.875f;
 	}
 
@@ -346,13 +338,13 @@ int main(int argc, char *argv[])
 	/* Initializes pads */
 	setupPad();
 
+	/* Load Font */
+	load_Font();
+	
 	/* Load Textures into VRAM */
 	load_mainmenu_Textures();
 	load_menu_Textures();
 	
-	/* Load Font */
-	load_Font();
-
 	/* Prior to call any of the gfx functions */
 	gfx_set_defaults();
 		
