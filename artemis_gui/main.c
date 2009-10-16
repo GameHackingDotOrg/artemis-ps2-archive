@@ -395,8 +395,7 @@ int main(int argc, char *argv[])
 						break;
 				}
 			}
-			else if(new_pad & PAD_LEFT)
-			{
+			else if(new_pad & PAD_LEFT)	{
 				/* Slow Down D-pads response without blocking */
 				#ifndef PCSX2_DEBUG
 				if (Timer() > WaitTime + slowDown_amount) 
@@ -414,8 +413,7 @@ int main(int argc, char *argv[])
 					if (selected_button < 1) selected_button = 4;
 				}				
 			}
-			else if(new_pad & PAD_RIGHT)
-			{
+			else if(new_pad & PAD_RIGHT) {
 				/* Slow Down D-pads response without blocking */
 				#ifndef PCSX2_DEBUG
 				if (Timer() > WaitTime + slowDown_amount) 
@@ -432,6 +430,9 @@ int main(int argc, char *argv[])
 					selected_button++;
 					if (selected_button > 4) selected_button = 1;				
 				}
+			}
+			else if (new_pad & (PAD_START | PAD_SELECT | PAD_L1 | PAD_L2 | PAD_R1 | PAD_R2)) {
+				launch_OSDSYS();
 			}			
 		}
 		

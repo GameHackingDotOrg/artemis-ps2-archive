@@ -43,6 +43,7 @@ extern u32 size_font_verdana;
 /* fn prototypes */
 void Setup_GS(int gs_vmode);
 void gfx_set_defaults(void);
+void vram_free(void);
 void load_mainmenu_Textures(void);
 void Clear_Screen(void);
 int  Draw_INTRO_part1(void);
@@ -347,7 +348,7 @@ void draw_logo(int alpha)
 	int x, y;
 
 	x = (SCREEN_WIDTH - tex_logo.Width) / 2;
-	y = 28 * Y_RATIO;
+	y = 18 * Y_RATIO;
 
 	/* Draw logo */
 	gsKit_prim_sprite_texture(gsGlobal, &tex_logo,
@@ -371,7 +372,7 @@ void draw_logo_ghost(int alpha)
 	int x, y;
 
 	x = (SCREEN_WIDTH - tex_logo_ghost.Width) / 2;
-	y = 2 * Y_RATIO;
+	y = -8 * Y_RATIO;
 
 	/* Draw logo */
 	gsKit_prim_sprite_texture(gsGlobal, &tex_logo_ghost,
@@ -548,6 +549,14 @@ void draw_options_desc(int x, int y, int alpha)
 							tex_desc_options.Height,				/* V2 */
 							0,
 							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
+}
+
+/*
+ * Clears VRAM
+ */
+void vram_free(void)
+{
+	gsKit_vram_clear(gsGlobal);
 }
 
 /*
@@ -1076,9 +1085,9 @@ int Draw_INTRO_part2(void)
 		ghsi_logo_move_done = 1;
 		
 	/* Draw gshi */
-	draw_gshi(gshi_x, (116 * Y_RATIO), gshi_alpha);
+	draw_gshi(gshi_x, (106 * Y_RATIO), gshi_alpha);
 
-	int min_y = 310 * Y_RATIO;
+	int min_y = 300 * Y_RATIO;
 	/* Y coordinate calculation to start icon moving */
 	if (icon_start_y > min_y) {
 		icon_start_y -= 4;
@@ -1234,10 +1243,10 @@ int Draw_INTRO_part2(void)
 	}	
 			
 	/* Draw descs */
-	draw_start_desc(143, 367 * Y_RATIO, desc_start_alpha);
-	draw_cheats_desc(240, 367 * Y_RATIO, desc_cheats_alpha);
-	draw_options_desc(335, 367 * Y_RATIO, desc_options_alpha);	
-	draw_about_desc(436, 364 * Y_RATIO, desc_about_alpha);
+	draw_start_desc(143, 357 * Y_RATIO, desc_start_alpha);
+	draw_cheats_desc(240, 357 * Y_RATIO, desc_cheats_alpha);
+	draw_options_desc(335, 357 * Y_RATIO, desc_options_alpha);	
+	draw_about_desc(436, 354 * Y_RATIO, desc_about_alpha);
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
@@ -1284,7 +1293,7 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	draw_logo(logo_alpha);
 
 	/* Draw gshi */
-	draw_gshi(gshi_x, (116 * Y_RATIO), gshi_alpha);
+	draw_gshi(gshi_x, (106 * Y_RATIO), gshi_alpha);
 				
 	/* Draw icons */
 	draw_start_icon(148, icon_start_y, icon_start_alpha);
@@ -1340,10 +1349,10 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	}
 	
 	/* Draw descs */
-	draw_start_desc(143, 367 * Y_RATIO, desc_start_alpha);
-	draw_cheats_desc(240, 367 * Y_RATIO, desc_cheats_alpha);
-	draw_options_desc(335, 367 * Y_RATIO, desc_options_alpha);	
-	draw_about_desc(436, 364 * Y_RATIO, desc_about_alpha);
+	draw_start_desc(143, 357 * Y_RATIO, desc_start_alpha);
+	draw_cheats_desc(240, 357 * Y_RATIO, desc_cheats_alpha);
+	draw_options_desc(335, 357 * Y_RATIO, desc_options_alpha);	
+	draw_about_desc(436, 354 * Y_RATIO, desc_about_alpha);
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
