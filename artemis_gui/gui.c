@@ -302,17 +302,17 @@ void drawString_neuropol(u32 x, u32 y, int fontsize, int fontspacing, u64 color,
 		if (c > 127) c = 127; /* security check as the font is incomplete */
 
 		/* Draw the string character by character */
-		drawChar_neuropol(cx, y, fontsize, fontsize-1, color, c);
+		drawChar_neuropol(cx, y, fontsize, (fontsize) * Y_RATIO, color, c);
 
 		/* Uses width informations for neuropol font header file */
-		cx += font_neuropol_width[c] + fontspacing;
+		cx += font_neuropol_width[c] + (fontsize-16) + fontspacing;
 	}
 }
 
 /*
  * Calculate and return width in pixels of a string using neuropol font
  */
-int getStringWidth_neuropol(const char *string, int fontspacing)
+int getStringWidth_neuropol(const char *string, int fontsize, int fontspacing)
 {
 	int i, l, c, size;
 
@@ -324,7 +324,7 @@ int getStringWidth_neuropol(const char *string, int fontspacing)
 		c = (u8)string[i];
 		if (c >= 128) c = 127; /* security check as the font is incomplete */
 
-		size += font_neuropol_width[c] + fontspacing;
+		size += font_neuropol_width[c] + (fontsize-16) + fontspacing;
 	}
 
 	return size;
@@ -1580,7 +1580,7 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	drawString_neuropol(20, 410 * Y_RATIO, 16, 0, Black, "Final Fantasy XI: Chains of Promathia Online Pack");
 	drawString_neuropol(20, 426 * Y_RATIO, 16, 0, Black, "Altana no Kamlhel Girade no Genei Treasures of");
 	drawString_neuropol(20, 442 * Y_RATIO, 16, 0, Black, "Aht Urhgan A Moogle Kupo d'Etat Vana'dlel");
-	drawString_neuropol(20, 458 * Y_RATIO, 20, 3, Black, "Choose Cheats - Options - About");
+	drawString_neuropol(20, 458 * Y_RATIO, 20, 0, Black, "Choose Cheats - Options - About");
 	
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
