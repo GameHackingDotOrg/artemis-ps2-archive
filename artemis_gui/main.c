@@ -35,6 +35,8 @@ extern void Clear_Screen(void);
 extern int  Draw_INTRO_part1(void);
 extern int  Draw_INTRO_part2(void);
 extern int  Draw_MainMenu(int selected_button, int highlight_pulse);
+extern int  Draw_CheatsMenu(void);
+extern int  Draw_OptionsMenu(void);
 extern int  Draw_AboutMenu(char *version);
 extern void Render_GUI(void);
 
@@ -256,6 +258,26 @@ void Update_MainMenu(void)
 }
 
 /*
+ * Draw & render Cheats Menu
+ */
+void Update_CheatsMenu(void)
+{
+	/* Update GUI and render */
+	Draw_CheatsMenu();
+	Render_GUI();
+}
+
+/*
+ * Draw & render Options Menu
+ */
+void Update_OptionsMenu(void)
+{
+	/* Update GUI and render */
+	Draw_OptionsMenu();
+	Render_GUI();
+}
+
+/*
  * Draw & render About Menu
  */
 void Update_AboutMenu(void)
@@ -411,9 +433,25 @@ int main(int argc, char *argv[])
 						break;
 						
 					case 2: /* cheats menu */
+						while (1) {
+							waitAnyPadReady();
+							if (readPad()) {
+								if (new_pad)
+									break;
+							}
+							Update_CheatsMenu();	
+						}					
 						break;
 						
 					case 3: /* options menu */
+						while (1) {
+							waitAnyPadReady();
+							if (readPad()) {
+								if (new_pad)
+									break;
+							}
+							Update_OptionsMenu();	
+						}					
 						break;
 						
 					case 4: /* about menu */

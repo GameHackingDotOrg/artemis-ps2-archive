@@ -64,6 +64,8 @@ void Clear_Screen(void);
 int  Draw_INTRO_part1(void);
 int  Draw_INTRO_part2(void);
 int  Draw_MainMenu(int selected_button, int highlight_pulse);
+int  Draw_CheatsMenu(void);
+int  Draw_OptionsMenu(void);
 int  Draw_AboutMenu(char *version);
 void Render_GUI(void);
 
@@ -1704,6 +1706,72 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 }
 
 /*
+ * Draw CheatsMenu
+ */
+int Draw_CheatsMenu(void)
+{
+	/* Clear screen	*/
+	gsKit_clear(gsGlobal, Black);
+
+	/* Set Alpha settings */
+	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
+	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
+
+	/* Draw Background */
+	draw_background(background_alpha);
+		
+	/* Draw cheats mini icon */ 
+	draw_cheats_icon_mini(34, 37 * Y_RATIO, 128);
+	
+	/* Draw text */
+	drawString_neuropol(61, 33 * Y_RATIO, 22, 0, Black, "Choose cheats");
+		
+	/* draw menu delimeter */			
+	draw_menu_bar(128);
+				
+    gsKit_set_test(gsGlobal, GS_ATEST_ON);
+    
+    /* Blend Alpha Primitives "Back To Front" */
+    gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
+
+    return 1;
+}
+
+/*
+ * Draw OptionsMenu
+ */
+int Draw_OptionsMenu(void)
+{
+	/* Clear screen	*/
+	gsKit_clear(gsGlobal, Black);
+
+	/* Set Alpha settings */
+	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
+	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
+
+	/* Draw Background */
+	draw_background(background_alpha);
+		
+	/* Draw options mini icon */ 
+	draw_options_icon_mini(34, 37 * Y_RATIO, 128);
+	
+	/* Draw text */
+	drawString_neuropol(61, 33 * Y_RATIO, 22, 0, Black, "Options");
+		
+	/* draw menu delimeter */			
+	draw_menu_bar(128);
+				
+    gsKit_set_test(gsGlobal, GS_ATEST_ON);
+    
+    /* Blend Alpha Primitives "Back To Front" */
+    gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
+
+    return 1;
+}
+
+/*
  * Draw AboutMenu
  */
 int Draw_AboutMenu(char *version)
@@ -1721,12 +1789,13 @@ int Draw_AboutMenu(char *version)
 	/* Draw Background */
 	draw_background(background_alpha);
 		
+	/* Draw about mini icon */ 
 	draw_about_icon_mini(34, 37 * Y_RATIO, 128);
 	
+	/* Draw text */
 	drawString_neuropol(61, 33 * Y_RATIO, 22, 0, Black, "About");
 	sprintf(ver, "v%s", version);
 	drawString_neuropol(550, 37 * Y_RATIO, 16, 0, Black, ver);
-
 	centerString_neuropol(102 * Y_RATIO, 17, 0, Black, "Thank you for using Artemis!");	
 	centerString_neuropol(123 * Y_RATIO, 15, 0, Black, "a Playstation 2 Hacking System");
 		
