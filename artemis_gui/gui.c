@@ -50,20 +50,21 @@ extern u32 size_font_neuropol;
 /* include font specific datas */
 #include "font_neuropol.h"
 
-/* #define DEBUG */
+//#define DEBUG
 
 /* fn prototypes */
 void Setup_GS(int gs_vmode);
 void gfx_set_defaults(void);
 void vram_free(void);
+void load_background_Textures(void);
 void load_mainmenu_Textures(void);
-void load_menu_Textures(void);
+void load_submenu_Textures(void);
 void load_Font(void);
 void Clear_Screen(void);
 int  Draw_INTRO_part1(void);
 int  Draw_INTRO_part2(void);
 int  Draw_MainMenu(int selected_button, int highlight_pulse);
-int  Draw_OUTRO(void);
+int  Draw_AboutMenu(char *version);
 void Render_GUI(void);
 
 GSGLOBAL *gsGlobal;
@@ -302,7 +303,7 @@ void drawString_neuropol(u32 x, u32 y, int fontsize, int fontspacing, u64 color,
 		if (c > 127) c = 127; /* security check as the font is incomplete */
 
 		/* Draw the string character by character */
-		drawChar_neuropol(cx, y, fontsize, (fontsize) * Y_RATIO, color, c);
+		drawChar_neuropol(cx, y, fontsize, (fontsize-1) * Y_RATIO, color, c);
 
 		/* Uses width informations for neuropol font header file */
 		cx += font_neuropol_width[c] + (fontsize-16) + fontspacing;
@@ -328,6 +329,20 @@ int getStringWidth_neuropol(const char *string, int fontsize, int fontspacing)
 	}
 
 	return size;
+}
+
+/*
+ * Draw a centered string with neuropol font
+ */
+void centerString_neuropol(int y, int fontsize, int fontspacing, u64 color, const char *string)
+{
+	int x, str_width;
+	
+	str_width = getStringWidth_neuropol(string, fontsize, fontspacing);
+	
+	x = (SCREEN_WIDTH - str_width) / 2;
+	
+	drawString_neuropol(x, y, fontsize, fontspacing, color, string);
 }
 
 /*
@@ -560,6 +575,82 @@ void draw_options_desc(int x, int y, int alpha)
 }
 
 /*
+ * Draw menu delimeter
+ */
+void draw_menu_bar(int alpha)
+{
+	int y;
+
+	y = 60 * Y_RATIO;
+	
+	gsKit_prim_sprite_texture(gsGlobal, &tex_menu_bar,
+							0, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							SCREEN_WIDTH, 							/* X2 */
+							y + 2,					 				/* Y2 */
+							tex_menu_bar.Width, 					/* U2 */
+							tex_menu_bar.Height,					/* V2 */
+							0,
+							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
+}
+
+/*
+ * Draw cheats icon mini
+ */
+void draw_cheats_icon_mini(int x, int y, int alpha)
+{
+	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_cheats_mini,
+							x, 											/* X1 */
+							y,											/* Y1 */
+							0,  										/* U1 */
+							0,  										/* V1 */
+							x + tex_icon_cheats_mini.Width, 			/* X2 */
+							y + (tex_icon_cheats_mini.Height * Y_RATIO),/* Y2 */
+							tex_icon_cheats_mini.Width, 				/* U2 */
+							tex_icon_cheats_mini.Height,				/* V2 */
+							0,
+							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
+}
+
+/*
+ * Draw about icon mini
+ */
+void draw_about_icon_mini(int x, int y, int alpha)
+{
+	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_about_mini,
+							x, 										/* X1 */
+							y,										/* Y1 */
+							0,  									/* U1 */
+							0,  									/* V1 */
+							x + tex_icon_about_mini.Width, 				/* X2 */
+							y + (tex_icon_about_mini.Height * Y_RATIO), 	/* Y2 */
+							tex_icon_about_mini.Width, 					/* U2 */
+							tex_icon_about_mini.Height,					/* V2 */
+							0,
+							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
+}
+
+/*
+ * Draw options icon mini
+ */
+void draw_options_icon_mini(int x, int y, int alpha)
+{
+	gsKit_prim_sprite_texture(gsGlobal, &tex_icon_options_mini,
+							x, 												/* X1 */
+							y,												/* Y1 */
+							0,  											/* U1 */
+							0,  											/* V1 */
+							x + tex_icon_options_mini.Width, 				/* X2 */
+							y + (tex_icon_options_mini.Height * Y_RATIO),	/* Y2 */
+							tex_icon_options_mini.Width, 					/* U2 */
+							tex_icon_options_mini.Height,					/* V2 */
+							0,
+							GS_SETREG_RGBAQ(0x80, 0x80, 0x80, alpha, 0x00));
+}
+
+/*
  * Clears VRAM
  */
 void vram_free(void)
@@ -570,7 +661,7 @@ void vram_free(void)
 /*
  * Load permanently mainmenu textures into VRAM
  */
-void load_mainmenu_Textures(void)
+void load_background_Textures(void)
 {
 	pngData *pPng;
 	u8		*pImgData;
@@ -606,6 +697,28 @@ void load_mainmenu_Textures(void)
 			free(pImgData);
 		}
 	}
+
+	#ifdef DEBUG
+		printf("Load_GUI last VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
+	#endif
+	//SleepThread();		
+}
+
+/*
+ * Load permanently mainmenu textures into VRAM
+ */
+void load_mainmenu_Textures(void)
+{
+	pngData *pPng;
+	u8		*pImgData;
+
+	//init_scr();
+	
+	#ifdef DEBUG
+		printf("1st VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
+	#endif
+
+	/* gsGlobal->CurrentPointer = vram_pointer; */
 	
 	if ((pPng = pngOpenRAW(&logo_ghost, size_logo_ghost)) > 0) {
 		if ((pImgData = malloc(pPng->width * pPng->height * (pPng->bit_depth / 8))) > 0) {
@@ -880,7 +993,7 @@ void load_mainmenu_Textures(void)
 /*
  * Load permanently menu textures into VRAM
  */
-void load_menu_Textures(void)
+void load_submenu_Textures(void)
 {
 	pngData *pPng;
 	u8		*pImgData;
@@ -1050,8 +1163,6 @@ void load_Font(void)
 {
 	pngData *pPng;
 	u8		*pImgData;
-
-	//init_scr();
 	
 	#ifdef DEBUG
 		printf("1st VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
@@ -1573,15 +1684,55 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	draw_options_desc(335, 357 * Y_RATIO, desc_options_alpha);	
 	draw_about_desc(436, 354 * Y_RATIO, desc_about_alpha);
 	
+	/*
 	drawString_neuropol(20, 10 * Y_RATIO, 16, 0, Black, "abcdefghijklmnopqrstuvwxyza");
 	drawString_neuropol(20, 26 * Y_RATIO, 16, 0, Black, "ABCDEFGHIJKLMNOPQRSTUVWXYZA");
 	drawString_neuropol(20, 42 * Y_RATIO, 16, 0, Black, "Neuropol NEUROPOL");	
-	drawString_neuropol(20, 58 * Y_RATIO, 16, 0, Black, "0123456789-+\\/*=0\"ok\" ',;:()[]{}=&$#|@^%!?0");	
+	drawString_neuropol(20, 58 * Y_RATIO, 16, 0, Black, "0123456789-+\\/=0\"ok\" ',;:()[]{}=&$#|@^%!?0");	
 	drawString_neuropol(20, 410 * Y_RATIO, 16, 0, Black, "Final Fantasy XI: Chains of Promathia Online Pack");
 	drawString_neuropol(20, 426 * Y_RATIO, 16, 0, Black, "Altana no Kamlhel Girade no Genei Treasures of");
 	drawString_neuropol(20, 442 * Y_RATIO, 16, 0, Black, "Aht Urhgan A Moogle Kupo d'Etat Vana'dlel");
 	drawString_neuropol(20, 458 * Y_RATIO, 20, 0, Black, "Choose Cheats - Options - About");
+	*/
 	
+    gsKit_set_test(gsGlobal, GS_ATEST_ON);
+    
+    /* Blend Alpha Primitives "Back To Front" */
+    gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
+
+    return 1;
+}
+
+/*
+ * Draw AboutMenu
+ */
+int Draw_AboutMenu(char *version)
+{
+	char ver[16];
+	
+	/* Clear screen	*/
+	gsKit_clear(gsGlobal, Black);
+
+	/* Set Alpha settings */
+	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
+	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
+	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
+
+	/* Draw Background */
+	draw_background(background_alpha);
+		
+	draw_about_icon_mini(34, 37 * Y_RATIO, 128);
+	
+	drawString_neuropol(61, 33 * Y_RATIO, 22, 0, Black, "About");
+	sprintf(ver, "v%s", version);
+	drawString_neuropol(550, 37 * Y_RATIO, 16, 0, Black, ver);
+
+	centerString_neuropol(102 * Y_RATIO, 17, 0, Black, "Thank you for using Artemis!");	
+	centerString_neuropol(123 * Y_RATIO, 15, 0, Black, "a Playstation 2 Hacking System");
+		
+	/* draw menu delimeter */			
+	draw_menu_bar(128);
+				
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
     /* Blend Alpha Primitives "Back To Front" */

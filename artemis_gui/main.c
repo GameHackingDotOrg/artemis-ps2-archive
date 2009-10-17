@@ -21,27 +21,27 @@ extern u32 size_usb_mass_irx;
 extern u32 size_elf_loader;
 
 //#define PCSX2_DEBUG
+#define PROGRAM_VERSION		"0.6"
 
 /* gui.c */
 extern void Setup_GS(int gs_vmode);
 extern void gfx_set_defaults(void);
+extern void vram_free(void);
+extern void load_background_Textures(void);
 extern void load_mainmenu_Textures(void);
-extern void load_menu_Textures(void);
+extern void load_submenu_Textures(void);
 extern void load_Font(void);
 extern void Clear_Screen(void);
 extern int  Draw_INTRO_part1(void);
 extern int  Draw_INTRO_part2(void);
 extern int  Draw_MainMenu(int selected_button, int highlight_pulse);
+extern int  Draw_AboutMenu(char *version);
 extern void Render_GUI(void);
 
 extern int SCREEN_WIDTH;
 extern int SCREEN_HEIGHT;
 extern int SCREEN_X;
 extern int SCREEN_Y;
-extern int FONT_WIDTH;
-extern int FONT_HEIGHT;
-extern int FONT_SPACING;
-extern int FONT_Y;
 extern float Y_RATIO;
 
 /* timer.c */
@@ -72,7 +72,8 @@ void CleanUp(void);
 void delay(int count);
 int  load_USB_modules(void);
 void launch_OSDSYS(void);
-void Update_GUI(void);
+void Update_MainMenu(void);
+void Update_AboutMenu(void);
 
 /* ELF-header structures and identifiers */
 #define ELF_MAGIC	0x464c457f
@@ -247,10 +248,20 @@ void launch_OSDSYS(void)
 /*
  * Draw & render Main Menu
  */
-void Update_GUI(void)
+void Update_MainMenu(void)
 {
 	/* Update GUI and render */
 	Draw_MainMenu(selected_button, highlight_pulse);
+	Render_GUI();
+}
+
+/*
+ * Draw & render About Menu
+ */
+void Update_AboutMenu(void)
+{
+	/* Update GUI and render */
+	Draw_AboutMenu(PROGRAM_VERSION);
 	Render_GUI();
 }
 
@@ -338,13 +349,12 @@ int main(int argc, char *argv[])
 	/* Initializes pads */
 	setupPad();
 
-	/* Load Font */
-	load_Font();
-	
 	/* Load Textures into VRAM */
+	vram_free();
+	load_background_Textures();	
 	load_mainmenu_Textures();
-	load_menu_Textures();
-	
+	load_Font();
+		
 	/* Prior to call any of the gfx functions */
 	gfx_set_defaults();
 		
@@ -365,7 +375,7 @@ int main(int argc, char *argv[])
 		Render_GUI();
 	Render_GUI();		
 			
-	/* Set Logo displayed, first button selected and highlight pulse ON */
+	/* Set first button selected and highlight pulse ON */
 	selected_button = 1;
 	highlight_pulse = 1;
 
@@ -387,11 +397,45 @@ int main(int argc, char *argv[])
 				/* Render again to take in account last changes by Draw_GUI */
 				Render_GUI();	
 
+				/* load submenu textures to vram */
+				vram_free();
+				load_background_Textures();	
+				load_submenu_Textures();
+				load_Font();
+				
 				/* Taking action for button press */
 				switch (selected_button) {
+					
+					case 1: /* start game */
+						launch_OSDSYS();
+						break;
+						
+					case 2: /* cheats menu */
+						break;
+						
+					case 3: /* options menu */
+						break;
+						
+					case 4: /* about menu */
+						while (1) {
+							waitAnyPadReady();
+							if (readPad()) {
+								if (new_pad)
+									break;
+							}
+							Update_AboutMenu();	
+						}
+						break;
+						
 					default:
 						break;
 				}
+				
+				/* reload main menu textures to vram */
+				vram_free();
+				load_background_Textures();	
+				load_mainmenu_Textures();
+				load_Font();
 			}
 			else if(new_pad & PAD_LEFT)	{
 				/* Slow Down D-pads response without blocking */
@@ -429,13 +473,14 @@ int main(int argc, char *argv[])
 					if (selected_button > 4) selected_button = 1;				
 				}
 			}
-			else if (new_pad & (PAD_START | PAD_SELECT | PAD_L1 | PAD_L2 | PAD_R1 | PAD_R2)) {
+			else if ((new_pad & PAD_START) && (new_pad & PAD_SELECT) && (new_pad & PAD_L1) &&
+					(new_pad & PAD_L2) && (new_pad & PAD_R1) && (new_pad & PAD_R2)) {
 				launch_OSDSYS();
 			}			
 		}
 		
 		/* Update GUI and render */
-		Update_GUI();
+		Update_MainMenu();
 	}
 
 	/* We won't get here */
