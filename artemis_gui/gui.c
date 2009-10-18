@@ -309,7 +309,7 @@ void drawString_neuropol(u32 x, u32 y, int alpha, int fontsize, int fontspacing,
 		if (c > 127) c = 127; /* security check as the font is incomplete */
 
 		/* Draw the string character by character */
-		drawChar_neuropol(cx, y, alpha, fontsize, (fontsize-1) * Y_RATIO, c);
+		drawChar_neuropol(cx, y, alpha, fontsize, fontsize * Y_RATIO, c);
 
 		/* Uses width informations for neuropol font header file */
 		cx += font_neuropol_width[c] + (fontsize-16) + fontspacing;
