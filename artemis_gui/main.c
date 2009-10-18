@@ -77,7 +77,7 @@ static struct about_content about_text[] = {
 		{ "Berion",
 		  "GUI graphic designer and sound maker." },
 		{ "jimmikaelkael",
-		  "Core developer, author of debugger code EE/IOP, elf loader code, \nand GUI code; assisted with other code." },
+		  "Core developer, author of debugger code EE/IOP, elf loader \ncode, and GUI code; assisted with other code." },
 		{ "Lazy Bastard",
 		  "Project founder." },
 		{ "misfire",
@@ -398,7 +398,6 @@ int main(int argc, char *argv[])
 	vram_free();
 	load_background_Textures();	
 	load_mainmenu_Textures();
-	load_Font();
 		
 	/* Prior to call any of the gfx functions */
 	gfx_set_defaults();
@@ -497,7 +496,6 @@ int main(int argc, char *argv[])
 				vram_free();
 				load_background_Textures();	
 				load_mainmenu_Textures();
-				load_Font();
 			}
 			else if(new_pad & PAD_LEFT)	{
 				/* Slow Down D-pads response without blocking */

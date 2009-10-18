@@ -264,9 +264,9 @@ void pngClose(pngData *png)
 /*
  * Draw a character with neuropol font
  */
-void drawChar_neuropol(u32 x, u32 y, int alpha, u32 width, u32 height, u32 c)
+void drawChar_neuropol(float x, float y, int alpha, u32 width, u32 height, u32 c)
 {
-	int x1, x2, y1, y2;
+	float x1, x2, y1, y2;
 	int u1, u2, v1, v2;
 
 	x1 = x;
@@ -274,11 +274,11 @@ void drawChar_neuropol(u32 x, u32 y, int alpha, u32 width, u32 height, u32 c)
 	y1 = y;
 	y2 = y1 + height;
 
-	/* Calculate char coordinates int neuropol texture */
-	u1 = (c % (tex_font_neuropol.Width/16)) * (tex_font_neuropol.Width/16);
-	u2 = u1 + 16;
-	v1 = c - (c % (tex_font_neuropol.Height/8)); /* careful: 8 rows only !!! */
-	v2 = v1 + 16;
+	c -= 32;
+	u1 = (c % (tex_font_neuropol.Width/32)) * (tex_font_neuropol.Width/16);
+	u2 = u1 + 32;
+	v1 = (c - (c % 16)) * 2; /* careful: 6 rows only !!! */
+	v2 = v1 + 32;
 
 	/* Draw a char using neuropol texture */
 	gsKit_prim_sprite_texture(gsGlobal, &tex_font_neuropol,
@@ -299,7 +299,8 @@ void drawChar_neuropol(u32 x, u32 y, int alpha, u32 width, u32 height, u32 c)
  */
 void drawString_neuropol(u32 x, u32 y, int alpha, int fontsize, int fontspacing, const char *string)
 {
-	int l, i, cx;
+	int l, i;
+	float cx;
 	int c;
 
 	cx = x;
@@ -308,7 +309,6 @@ void drawString_neuropol(u32 x, u32 y, int alpha, int fontsize, int fontspacing,
 
 	for( i = 0; i < l; i++)	{
 		c = (u8)string[i];
-		if (c > 127) c = 127; /* security check as the font is incomplete */
 
 		/* catch "\n" */
 		if (c == 10) {
@@ -320,8 +320,10 @@ void drawString_neuropol(u32 x, u32 y, int alpha, int fontsize, int fontspacing,
 		drawChar_neuropol(cx, y, alpha, fontsize, fontsize * Y_RATIO, c);
 
 		/* Uses width informations for neuropol font header file */
-		if (c != 10)
-			cx += font_neuropol_width[c] + (fontsize-16) + fontspacing;
+		if (c != 10) {
+			float f = font_neuropol_width[c-32] * (float)(fontsize / 32.0f);
+			cx += (float)(f + fontspacing);
+		}
 	}
 }
 
@@ -330,7 +332,8 @@ void drawString_neuropol(u32 x, u32 y, int alpha, int fontsize, int fontspacing,
  */
 int getStringWidth_neuropol(const char *string, int fontsize, int fontspacing)
 {
-	int i, l, c, size;
+	int i, l, c;
+	float size;
 
 	l = strlen(string);
 
@@ -338,12 +341,12 @@ int getStringWidth_neuropol(const char *string, int fontsize, int fontspacing)
 
 	for( i = 0; i < l; i++) {
 		c = (u8)string[i];
-		if (c >= 128) c = 127; /* security check as the font is incomplete */
-
-		size += font_neuropol_width[c] + (fontsize-16) + fontspacing;
+		
+		float f = font_neuropol_width[c-32] * (float)(fontsize / 32.0f);
+		size += (float)(f + fontspacing);
 	}
 
-	return size;
+	return (int)size;
 }
 
 /*
@@ -622,7 +625,7 @@ void draw_menu_bar(int x, int y, int alpha)
 							0,  									/* U1 */
 							0,  									/* V1 */
 							x + SCREEN_WIDTH,		 				/* X2 */
-							y + (tex_menu_bar.Height * Y_RATIO),	/* Y2 */
+							y + 2,//(tex_menu_bar.Height * Y_RATIO),	/* Y2 */
 							tex_menu_bar.Width, 					/* U2 */
 							tex_menu_bar.Height,					/* V2 */
 							0,
@@ -1309,12 +1312,12 @@ void Setup_GS(int gs_vmode)
  * render GUI
  */
 void Render_GUI(void)
-{
+{			
 	/* Flips Framebuffers on VSync */
 	gsKit_sync_flip(gsGlobal);
 
 	/* Normal User Draw Queue "Execution" (Kicks Oneshot and Persistent Queues) */
-	gsKit_queue_exec(gsGlobal);
+	gsKit_queue_exec(gsGlobal);	
 }
 
 /*
@@ -1405,7 +1408,7 @@ int Draw_INTRO_part2(void)
 	int icon_cheats_move_done = 0;
 	int icon_options_move_done = 0;		
 	int icon_about_move_done = 0;		
-
+	
 	/* Clear screen	*/
 	gsKit_clear(gsGlobal, Black);
 
@@ -1804,11 +1807,12 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
 	int about_menu_header_fadein_done = 0;
 	int about_menu_thx_fadein_done = 0;
 	int about_menu_content_fadein_done = 0;
-	
+
 	/* Clear screen	*/
 	gsKit_clear(gsGlobal, Black);
 
 	/* Set Alpha settings */
+	gsGlobal->PrimAAEnable = GS_SETTING_ON;
 	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
@@ -1842,13 +1846,13 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
 	draw_about_icon_mini(34, 37 * Y_RATIO, about_menu_header_alpha);
 	
 	/* Draw text */
-	drawString_neuropol(61, 33 * Y_RATIO, about_menu_header_alpha, 22, 0, "About");
+	drawString_neuropol(61, 30 * Y_RATIO, about_menu_header_alpha, 29, 2, "About");
 	sprintf(ver, "v%s", version);
-	drawString_neuropol(550, 37 * Y_RATIO, about_menu_header_alpha, 16, 0, ver);
+	drawString_neuropol(550, 39 * Y_RATIO, about_menu_header_alpha, 16, 0, ver);
 
-	/* draw menu delimeter */			
+	/* draw menu delimeter */
 	draw_menu_bar(menu_bar_x, 60 * Y_RATIO, about_menu_header_alpha);
-		
+
 	if (menu_bar_move_done) {
 		/* Alpha calculation for about menu header */
 		if (about_menu_thx_alpha < 128) {
@@ -1861,8 +1865,8 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
 		else
 			about_menu_thx_fadein_done = 1;
 		
-		centerString_neuropol(102 * Y_RATIO, about_menu_thx_alpha, 17, 0, "Thank you for using Artemis!");	
-		centerString_neuropol(123 * Y_RATIO, about_menu_thx_alpha,15, 0, "a PlayStation 2 Hacking System");
+		centerString_neuropol(99 * Y_RATIO, about_menu_thx_alpha, 21, 1, "Thank you for using Artemis!");	
+		centerString_neuropol(120 * Y_RATIO, about_menu_thx_alpha, 16, 1, "a PlayStation 2 Hacking System");
 	}
 
 	if (about_menu_thx_fadein_done) {
@@ -1877,12 +1881,12 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
 		else
 			about_menu_content_fadein_done = 1;
 		
-		int y = 164 * Y_RATIO;
+		int y = 161 * Y_RATIO;
 		while (about_text->name) {
-			drawString_neuropol(34, y, about_menu_content_alpha, 16, 0, about_text->name);
-			y += getStringHeight_neuropol(about_text->name, 16);
-			drawString_neuropol(34, y, about_menu_content_alpha, 14, 0, about_text->desc);
-			y += getStringHeight_neuropol(about_text->desc, 14);
+			drawString_neuropol(34, y, about_menu_content_alpha, 20, 1, about_text->name);
+			y += getStringHeight_neuropol(about_text->name, 20);
+			drawString_neuropol(34, y, about_menu_content_alpha, 15, 1, about_text->desc);
+			y += getStringHeight_neuropol(about_text->desc, 15);
 			y += 16 * Y_RATIO;
 			about_text++;
 		}
@@ -1893,5 +1897,8 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
     /* Blend Alpha Primitives "Back To Front" */
     gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
 
-    return 1;
+    if (about_menu_content_fadein_done)
+    	return 1;
+
+    return 0;
 }
