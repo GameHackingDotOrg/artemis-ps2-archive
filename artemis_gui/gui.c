@@ -52,6 +52,11 @@ extern u32 size_font_neuropol;
 
 //#define DEBUG
 
+struct about_content {
+	char *name;
+	char *desc;
+};
+
 /* fn prototypes */
 void Setup_GS(int gs_vmode);
 void gfx_set_defaults(void);
@@ -67,7 +72,7 @@ int  Draw_MainMenu(int selected_button, int highlight_pulse);
 int  Draw_CheatsMenu(void);
 int  Draw_OptionsMenu(void);
 int  Init_AboutMenu(void);
-int  Draw_AboutMenu(char *version);
+int  Draw_AboutMenu(char *version, struct about_content *about_text);
 void Render_GUI(void);
 
 GSGLOBAL *gsGlobal;
@@ -109,14 +114,11 @@ int desc_options_alpha;
 int highlight_alpha;
 int amount;
 int pause_pulse;
-int stop_pulse_done;
 
 int about_menu_header_alpha;
 int about_menu_thx_alpha;
+int about_menu_content_alpha;
 int menu_bar_x;
-int icon_about_mini_x;
-int str_about_x;
-int str_ver_x;
 
 /*
  * PNG handling code: from MyPS2 by ntba2
@@ -308,11 +310,18 @@ void drawString_neuropol(u32 x, u32 y, int alpha, int fontsize, int fontspacing,
 		c = (u8)string[i];
 		if (c > 127) c = 127; /* security check as the font is incomplete */
 
+		/* catch "\n" */
+		if (c == 10) {
+			y += fontsize * Y_RATIO;
+			cx = x;
+		}
+		
 		/* Draw the string character by character */
 		drawChar_neuropol(cx, y, alpha, fontsize, fontsize * Y_RATIO, c);
 
 		/* Uses width informations for neuropol font header file */
-		cx += font_neuropol_width[c] + (fontsize-16) + fontspacing;
+		if (c != 10)
+			cx += font_neuropol_width[c] + (fontsize-16) + fontspacing;
 	}
 }
 
@@ -335,6 +344,28 @@ int getStringWidth_neuropol(const char *string, int fontsize, int fontspacing)
 	}
 
 	return size;
+}
+
+/*
+ * Calculate and return height in pixels of a string using neuropol font
+ */
+int getStringHeight_neuropol(const char *string, int fontsize)
+{
+	int l, i, c;
+	int height = fontsize * Y_RATIO;
+
+	l = strlen(string);
+
+	for( i = 0; i < l; i++)	{
+		c = (u8)string[i];
+		if (c > 127) c = 127; /* security check as the font is incomplete */
+
+		/* catch "\n" */
+		if (c == 10)
+			height += fontsize * Y_RATIO;		
+	}
+	
+	return height;
 }
 
 /*
@@ -1223,12 +1254,10 @@ void gfx_set_defaults(void)
 	desc_cheats_alpha = 0;
 	desc_about_alpha = 0;
 	desc_options_alpha = 0;	
-	stop_pulse_done = 0;
 	background_alpha = 128;
 	highlight_alpha = 32;
 	amount = 6;
 	pause_pulse = 0;
-	stop_pulse_done = 0;
 }
 
 /*
@@ -1649,15 +1678,7 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 		}
 	}
 	else {
-		stop_pulse_done = 0;
-		if (highlight_alpha <= 128) {
-			amount = 3;
-			highlight_alpha += amount;	
-			if (highlight_alpha >= 128) {
-				highlight_alpha = 128;
-				stop_pulse_done = 1;
-			} 	
-		}
+		highlight_alpha = 128;	
 	}
 		
 	desc_start_alpha = 32;
@@ -1690,13 +1711,8 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
     
     /* Blend Alpha Primitives "Back To Front" */
     gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
-
-	if (highlight_pulse)
-		return 1;
-    else if (stop_pulse_done)
-    	return 1;
     
-    return 0;
+    return 1;
 }
 
 /*
@@ -1771,24 +1787,23 @@ int Draw_OptionsMenu(void)
 int Init_AboutMenu(void)
 {
 	about_menu_header_alpha = 0;
-	about_menu_thx_alpha = 0;	
-	menu_bar_x = SCREEN_WIDTH;
-	icon_about_mini_x = SCREEN_WIDTH + 40;
-	str_about_x = SCREEN_WIDTH + 67;
-	str_ver_x = SCREEN_WIDTH + 556;
-	
+	about_menu_thx_alpha = 0;
+	about_menu_content_alpha = 0;
+	menu_bar_x = 0-SCREEN_WIDTH;
+
 	return 1;
 }
 
 /*
  * Draw AboutMenu
  */
-int Draw_AboutMenu(char *version)
+int Draw_AboutMenu(char *version, struct about_content *about_text)
 {
 	char ver[16];
 	int menu_bar_move_done = 0;
 	int about_menu_header_fadein_done = 0;
 	int about_menu_thx_fadein_done = 0;
+	int about_menu_content_fadein_done = 0;
 	
 	/* Clear screen	*/
 	gsKit_clear(gsGlobal, Black);
@@ -1802,13 +1817,12 @@ int Draw_AboutMenu(char *version)
 	draw_background(background_alpha);
 	
 	/* X coordinate calculation to aboutmenu text moving */
-	if (menu_bar_x > 0) {
-		icon_about_mini_x -= 12;
-		str_about_x -= 12;
-		str_ver_x -= 12;
-		menu_bar_x -= 12;		
-		if (menu_bar_x <= 0)
+	if (menu_bar_x < 0) {
+		menu_bar_x += 12;		
+		if (menu_bar_x >= 0) {
+			menu_bar_x = 0;
 			menu_bar_move_done = 1;
+		}
 	}
 	else
 		menu_bar_move_done = 1;
@@ -1825,12 +1839,12 @@ int Draw_AboutMenu(char *version)
 		about_menu_header_fadein_done = 1;
 					
 	/* Draw about mini icon */ 
-	draw_about_icon_mini(icon_about_mini_x, 37 * Y_RATIO, about_menu_header_alpha);
+	draw_about_icon_mini(34, 37 * Y_RATIO, about_menu_header_alpha);
 	
 	/* Draw text */
-	drawString_neuropol(str_about_x, 33 * Y_RATIO, about_menu_header_alpha, 22, 0, "About");
+	drawString_neuropol(61, 33 * Y_RATIO, about_menu_header_alpha, 22, 0, "About");
 	sprintf(ver, "v%s", version);
-	drawString_neuropol(str_ver_x, 37 * Y_RATIO, about_menu_header_alpha, 16, 0, ver);
+	drawString_neuropol(550, 37 * Y_RATIO, about_menu_header_alpha, 16, 0, ver);
 
 	/* draw menu delimeter */			
 	draw_menu_bar(menu_bar_x, 60 * Y_RATIO, about_menu_header_alpha);
@@ -1850,7 +1864,30 @@ int Draw_AboutMenu(char *version)
 		centerString_neuropol(102 * Y_RATIO, about_menu_thx_alpha, 17, 0, "Thank you for using Artemis!");	
 		centerString_neuropol(123 * Y_RATIO, about_menu_thx_alpha,15, 0, "a PlayStation 2 Hacking System");
 	}
+
+	if (about_menu_thx_fadein_done) {
+		/* Alpha calculation for about menu content */
+		if (about_menu_content_alpha < 128) {
+			about_menu_content_alpha += 5;
+			if (about_menu_content_alpha >= 128) {
+				about_menu_content_alpha = 128;
+				about_menu_content_fadein_done = 1;
+			}
+		}
+		else
+			about_menu_content_fadein_done = 1;
 		
+		int y = 164 * Y_RATIO;
+		while (about_text->name) {
+			drawString_neuropol(34, y, about_menu_content_alpha, 16, 0, about_text->name);
+			y += getStringHeight_neuropol(about_text->name, 16);
+			drawString_neuropol(34, y, about_menu_content_alpha, 14, 0, about_text->desc);
+			y += getStringHeight_neuropol(about_text->desc, 14);
+			y += 16 * Y_RATIO;
+			about_text++;
+		}
+	}
+			
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
     /* Blend Alpha Primitives "Back To Front" */

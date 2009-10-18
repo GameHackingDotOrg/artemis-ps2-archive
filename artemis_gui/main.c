@@ -23,6 +23,11 @@ extern u32 size_elf_loader;
 //#define PCSX2_DEBUG
 #define PROGRAM_VERSION		"0.6"
 
+struct about_content {
+	char *name;
+	char *desc;
+};
+
 /* gui.c */
 extern void Setup_GS(int gs_vmode);
 extern void gfx_set_defaults(void);
@@ -38,7 +43,7 @@ extern int  Draw_MainMenu(int selected_button, int highlight_pulse);
 extern int  Draw_CheatsMenu(void);
 extern int  Draw_OptionsMenu(void);
 extern int  Init_AboutMenu(void);
-extern int  Draw_AboutMenu(char *version);
+extern int  Draw_AboutMenu(char *version, struct about_content *about_text);
 extern void Render_GUI(void);
 
 extern int SCREEN_WIDTH;
@@ -67,6 +72,23 @@ int selected_button;
 int highlight_pulse;
 
 char run_path[MAX_PATH];
+
+static struct about_content about_text[] = {
+		{ "Berion",
+		  "GUI graphic designer and sound maker." },
+		{ "jimmikaelkael",
+		  "Core developer, author of debugger code EE/IOP, elf loader code, \nand GUI code; assisted with other code." },
+		{ "Lazy Bastard",
+		  "Project founder." },
+		{ "misfire",
+		  "Project maintainer and core developer, author of cheat engine \ncode, elf loader code; assisted with other code." },
+		{ "ps2dragon",
+		  "Author of Artemis logo." },
+		{ "Viper187",
+		  "Author of PS2CC." },
+		{ NULL,
+		  NULL }
+};
 	
 /* functions prototypes */
 void load_elf(char *elf_path);
@@ -284,7 +306,7 @@ void Update_OptionsMenu(void)
 void Update_AboutMenu(void)
 {
 	/* Update GUI and render */
-	Draw_AboutMenu(PROGRAM_VERSION);
+	Draw_AboutMenu(PROGRAM_VERSION, &about_text[0]);
 	Render_GUI();
 }
 
@@ -389,7 +411,7 @@ int main(int argc, char *argv[])
 	/* delay */
 	#ifndef PCSX2_DEBUG
 	WaitTime = Timer();
-	while (Timer() < (WaitTime + 1000))
+	while (Timer() < (WaitTime + 500))
 		Render_GUI();
 	#endif	
 	
