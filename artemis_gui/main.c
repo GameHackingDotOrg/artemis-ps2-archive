@@ -37,6 +37,7 @@ extern int  Draw_INTRO_part2(void);
 extern int  Draw_MainMenu(int selected_button, int highlight_pulse);
 extern int  Draw_CheatsMenu(void);
 extern int  Draw_OptionsMenu(void);
+extern int  Init_AboutMenu(void);
 extern int  Draw_AboutMenu(char *version);
 extern void Render_GUI(void);
 
@@ -455,6 +456,7 @@ int main(int argc, char *argv[])
 						break;
 						
 					case 4: /* about menu */
+						Init_AboutMenu();					
 						while (1) {
 							waitAnyPadReady();
 							if (readPad()) {

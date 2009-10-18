@@ -66,6 +66,7 @@ int  Draw_INTRO_part2(void);
 int  Draw_MainMenu(int selected_button, int highlight_pulse);
 int  Draw_CheatsMenu(void);
 int  Draw_OptionsMenu(void);
+int  Init_AboutMenu(void);
 int  Draw_AboutMenu(char *version);
 void Render_GUI(void);
 
@@ -87,10 +88,6 @@ float Y_RATIO	  = 0.875f;
 
 /* define colors */
 #define Black  		GS_SETREG_RGBAQ(0x00,0x00,0x00,0x80,0x00)
-#define Blue  		GS_SETREG_RGBAQ(0x18,0x23,0xFF,0x80,0x00)
-#define White  		GS_SETREG_RGBAQ(0xFF,0xFF,0xFF,0x80,0x00)
-#define Gray  		GS_SETREG_RGBAQ(0x33,0x33,0x33,0x80,0x00)
-#define TexCol 		GS_SETREG_RGBAQ(0x80,0x80,0x80,0x80,0x00)
 
 /* For GUI */
 int background_alpha;
@@ -113,6 +110,13 @@ int highlight_alpha;
 int amount;
 int pause_pulse;
 int stop_pulse_done;
+
+int about_menu_header_alpha;
+int about_menu_thx_alpha;
+int menu_bar_x;
+int icon_about_mini_x;
+int str_about_x;
+int str_ver_x;
 
 /*
  * PNG handling code: from MyPS2 by ntba2
@@ -258,7 +262,7 @@ void pngClose(pngData *png)
 /*
  * Draw a character with neuropol font
  */
-void drawChar_neuropol(u32 x, u32 y, u32 width, u32 height, u64 color, u32 c)
+void drawChar_neuropol(u32 x, u32 y, int alpha, u32 width, u32 height, u32 c)
 {
 	int x1, x2, y1, y2;
 	int u1, u2, v1, v2;
@@ -285,13 +289,13 @@ void drawChar_neuropol(u32 x, u32 y, u32 width, u32 height, u64 color, u32 c)
 							u2, /* U2 */
 							v2, /* V2 */
 							0,
-							color);
+							GS_SETREG_RGBAQ(0x00, 0x00, 0x00, alpha, 0x00));
 }
 
 /*
  * Draw a string with neuropol font
  */
-void drawString_neuropol(u32 x, u32 y, int fontsize, int fontspacing, u64 color, const char *string)
+void drawString_neuropol(u32 x, u32 y, int alpha, int fontsize, int fontspacing, const char *string)
 {
 	int l, i, cx;
 	int c;
@@ -305,7 +309,7 @@ void drawString_neuropol(u32 x, u32 y, int fontsize, int fontspacing, u64 color,
 		if (c > 127) c = 127; /* security check as the font is incomplete */
 
 		/* Draw the string character by character */
-		drawChar_neuropol(cx, y, fontsize, (fontsize-1) * Y_RATIO, color, c);
+		drawChar_neuropol(cx, y, alpha, fontsize, (fontsize-1) * Y_RATIO, c);
 
 		/* Uses width informations for neuropol font header file */
 		cx += font_neuropol_width[c] + (fontsize-16) + fontspacing;
@@ -336,7 +340,7 @@ int getStringWidth_neuropol(const char *string, int fontsize, int fontspacing)
 /*
  * Draw a centered string with neuropol font
  */
-void centerString_neuropol(int y, int fontsize, int fontspacing, u64 color, const char *string)
+void centerString_neuropol(int y, int alpha, int fontsize, int fontspacing, const char *string)
 {
 	int x, str_width;
 	
@@ -344,7 +348,7 @@ void centerString_neuropol(int y, int fontsize, int fontspacing, u64 color, cons
 	
 	x = (SCREEN_WIDTH - str_width) / 2;
 	
-	drawString_neuropol(x, y, fontsize, fontspacing, color, string);
+	drawString_neuropol(x, y, alpha, fontsize, fontspacing, string);
 }
 
 /*
@@ -579,19 +583,15 @@ void draw_options_desc(int x, int y, int alpha)
 /*
  * Draw menu delimeter
  */
-void draw_menu_bar(int alpha)
-{
-	int y;
-
-	y = 60 * Y_RATIO;
-	
+void draw_menu_bar(int x, int y, int alpha)
+{	
 	gsKit_prim_sprite_texture(gsGlobal, &tex_menu_bar,
-							0, 										/* X1 */
+							x, 										/* X1 */
 							y,										/* Y1 */
 							0,  									/* U1 */
 							0,  									/* V1 */
-							SCREEN_WIDTH, 							/* X2 */
-							y + 2,					 				/* Y2 */
+							x + SCREEN_WIDTH,		 				/* X2 */
+							y + (tex_menu_bar.Height * Y_RATIO),	/* Y2 */
 							tex_menu_bar.Width, 					/* U2 */
 							tex_menu_bar.Height,					/* V2 */
 							0,
@@ -1211,9 +1211,9 @@ void gfx_set_defaults(void)
 	logo_alpha = 0;
 	gshi_alpha = 0;
 	gshi_x = 378;
-	icon_start_y = SCREEN_HEIGHT + (120 * Y_RATIO);
-	icon_cheats_y = SCREEN_HEIGHT + (80 * Y_RATIO);
-	icon_options_y = SCREEN_HEIGHT + (40 * Y_RATIO);	
+	icon_start_y = SCREEN_HEIGHT + (180 * Y_RATIO);
+	icon_cheats_y = SCREEN_HEIGHT + (120 * Y_RATIO);
+	icon_options_y = SCREEN_HEIGHT + (60 * Y_RATIO);	
 	icon_about_y = SCREEN_HEIGHT;	
 	icon_start_alpha = 0;
 	icon_cheats_alpha = 0;
@@ -1422,7 +1422,7 @@ int Draw_INTRO_part2(void)
 	int min_y = 300 * Y_RATIO;
 	/* Y coordinate calculation to start icon moving */
 	if (icon_start_y > min_y) {
-		icon_start_y -= 4;
+		icon_start_y -= 6;
 		if (icon_start_y <= min_y) {
 			icon_start_y = min_y;
 			icon_start_move_done = 1;
@@ -1433,7 +1433,7 @@ int Draw_INTRO_part2(void)
 		
 	/* Y coordinate calculation to cheats icon moving */
 	if (icon_cheats_y > min_y) {
-		icon_cheats_y -= 4;
+		icon_cheats_y -= 6;
 		if (icon_cheats_y <= min_y) {
 			icon_cheats_y = min_y;
 			icon_cheats_move_done = 1;
@@ -1444,7 +1444,7 @@ int Draw_INTRO_part2(void)
 
 	/* Y coordinate calculation to options icon moving */
 	if (icon_options_y > min_y) {
-		icon_options_y -= 4;
+		icon_options_y -= 6;
 		if (icon_options_y <= min_y) {
 			icon_options_y = min_y;
 			icon_options_move_done = 1;
@@ -1455,7 +1455,7 @@ int Draw_INTRO_part2(void)
 		
 	/* Y coordinate calculation to about icon moving */
 	if (icon_about_y > min_y) {
-		icon_about_y -= 4;
+		icon_about_y -= 6;
 		if (icon_about_y <= min_y) {
 			icon_about_y = min_y;
 			icon_about_move_done = 1;
@@ -1467,7 +1467,7 @@ int Draw_INTRO_part2(void)
 	/* Alpha calculation to control icon start fade-in */
 	if (icon_start_y <= SCREEN_HEIGHT) {
 		if (icon_start_alpha < 128) {
-			icon_start_alpha += 2;
+			icon_start_alpha += 3;
 			if (icon_start_alpha >= 128) {
 				icon_start_alpha = 128;
 				icon_start_fadein_done = 1;
@@ -1480,7 +1480,7 @@ int Draw_INTRO_part2(void)
 	/* Alpha calculation to control icon cheats fade-in */
 	if (icon_cheats_y <= SCREEN_HEIGHT) {	
 		if (icon_cheats_alpha < 128) {
-			icon_cheats_alpha += 2;
+			icon_cheats_alpha += 3;
 			if (icon_cheats_alpha >= 128) {
 				icon_cheats_alpha = 128;
 				icon_cheats_fadein_done = 1;
@@ -1493,7 +1493,7 @@ int Draw_INTRO_part2(void)
 	/* Alpha calculation to control icon options fade-in */
 	if (icon_options_y <= SCREEN_HEIGHT) {	
 		if (icon_options_alpha < 128) {
-			icon_options_alpha += 2;
+			icon_options_alpha += 3;
 			if (icon_options_alpha >= 128) {
 				icon_options_alpha = 128;
 				icon_options_fadein_done = 1;
@@ -1506,7 +1506,7 @@ int Draw_INTRO_part2(void)
 	/* Alpha calculation to control icon about fade-in */
 	if (icon_start_y <= SCREEN_HEIGHT) {
 		if (icon_about_alpha < 128) {
-			icon_about_alpha += 2;
+			icon_about_alpha += 3;
 			if (icon_about_alpha >= 128) {
 				icon_about_alpha = 128;
 				icon_about_fadein_done = 1;
@@ -1685,24 +1685,18 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	draw_cheats_desc(240, 357 * Y_RATIO, desc_cheats_alpha);
 	draw_options_desc(335, 357 * Y_RATIO, desc_options_alpha);	
 	draw_about_desc(436, 354 * Y_RATIO, desc_about_alpha);
-	
-	/*
-	drawString_neuropol(20, 10 * Y_RATIO, 16, 0, Black, "abcdefghijklmnopqrstuvwxyza");
-	drawString_neuropol(20, 26 * Y_RATIO, 16, 0, Black, "ABCDEFGHIJKLMNOPQRSTUVWXYZA");
-	drawString_neuropol(20, 42 * Y_RATIO, 16, 0, Black, "Neuropol NEUROPOL");	
-	drawString_neuropol(20, 58 * Y_RATIO, 16, 0, Black, "0123456789-+\\/=0\"ok\" ',;:()[]{}=&$#|@^%!?0");	
-	drawString_neuropol(20, 410 * Y_RATIO, 16, 0, Black, "Final Fantasy XI: Chains of Promathia Online Pack");
-	drawString_neuropol(20, 426 * Y_RATIO, 16, 0, Black, "Altana no Kamlhel Girade no Genei Treasures of");
-	drawString_neuropol(20, 442 * Y_RATIO, 16, 0, Black, "Aht Urhgan A Moogle Kupo d'Etat Vana'dlel");
-	drawString_neuropol(20, 458 * Y_RATIO, 20, 0, Black, "Choose Cheats - Options - About");
-	*/
-	
+		
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
     /* Blend Alpha Primitives "Back To Front" */
     gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
 
-    return 1;
+	if (highlight_pulse)
+		return 1;
+    else if (stop_pulse_done)
+    	return 1;
+    
+    return 0;
 }
 
 /*
@@ -1725,10 +1719,10 @@ int Draw_CheatsMenu(void)
 	draw_cheats_icon_mini(34, 37 * Y_RATIO, 128);
 	
 	/* Draw text */
-	drawString_neuropol(61, 33 * Y_RATIO, 22, 0, Black, "Choose cheats");
+	drawString_neuropol(61, 33 * Y_RATIO, 128, 22, 0, "Choose cheats");
 		
 	/* draw menu delimeter */			
-	draw_menu_bar(128);
+	//draw_menu_bar(128);
 				
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
@@ -1758,10 +1752,10 @@ int Draw_OptionsMenu(void)
 	draw_options_icon_mini(34, 37 * Y_RATIO, 128);
 	
 	/* Draw text */
-	drawString_neuropol(61, 33 * Y_RATIO, 22, 0, Black, "Options");
+	drawString_neuropol(61, 33 * Y_RATIO, 128, 22, 0, "Options");
 		
 	/* draw menu delimeter */			
-	draw_menu_bar(128);
+	//draw_menu_bar(128);
 				
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
@@ -1772,11 +1766,29 @@ int Draw_OptionsMenu(void)
 }
 
 /*
+ * Init AboutMenu
+ */
+int Init_AboutMenu(void)
+{
+	about_menu_header_alpha = 0;
+	about_menu_thx_alpha = 0;	
+	menu_bar_x = SCREEN_WIDTH;
+	icon_about_mini_x = SCREEN_WIDTH + 40;
+	str_about_x = SCREEN_WIDTH + 67;
+	str_ver_x = SCREEN_WIDTH + 556;
+	
+	return 1;
+}
+
+/*
  * Draw AboutMenu
  */
 int Draw_AboutMenu(char *version)
 {
 	char ver[16];
+	int menu_bar_move_done = 0;
+	int about_menu_header_fadein_done = 0;
+	int about_menu_thx_fadein_done = 0;
 	
 	/* Clear screen	*/
 	gsKit_clear(gsGlobal, Black);
@@ -1788,20 +1800,57 @@ int Draw_AboutMenu(char *version)
 
 	/* Draw Background */
 	draw_background(background_alpha);
-		
+	
+	/* X coordinate calculation to aboutmenu text moving */
+	if (menu_bar_x > 0) {
+		icon_about_mini_x -= 12;
+		str_about_x -= 12;
+		str_ver_x -= 12;
+		menu_bar_x -= 12;		
+		if (menu_bar_x <= 0)
+			menu_bar_move_done = 1;
+	}
+	else
+		menu_bar_move_done = 1;
+
+	/* Alpha calculation for about menu header */
+	if (about_menu_header_alpha < 128) {
+		about_menu_header_alpha += 2;
+		if (about_menu_header_alpha >= 128) {
+			about_menu_header_alpha = 128;
+			about_menu_header_fadein_done = 1;
+		}
+	}
+	else
+		about_menu_header_fadein_done = 1;
+					
 	/* Draw about mini icon */ 
-	draw_about_icon_mini(34, 37 * Y_RATIO, 128);
+	draw_about_icon_mini(icon_about_mini_x, 37 * Y_RATIO, about_menu_header_alpha);
 	
 	/* Draw text */
-	drawString_neuropol(61, 33 * Y_RATIO, 22, 0, Black, "About");
+	drawString_neuropol(str_about_x, 33 * Y_RATIO, about_menu_header_alpha, 22, 0, "About");
 	sprintf(ver, "v%s", version);
-	drawString_neuropol(550, 37 * Y_RATIO, 16, 0, Black, ver);
-	centerString_neuropol(102 * Y_RATIO, 17, 0, Black, "Thank you for using Artemis!");	
-	centerString_neuropol(123 * Y_RATIO, 15, 0, Black, "a Playstation 2 Hacking System");
-		
+	drawString_neuropol(str_ver_x, 37 * Y_RATIO, about_menu_header_alpha, 16, 0, ver);
+
 	/* draw menu delimeter */			
-	draw_menu_bar(128);
-				
+	draw_menu_bar(menu_bar_x, 60 * Y_RATIO, about_menu_header_alpha);
+		
+	if (menu_bar_move_done) {
+		/* Alpha calculation for about menu header */
+		if (about_menu_thx_alpha < 128) {
+			about_menu_thx_alpha += 5;
+			if (about_menu_thx_alpha >= 128) {
+				about_menu_thx_alpha = 128;
+				about_menu_thx_fadein_done = 1;
+			}
+		}
+		else
+			about_menu_thx_fadein_done = 1;
+		
+		centerString_neuropol(102 * Y_RATIO, about_menu_thx_alpha, 17, 0, "Thank you for using Artemis!");	
+		centerString_neuropol(123 * Y_RATIO, about_menu_thx_alpha,15, 0, "a PlayStation 2 Hacking System");
+	}
+		
     gsKit_set_test(gsGlobal, GS_ATEST_ON);
     
     /* Blend Alpha Primitives "Back To Front" */
