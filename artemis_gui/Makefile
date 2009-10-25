@@ -29,13 +29,14 @@ EE_LIBS = -Xlinker --start-group -lpatches -lpad -lgskit -ldmakit -lm -lz -lpng 
 all: $(EE_BIN)
 	ps2_packer/ps2_packer $(EE_BIN) $(EE_BIN_PACKED)
 	cp -f --remove-destination $(EE_BIN_PACKED) $(EE_BIN_DIR)/$(EE_BIN)
-	$(MAKE) -C elf_loader clean			
-	rm -f $(EE_OBJS) $(EE_SRC) *.elf *.ELF
  
 clean:
 	$(MAKE) -C elf_loader clean			
 	rm -f $(EE_OBJS) $(EE_SRC) *.elf *.ELF
 
+rebuild:
+	$(MAKE) clean all
+	
 usbd.s:
 	bin2s $(PS2SDK)/iop/irx/usbd.irx usbd.s usbd_irx
 usbhdfsd.s:
