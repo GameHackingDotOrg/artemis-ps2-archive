@@ -625,7 +625,7 @@ void draw_menu_bar(int x, int y, int alpha)
 							0,  									/* U1 */
 							0,  									/* V1 */
 							x + SCREEN_WIDTH,		 				/* X2 */
-							y + 2,//(tex_menu_bar.Height * Y_RATIO),	/* Y2 */
+							y + (tex_menu_bar.Height * Y_RATIO),	/* Y2 */
 							tex_menu_bar.Width, 					/* U2 */
 							tex_menu_bar.Height,					/* V2 */
 							0,
@@ -707,7 +707,7 @@ void load_background_Textures(void)
 	#ifdef DEBUG
 		printf("1st VRAM Pointer = %08x  \n", gsGlobal->CurrentPointer);
 	#endif
-
+	
 	/* gsGlobal->CurrentPointer = vram_pointer; */
 
 	if ((pPng = pngOpenRAW(&background, size_background)) > 0) { /* tex size = 0x140000 */
@@ -719,7 +719,7 @@ void load_background_Textures(void)
 				tex_background.Clut		= NULL;
 				tex_background.Width    = pPng->width;
 				tex_background.Height   = pPng->height;
-				tex_background.Filter   = GS_FILTER_NEAREST;
+				tex_background.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -765,7 +765,7 @@ void load_mainmenu_Textures(void)
 				tex_logo_ghost.Clut	  = NULL;
 				tex_logo_ghost.Width    = pPng->width;
 				tex_logo_ghost.Height   = pPng->height;
-				tex_logo_ghost.Filter   = GS_FILTER_NEAREST;
+				tex_logo_ghost.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -789,7 +789,7 @@ void load_mainmenu_Textures(void)
 				tex_logo.Clut	  = NULL;
 				tex_logo.Width    = pPng->width;
 				tex_logo.Height   = pPng->height;
-				tex_logo.Filter   = GS_FILTER_NEAREST;
+				tex_logo.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -813,7 +813,7 @@ void load_mainmenu_Textures(void)
 				tex_gshi_full.Clut	  = NULL;
 				tex_gshi_full.Width    = pPng->width;
 				tex_gshi_full.Height   = pPng->height;
-				tex_gshi_full.Filter   = GS_FILTER_NEAREST;
+				tex_gshi_full.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -837,7 +837,7 @@ void load_mainmenu_Textures(void)
 				tex_icon_start.Clut	  = NULL;
 				tex_icon_start.Width    = pPng->width;
 				tex_icon_start.Height   = pPng->height;
-				tex_icon_start.Filter   = GS_FILTER_NEAREST;
+				tex_icon_start.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -861,7 +861,7 @@ void load_mainmenu_Textures(void)
 				tex_icon_cheats.Clut	  = NULL;
 				tex_icon_cheats.Width    = pPng->width;
 				tex_icon_cheats.Height   = pPng->height;
-				tex_icon_cheats.Filter   = GS_FILTER_NEAREST;
+				tex_icon_cheats.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -885,7 +885,7 @@ void load_mainmenu_Textures(void)
 				tex_icon_about.Clut	  = NULL;
 				tex_icon_about.Width    = pPng->width;
 				tex_icon_about.Height   = pPng->height;
-				tex_icon_about.Filter   = GS_FILTER_NEAREST;
+				tex_icon_about.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -909,7 +909,7 @@ void load_mainmenu_Textures(void)
 				tex_icon_options.Clut	  = NULL;
 				tex_icon_options.Width    = pPng->width;
 				tex_icon_options.Height   = pPng->height;
-				tex_icon_options.Filter   = GS_FILTER_NEAREST;
+				tex_icon_options.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -933,7 +933,7 @@ void load_mainmenu_Textures(void)
 				tex_desc_start.Clut	  = NULL;
 				tex_desc_start.Width    = pPng->width;
 				tex_desc_start.Height   = pPng->height;
-				tex_desc_start.Filter   = GS_FILTER_NEAREST;
+				tex_desc_start.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -957,7 +957,7 @@ void load_mainmenu_Textures(void)
 				tex_desc_cheats.Clut	  = NULL;
 				tex_desc_cheats.Width    = pPng->width;
 				tex_desc_cheats.Height   = pPng->height;
-				tex_desc_cheats.Filter   = GS_FILTER_NEAREST;
+				tex_desc_cheats.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -981,7 +981,7 @@ void load_mainmenu_Textures(void)
 				tex_desc_about.Clut	  = NULL;
 				tex_desc_about.Width    = pPng->width;
 				tex_desc_about.Height   = pPng->height;
-				tex_desc_about.Filter   = GS_FILTER_NEAREST;
+				tex_desc_about.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1005,7 +1005,7 @@ void load_mainmenu_Textures(void)
 				tex_desc_options.Clut	  = NULL;
 				tex_desc_options.Width    = pPng->width;
 				tex_desc_options.Height   = pPng->height;
-				tex_desc_options.Filter   = GS_FILTER_NEAREST;
+				tex_desc_options.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1051,7 +1051,7 @@ void load_submenu_Textures(void)
 				tex_icon_cheats_mini.Clut		= NULL;
 				tex_icon_cheats_mini.Width    = pPng->width;
 				tex_icon_cheats_mini.Height   = pPng->height;
-				tex_icon_cheats_mini.Filter   = GS_FILTER_NEAREST;
+				tex_icon_cheats_mini.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1075,7 +1075,7 @@ void load_submenu_Textures(void)
 				tex_icon_about_mini.Clut		= NULL;
 				tex_icon_about_mini.Width    = pPng->width;
 				tex_icon_about_mini.Height   = pPng->height;
-				tex_icon_about_mini.Filter   = GS_FILTER_NEAREST;
+				tex_icon_about_mini.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1099,7 +1099,7 @@ void load_submenu_Textures(void)
 				tex_icon_options_mini.Clut		= NULL;
 				tex_icon_options_mini.Width    = pPng->width;
 				tex_icon_options_mini.Height   = pPng->height;
-				tex_icon_options_mini.Filter   = GS_FILTER_NEAREST;
+				tex_icon_options_mini.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1123,7 +1123,7 @@ void load_submenu_Textures(void)
 				tex_menu_bar.Clut		= NULL;
 				tex_menu_bar.Width    = pPng->width;
 				tex_menu_bar.Height   = pPng->height;
-				tex_menu_bar.Filter   = GS_FILTER_NEAREST;
+				tex_menu_bar.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1147,7 +1147,7 @@ void load_submenu_Textures(void)
 				tex_sel_bar1.Clut		= NULL;
 				tex_sel_bar1.Width    = pPng->width;
 				tex_sel_bar1.Height   = pPng->height;
-				tex_sel_bar1.Filter   = GS_FILTER_NEAREST;
+				tex_sel_bar1.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1171,7 +1171,7 @@ void load_submenu_Textures(void)
 				tex_sel_bar2.Clut		= NULL;
 				tex_sel_bar2.Width    = pPng->width;
 				tex_sel_bar2.Height   = pPng->height;
-				tex_sel_bar2.Filter   = GS_FILTER_NEAREST;
+				tex_sel_bar2.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1215,7 +1215,7 @@ void load_Font(void)
 				tex_font_neuropol.Clut		= NULL;
 				tex_font_neuropol.Width    = pPng->width;
 				tex_font_neuropol.Height   = pPng->height;
-				tex_font_neuropol.Filter   = GS_FILTER_NEAREST;
+				tex_font_neuropol.Filter   = GS_FILTER_LINEAR;
 				#ifdef DEBUG
 					printf("VRAM Pointer = %08x  ", gsGlobal->CurrentPointer);
 					printf("texture size = %x\n", gsKit_texture_size(pPng->width, pPng->height, GS_PSM_CT32));
@@ -1270,7 +1270,7 @@ void Setup_GS(int gs_vmode)
 {
 	/* GS Init */
 	gsGlobal = gsKit_init_global_custom(
-		GS_RENDER_QUEUE_OS_POOLSIZE+GS_RENDER_QUEUE_OS_POOLSIZE/2, /* eliminates overflow */
+		GS_RENDER_QUEUE_OS_POOLSIZE, //+GS_RENDER_QUEUE_OS_POOLSIZE/2, /* eliminates overflow */
 		GS_RENDER_QUEUE_PER_POOLSIZE);
 
 	/* Clear Screen */
@@ -1286,12 +1286,12 @@ void Setup_GS(int gs_vmode)
 	gsGlobal->StartY = SCREEN_Y;
 
 	/* Buffer Init */
+	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsGlobal->PrimAAEnable = GS_SETTING_ON;
 	gsGlobal->DoubleBuffering = GS_SETTING_OFF;
 	gsGlobal->ZBuffering      = GS_SETTING_OFF;
 	gsGlobal->PSM = GS_PSM_CT32;
-	gsGlobal->PSMZ = GS_PSMZ_16S;
-
+	
 	/* Force Interlace and Field mode */
 	gsGlobal->Interlace = GS_INTERLACED;
 	gsGlobal->Field     = GS_FIELD;
@@ -1305,19 +1305,22 @@ void Setup_GS(int gs_vmode)
 	/* Screen Init */
 	gsKit_init_screen(gsGlobal);
 	gsKit_clear(gsGlobal, Black);
-	gsKit_mode_switch(gsGlobal, GS_ONESHOT);
+		
+	gsKit_mode_switch(gsGlobal, GS_PERSISTENT);
 }
 
 /*
  * render GUI
  */
 void Render_GUI(void)
-{			
+{				     
 	/* Flips Framebuffers on VSync */
 	gsKit_sync_flip(gsGlobal);
 
 	/* Normal User Draw Queue "Execution" (Kicks Oneshot and Persistent Queues) */
 	gsKit_queue_exec(gsGlobal);	
+		
+	gsKit_queue_reset(gsGlobal->Per_Queue);
 }
 
 /*
@@ -1338,12 +1341,11 @@ int Draw_INTRO_part1(void)
 {
 	int intro_done = 0;
 	int logo_fadein_done = 0;
-
+	
 	/* Clear screen	*/
 	gsKit_clear(gsGlobal, Black);
 
 	/* Set Alpha settings */
-	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
 
@@ -1360,7 +1362,7 @@ int Draw_INTRO_part1(void)
 
 	/* Draw Background */
 	draw_background(background_alpha);
-
+	
 	/* Draw ghost logo */
 	draw_logo_ghost(logo_alpha);
 				
@@ -1413,7 +1415,6 @@ int Draw_INTRO_part2(void)
 	gsKit_clear(gsGlobal, Black);
 
 	/* Set Alpha settings */
-	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
 
@@ -1643,7 +1644,6 @@ int Draw_MainMenu(int selected_button, int highlight_pulse)
 	gsKit_clear(gsGlobal, Black);
 
 	/* Set Alpha settings */
-	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
 
@@ -1727,7 +1727,6 @@ int Draw_CheatsMenu(void)
 	gsKit_clear(gsGlobal, Black);
 
 	/* Set Alpha settings */
-	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
 
@@ -1760,7 +1759,6 @@ int Draw_OptionsMenu(void)
 	gsKit_clear(gsGlobal, Black);
 
 	/* Set Alpha settings */
-	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
 
@@ -1812,11 +1810,9 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
 	gsKit_clear(gsGlobal, Black);
 
 	/* Set Alpha settings */
-	gsGlobal->PrimAAEnable = GS_SETTING_ON;
-	gsGlobal->PrimAlphaEnable = GS_SETTING_ON;
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
-
+	
 	/* Draw Background */
 	draw_background(background_alpha);
 	
@@ -1849,10 +1845,10 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
 	drawString_neuropol(61, 30 * Y_RATIO, about_menu_header_alpha, 29, 2, "About");
 	sprintf(ver, "v%s", version);
 	drawString_neuropol(550, 39 * Y_RATIO, about_menu_header_alpha, 16, 0, ver);
-
+	
 	/* draw menu delimeter */
 	draw_menu_bar(menu_bar_x, 60 * Y_RATIO, about_menu_header_alpha);
-
+	
 	if (menu_bar_move_done) {
 		/* Alpha calculation for about menu header */
 		if (about_menu_thx_alpha < 128) {
@@ -1896,7 +1892,7 @@ int Draw_AboutMenu(char *version, struct about_content *about_text)
     
     /* Blend Alpha Primitives "Back To Front" */
     gsKit_set_primalpha(gsGlobal, GS_BLEND_BACK2FRONT, 0);
-
+    
     if (about_menu_content_fadein_done)
     	return 1;
 
