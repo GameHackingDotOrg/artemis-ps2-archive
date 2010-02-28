@@ -221,7 +221,7 @@ extern HWND_WNDPROC_INFO DlgInfo;
 
 /****************************************************************************
 Function Declarations -should also be a guidline to help people find where
-any function is locatated.
+any function is located.
 *****************************************************************************/
 
 //ps2cc.c

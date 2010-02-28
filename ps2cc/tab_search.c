@@ -692,7 +692,9 @@ search_end:
                     if (!(LoadStruct(&RamInfo.NewResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), ResFileName))) { break; }
                     if (!(LoadFile(&RamInfo.Results, ResFileName, sizeof(CODE_SEARCH_RESULTS_INFO), NULL, FALSE))) { break; }
                     sprintf(ResFileName, "%sdump1.raw", Settings.CS.DumpDir);
-                    rename (RamInfo.NewResultsInfo.dmpFileName, ResFileName);
+                    if(!CopyBinFile(RamInfo.NewResultsInfo.dmpFileName, ResFileName)) { FreeRamInfo(); break; }
+//                    rename (RamInfo.NewResultsInfo.dmpFileName, ResFileName);
+                    strcpy(RamInfo.NewResultsInfo.dmpFileName, ResFileName);
                     sprintf(ResFileName, "%ssearch1.bin", Settings.CS.DumpDir);
                     SaveFile(RamInfo.Results, (RamInfo.NewResultsInfo.DumpSize/Search.Size/8), ResFileName, sizeof(CODE_SEARCH_RESULTS_INFO), &RamInfo.NewResultsInfo);
                     SendMessage(hwndCompareTo,CB_RESETCONTENT,0,0);

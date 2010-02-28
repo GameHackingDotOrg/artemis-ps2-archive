@@ -7,6 +7,8 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 29: Fixed loading searches. It seemed to work before, but it wasn't right.
+
 Rev 28: NTPB comms changes
 
 Rev 27: Settings fix
