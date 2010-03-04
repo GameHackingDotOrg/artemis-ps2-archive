@@ -333,6 +333,7 @@ s64 ShowResPage(s64 ResNum);
 int ResFormatString(char *tmpstring, int outfmt, int numbytes);
 int Result2ActiveList(u32 address, u64 value, int size);int UpdateActiveCheats();
 u64 GetResListValue(HWND hwndResList, int iItem, int iSubItem, int SearchSize);
+int ExportResults(int ExportType);
 
 //tab_search
 BOOL CALLBACK CodeSearchProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam);

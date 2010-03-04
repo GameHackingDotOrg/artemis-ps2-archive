@@ -7,6 +7,9 @@ to note a few things.
 /****************************************************************************
 Changes
 *****************************************************************************/
+Rev 30: Export Results option added. The format of the values is dependent on
+	the current view.
+
 Rev 29: Fixed loading searches. It seemed to work before, but it wasn't right.
 
 Rev 28: NTPB comms changes

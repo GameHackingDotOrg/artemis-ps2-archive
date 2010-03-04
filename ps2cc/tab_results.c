@@ -277,11 +277,11 @@ LRESULT CALLBACK ResultsListHandler (HWND hwnd, UINT message, WPARAM wParam, LPA
                     int iSelected = SendMessage(hwnd, LVM_GETSELECTIONMARK, 0, 0);
                     if (wParam == VK_NEXT) {
                     	SendMessage(hwndResPage,CB_SETCURSEL, SendMessage(hwndResPage,CB_GETCURSEL,0,0) + 1, 0);
-            			SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, MAKEWPARAM(SEARCH_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
+            			SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, MAKEWPARAM(RESULTS_PAGE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
 					}
                     else {
                     	SendMessage(hwndResPage,CB_SETCURSEL, SendMessage(hwndResPage,CB_GETCURSEL,0,0) - 1, 0);
-            			SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, MAKEWPARAM(SEARCH_SIZE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
+            			SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], WM_COMMAND, MAKEWPARAM(RESULTS_PAGE_CMB, CBN_SELCHANGE),(LPARAM)hwndResPage);
                     }
                     ListView_SetItemState(hwnd, iSelected, LVIS_SELECTED|LVIS_FOCUSED, LVIS_SELECTED|LVIS_FOCUSED);
                 } return 0;
@@ -666,4 +666,107 @@ u64 GetResListValue(HWND hwndResList, int iItem, int iSubItem, int SearchSize)
 		} break;
 	}
 	return 0;
+}
+
+/**************************************************************
+Export results
+**************************************************************/
+int ExportResults(int ExportType)
+{
+    if (!(ResultsList)) { return 0; }
+    char ErrTxt[1000];
+    u32 i, DumpNum, address;
+    u64 value;
+    float tmpFloat=0;
+    u32 *CastFloat=(u32*)(&tmpFloat);
+    double tmpDouble=0;
+    u64 *CastDouble=(u64*)&tmpDouble;
+    int SearchCount = SendMessage(GetDlgItem(DlgInfo.TabDlgs[CODE_SEARCH_TAB], COMPARE_TO_CMB),CB_GETCOUNT,0,0) - 1;
+	int SearchNum = SendMessage(GetDlgItem(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], RESULTS_SEARCH_NUM_CMB),CB_GETCURSEL,0,0);
+    char resFileName[MAX_PATH], txtValue[32], fmtString[20], txtLine[4096];
+    sprintf(resFileName,"%ssearch%u.bin",Settings.CS.DumpDir, SearchCount);
+//    RAM_AND_RES_DATA RamInfo; memset(&RamInfo,0,sizeof(RAM_AND_RES_DATA));
+    if (!(LoadStruct(&RamInfo.NewResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), resFileName))) { goto EXPORT_RES_ERROR; }
+    if (!(LoadFile(&RamInfo.Results, resFileName, sizeof(CODE_SEARCH_RESULTS_INFO), NULL, FALSE))) { goto EXPORT_RES_ERROR; }
+
+    if (!DoFileSave(NULL, resFileName)) { goto EXPORT_RES_ERROR; }
+    FILE *ResTxtFile = fopen(resFileName, "wt");
+    if (!(ResTxtFile)) {
+        sprintf(ErrTxt, "Unable to open/create results file (ExportResults,1) -- Error %u", GetLastError());
+        MessageBox(NULL,ErrTxt,"Error",MB_OK); goto EXPORT_RES_ERROR;
+    }
+
+	//open dump file handles - Notice they're being loaded in order from the current search back.
+    FILE *ramFiles[MAX_SEARCHES];
+    for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {
+        sprintf(resFileName,"%ssearch%u.bin",Settings.CS.DumpDir, (SearchCount - DumpNum));
+        if (!(LoadStruct(&RamInfo.OldResultsInfo, sizeof(CODE_SEARCH_RESULTS_INFO), resFileName))) { goto EXPORT_RES_ERROR; }
+        if (!(ramFiles[DumpNum] = fopen(RamInfo.OldResultsInfo.dmpFileName,"rb"))) {
+            sprintf(ErrTxt, "Unable to open dump file (ShowResPage,1) -- Error %u", GetLastError());
+            MessageBox(NULL,ErrTxt,"Error",MB_OK);
+            goto EXPORT_RES_ERROR;
+	    }
+    }
+
+    ResFormatString(fmtString, Settings.Results.DisplayFmt, RamInfo.NewResultsInfo.SearchSize);
+    for (i = 0; i < RamInfo.NewResultsInfo.ResCount; i++) {
+        if (ExportType == MNU_RES_EXPORT_ALL) {
+			sprintf(txtLine, "%08X ", ResultsList[i] + RamInfo.NewResultsInfo.MapMemAddy);
+            for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {
+            	RamInfo.NewFile = ramFiles[DumpNum];
+            	GetSearchValues(&value, NULL, ResultsList[i], RamInfo.NewResultsInfo.SearchSize, LITTLE_ENDIAN_SYS);
+             	if (Settings.Results.DisplayFmt == MNU_RES_SHOW_FLOAT) {
+                	*CastDouble = value;
+                	*CastFloat = value & 0xFFFFFFFF;
+                	sprintf(txtValue, fmtString, (RamInfo.NewResultsInfo.SearchSize == 4) ? tmpFloat : tmpDouble);
+             	} else { sprintf(txtValue, fmtString, value); }
+             	strcat(txtValue, " ");
+
+ 				strcat(txtLine, txtValue);
+            }
+        } else {
+            address = ResultsList[i] + RamInfo.NewResultsInfo.MapMemAddy;
+            RamInfo.NewFile = ramFiles[SearchNum]; //CHECK THIS
+            GetSearchValues(&value, NULL, ResultsList[i], RamInfo.NewResultsInfo.SearchSize, LITTLE_ENDIAN_SYS);
+			if (ExportType == MNU_RES_EXPORT_CHEAT) {
+				switch (RamInfo.NewResultsInfo.SearchSize) {
+					case 1:
+					{
+						sprintf(txtLine, "%08X %08X", address, value);
+					} break;
+					case 2:
+					{
+						sprintf(txtLine, "%08X %08X", address|0x10000000, value);
+					} break;
+					case 4:
+					{
+						sprintf(txtLine, "%08X %08X", address|0x20000000, value);
+					} break;
+					case 8:
+					{
+						sprintf(txtLine, "%08X %08X", address|0x2000000, WordFromU64(value,0));
+						sprintf(txtLine, "%s%08X %08X", txtLine, (address|0x20000000) + 4, WordFromU64(value,1));
+					} break;
+				}
+			} else if (Settings.Results.DisplayFmt == MNU_RES_SHOW_FLOAT) {
+                *CastDouble = value;
+                *CastFloat = value & 0xFFFFFFFF;
+                sprintf(txtLine, "%08X ", address);
+                sprintf(txtValue, fmtString, (RamInfo.NewResultsInfo.SearchSize == 4) ? tmpFloat : tmpDouble);
+                strcat(txtLine, txtValue);
+			} else {
+                sprintf(txtLine, "%08X ", address);
+                sprintf(txtValue, fmtString, value);
+                strcat(txtLine, txtValue);
+            }
+		}
+        fprintf(ResTxtFile, "%s\n", txtLine);
+    }
+EXPORT_RES_ERROR:
+    fclose(ResTxtFile);
+	for (DumpNum = 0; DumpNum < SearchCount; DumpNum++) {
+		if(ramFiles[DumpNum]) { fclose(ramFiles[DumpNum]); }
+	}
+    FreeRamInfo();
+    return i;
 }

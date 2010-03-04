@@ -47,6 +47,12 @@ BEGIN
   		MENUITEM "Decimal (Signed)",MNU_RES_SHOW_DECS
   		MENUITEM "Float",MNU_RES_SHOW_FLOAT
     END
+    POPUP "Export"
+    BEGIN
+    	MENUITEM "Selected Search",MNU_RES_EXPORT_SEL
+    	MENUITEM "Cheat Device (Selected Search)",MNU_RES_EXPORT_CHEAT
+    	MENUITEM "All Values",MNU_RES_EXPORT_ALL
+    END
   END
   POPUP "Memory Editor"
   BEGIN

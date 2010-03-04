@@ -169,6 +169,13 @@ BOOL CALLBACK MainWndProc(HWND hwnd,UINT msg,WPARAM wParam,LPARAM lParam)
 				{
 					if ((ResultsList) && (SendMessage(hwndTabCtrl, TCM_GETCURFOCUS, 0, 0) == SEARCH_RESULTS_TAB)) { SendMessage(DlgInfo.TabDlgs[SEARCH_RESULTS_TAB], msg, wParam, lParam); }
 				} break;
+				/************************************************************
+				Menu > Results > Export > Selected Search Number
+				*************************************************************/
+                case MNU_RES_EXPORT_SEL: case MNU_RES_EXPORT_ALL: case MNU_RES_EXPORT_CHEAT:
+                {
+					ExportResults(LOWORD(wParam));
+				} break;
 			    case MNU_CS_INPUT_HEX: case MNU_CS_INPUT_DEC: case MNU_CS_INPUT_FLOAT:
                 {
                     Settings.CS.NumBase = GetMenuItemData(hMenu, LOWORD(wParam));
