@@ -1,0 +1,19 @@
+CL-LiveDebug v3 Launcher
+CheatersLounge Copyright ©
+Written by: Gtlcpimp
+
+Some functionality borrowed from other sources.
+
+Source version: 3.0.4
+
+
+If you use some of this source for your own application please provide proper credit.
+I already know that by releasing this source that 'sp0nge', 'freddyftbll', 'n.injallo',
+and the rest of them credit and source stealing idiots at 'cheatersevolved' will take
+this and claim they made it / a debugger on their own. Please keep in mind that those
+idiots only steal sources and credit, and actually contain no ability at software
+development nor hacking (any form of code hacking console hacking etc.). However
+I am still releasing this source to help out those who wish to learn / play with the
+ability to force GPU print outs during gameplay.
+
+~ Gtlcpimp
