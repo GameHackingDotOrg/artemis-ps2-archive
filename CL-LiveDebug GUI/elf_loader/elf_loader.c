@@ -1,0 +1,208 @@
+#include <tamtypes.h>
+#include <kernel.h>
+#include <sifrpc.h>
+#include <loadfile.h>
+#include <string.h>
+#include <stdio.h>
+
+/* GS macro */
+#define GS_BGCOLOUR	*((vu32*)0x120000e0)
+
+char boot_path[1024];
+int load_elf_ram(char *elf);
+
+/* ELF-header structures and identifiers */
+#define ELF_MAGIC	0x464c457f
+#define ELF_PT_LOAD	1
+
+typedef struct {
+	u8	ident[16];
+	u16	type;
+	u16	machine;
+	u32	version;
+	u32	entry;
+	u32	phoff;
+	u32	shoff;
+	u32	flags;
+	u16	ehsize;
+	u16	phentsize;
+	u16	phnum;
+	u16	shentsize;
+	u16	shnum;
+	u16	shstrndx;
+} elf_header_t;
+
+typedef struct {
+	u32	type;
+	u32	offset;
+	void *vaddr;
+	u32	paddr;
+	u32	filesz;
+	u32	memsz;
+	u32	flags;
+	u32	align;
+} elf_pheader_t;
+
+/*
+ * launch OSDSYS in case elf load failed (if fmcb installed, reloads it)
+ */
+void launch_OSDSYS(void)
+{
+	__asm__ __volatile__(
+		"	li $3, 0x04;"
+		"	syscall;"
+		"	nop;"
+	);
+}
+
+/*
+ * Execute an elf with SifLoadElf + ExecPS2
+ * Replaced by load_elf_ram (this can't boot backups for some reason)
+ */
+/*
+void execute_elf(char *path)
+{
+	t_ExecData elf;
+	int r;
+	char *args[1];
+
+	memset(&elf, 0, sizeof(t_ExecData));
+
+    SifLoadFileInit();
+	r = SifLoadElf(path, &elf);
+	if ((!r) && (elf.epc)) {
+
+		GS_BGCOLOUR = 0x00ffff; // YELLOW: Sifload elf
+  	    SifLoadFileExit();
+  	  	fioExit();
+  	  	SifExitRpc(); // some programs need it to be here
+
+  	  	FlushCache(0);
+  	  	FlushCache(2);
+
+    	args[0] = path;
+    	ExecPS2((void*)elf.epc, (void*)elf.gp, 1, args);
+
+    	while (1){;}
+  	}
+  	else {
+	
+		GS_BGCOLOUR = 0xff00ff; // PINK: Launching OSDSYS
+  	    SifLoadFileExit();
+  	  	fioExit();
+  	  	SifExitRpc();
+
+  		launch_OSDSYS();
+	}
+
+ 	GS_BGCOLOUR = 0xffffff; // WHITE: Failed to load OSDSYS
+  	while (1){;}
+}
+*/
+
+/*
+ * main function
+ */
+int main (int argc, char *argv[1])
+{
+	int i;
+
+	/* preserves elf path before clearing stack !!! */
+	strcpy(boot_path, argv[0]);
+
+	/* clearing mem, so better not to have anything valuable on stack */
+	for (i = 0x100000; i < 0x2000000 ; i += 64) {
+		asm (
+			"\tsq $0, 0(%0) \n"
+			"\tsq $0, 16(%0) \n"
+			"\tsq $0, 32(%0) \n"
+			"\tsq $0, 48(%0) \n"
+			:: "r" (i) );
+	}
+
+	SifInitRpc(0);
+	load_elf_ram(boot_path);
+	//execute_elf(argv[0]);
+
+	return 0;
+}
+
+int load_elf_ram(char *elf) {
+	u32 elfloc = 0x01800000;
+	elf_header_t *boot_header;
+	elf_pheader_t *boot_pheader;
+	int i, size = 0, fd = 0;
+	char *args[1];
+
+	
+	GS_BGCOLOUR = 0x0000ff; /* RED: Opening elf */
+	fd = fioOpen(elf, O_RDONLY); //Open the elf
+	if (fd < 0) { fioClose(fd); return -1; } //If it doesn't exist, return null
+
+	size = fioLseek(fd, 0, SEEK_END); //Gets the size of the elf
+	fioLseek(fd, 0, SEEK_SET);
+	
+	if (size < 0) { fioClose(fd); return -1; }
+	
+	GS_BGCOLOUR = 0x00ff00; /* GREEN: Reading elf */
+	fioRead(fd, (u32*)elfloc, size); //Reads the elf and stores it into the memory at 0x01000000
+	fioClose(fd); //Closes system.cnf
+	elfloc = 0x01800000;
+
+	/* Get Elf header */
+	//boot_header = &elfloc;
+	GS_BGCOLOUR = 0xff0000; /* BLUE: Installing elf */
+	boot_header = (elf_header_t*)elfloc;
+
+	/* Check elf magic */
+	if ((*(u32*)boot_header->ident) != ELF_MAGIC)
+		return -1;
+
+	/* Get program headers */
+	boot_pheader = (elf_pheader_t*)(elfloc + boot_header->phoff);
+
+	/* Scan through the ELF's program headers and copy them into apropriate RAM
+	 * section, then padd with zeros if needed.
+	 */
+	for (i = 0; i < boot_header->phnum; i++) {
+		if (boot_pheader[i].type != ELF_PT_LOAD)
+			continue;
+
+		memcpy(boot_pheader[i].vaddr, (u8 *)elfloc + boot_pheader[i].offset, (int)(boot_pheader[i].filesz)); //(elf_pheader_t*)boot_pheader[i].filesz);
+
+		if (boot_pheader[i].memsz > boot_pheader[i].filesz)
+			memset(boot_pheader[i].vaddr + boot_pheader[i].filesz, 0, boot_pheader[i].memsz - boot_pheader[i].filesz);
+	}
+	
+	//Booting part
+	if (boot_header->entry) {
+
+		GS_BGCOLOUR = 0x00ffff; /* YELLOW: ExecPS2 */
+  	    SifLoadFileExit();
+  	  	fioExit();
+  	  	SifExitRpc(); /* some programs need it to be here */
+
+  	  	FlushCache(0);
+  	  	FlushCache(2);
+		
+    	args[0] = elf;
+    	//ExecPS2((void*)boot_header.epc, (void*)boot_header.gp, 1, args);
+		ExecPS2((u32*)boot_header->entry, 0, 1, args);
+
+    	SleepThread();
+  	}
+  	else {
+	
+		GS_BGCOLOUR = 0xff00ff; /* PINK: Launching OSDSYS */
+  	    SifLoadFileExit();
+  	  	fioExit();
+  	  	SifExitRpc();
+
+  		launch_OSDSYS();
+	}
+
+ 	GS_BGCOLOUR = 0xffffff; /* WHITE: Failed to load OSDSYS */
+  	while (1){;}
+	
+	return 0;
+}

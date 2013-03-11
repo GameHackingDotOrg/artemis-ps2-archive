@@ -1,0 +1,12 @@
+Starts at 80047810
+Ends at the ((512 * 0x20) + 0x80047810) line
+
+One code example:
+80047810 - 80047830
+
+80047810 - 80047820 = 16 byte long string
+80047820 - 80047824 = Address
+80047824 - 80047828 = Value ON
+80047828 - 8004782C = Value OFF
+8004782C - 80047830 = Boolean, is code On or Off (0 = off, 1 = on)
+

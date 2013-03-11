@@ -1,0 +1,29 @@
+Delete Codes:
+	Code to codes menu and highlight the code you wish to delete
+	Press [SQUARE] and then press [CROSS] on 'Okay'
+	
+Add Patch to Codes:
+	Go to the patches menu and press [SQUARE]
+	Go down to 'Add to Codes' and press [CROSS]
+	Enter in a Code Name for the code by pressing [CROSS] when the Code Name: text is selected
+	By default, the code name will be the address
+	Check Code Name: Controls for more help on that
+	Then change the bit type between 8 - 32 bit
+	After that press [CROSS] on 'Okay' and your done
+	
+Code Name: Controls:
+	DPAD LEFT and RIGHT will move the highlighter accordingly
+	DPAD UP and DOWN will increment or decrement to that character accordingly
+	R1 will store 0x00 at the highlighted character (ending the string)
+	L1 will store 0x20 at the highlighted character (space)
+	R2 will increment the highlighted value by 0x20
+	L2 will decrement the highlighted value by 0x20
+	Pressing [TRIANGLE] will exit out of the Code Name editor
+	
+Searching for Changes:
+	Search for a value with Search
+	Then when your ready, change Next Search: to Changed or Unchanged which will search for a change or no change
+	Then press [CROSS] on 'Next Search' to search
+	
+	If you want to just Next Search for a value greater than or something, choose the Operator mode for Next Search:
+
