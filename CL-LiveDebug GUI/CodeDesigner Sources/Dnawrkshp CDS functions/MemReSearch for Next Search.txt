@@ -1,0 +1,440 @@
+//Next Search searching function by Dnawrkshp
+//I copied the MemSearchProcess function that Gtlcpimp made
+//and modified it to read from the results list at 8004B040
+//Then it just searches through those addresses
+//Most credit is Gtlcpimps
+_MemReSearchProcess:
+
+addiu sp, sp, $FF50
+sq ra, $0000(sp)
+sw s0, $0010(sp)
+sw s1, $0014(sp)
+sw s2, $0018(sp)
+sw s3, $001C(sp)
+sw s4, $0020(sp)
+sw s5, $0024(sp)
+sw s6, $0028(sp)
+sw s7, $002C(sp)
+sq k0, $0060(sp)
+sq k1, $0070(sp)
+sq zero, $0080(sp)
+
+addu s0, a0, zero // Search Query
+lw s1, $0000(s0) // Start
+lw s2, $0004(s0) // Stop
+
+lw v0, $0008(s0)
+sw v0, $0080(sp)
+lw v0, $000C(s0)
+sw v0, $0084(sp)
+lw v0, $0010(s0)
+sw v0, $0088(sp)
+lw v0, $0014(s0)
+sw v0, $008C(sp)
+
+lw s3, $0018(s0)
+
+bne s3, zero, 2
+nop
+lb s4, $0080(sp)
+
+addiu v0, zero, 1
+bne s3, v0, 2
+nop
+lh s4, $0080(sp)
+
+addiu v0, zero, 2
+bne s3, v0, 2
+nop
+lw s4, $0080(sp)
+
+addiu v0, zero, 3
+bne s3, v0, 2
+nop
+ld s4, $0080(sp)
+
+addiu v0, zero, 4
+bne s3, v0, 2
+nop
+lq s4, $0080(sp)
+
+lui s5, $8004        // Results Storage
+ori s5, s5, $B020
+daddu s6, zero, zero // Results Count
+
+sw s1, $0000(s5)
+sw s2, $0004(s5)
+sw s3, $0008(s5)
+sw zero, $000C(s5)
+sq s4, $0010(s5)
+// 8004B040
+
+//Results addressing starts at 8004B040
+lui s1, $8005
+addiu s1, s1, $B040 //8004B040
+
+_MemReSearchProcessLoop:
+
+// Clear menu space
+lui t0, $0009        // Packet
+addiu t1, zero, 0    // x
+addiu t2, zero, 60   // y
+daddu t3, zero, zero   // z
+addiu t4, zero, $000 // r
+addiu t5, zero, $000 // g
+addiu t6, zero, $000 // b
+daddu t7, zero, zero // size
+addiu t8, zero, 640  // w
+addiu t9, zero, 380  // h
+jal :_AddPixel
+nop
+lui a0, $0009
+jal :_SendPacket
+addiu a1, zero, 80
+
+// Text (Searching...)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $47DC
+addiu t0, zero, 248
+addiu t1, zero, 70
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+lui k0, $0008
+sw s1, $0090(sp)
+sw s2, $0094(sp)
+sw s6, $0098(sp)
+
+// %08X / %08X -----------
+
+lw s7, $0018(k0)
+
+addiu a0, sp, $0090
+addu a1, s7, zero
+jal :_lineToHex
+addiu a2, zero, 8
+
+addiu t0, zero, $0020
+addiu t1, zero, $002F
+sb t0, $0009(s7)
+sb t1, $000A(s7)
+sb t0, $000B(s7)
+
+addiu s7, s7, 10
+
+addiu a0, sp, $0094
+addu a1, s7, zero
+jal :_lineToHex
+addiu a2, zero, 8
+
+lw a1, $0018(k0)
+lw a0, $001C(k0)
+addiu t0, zero, 206
+addiu t1, zero, 135
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+//------------------------
+
+addiu a0, sp, $0098
+lw a1, $0018(k0)
+jal :_lineToHex
+addiu a2, zero, 8
+
+lw a1, $0018(k0)
+lw a0, $001C(k0)
+addiu t0, zero, 316
+addiu t1, zero, 165
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+addiu s7, zero, $2000
+
+_MemReSearchMiniLoop:
+
+//-------------------- Compare
+lw v1, $0000(s1) //An address of a result
+beq v1, zero, :_MemReSearchProcessComplete //If address is 00000000 then exit
+nop
+
+bne s3, zero, 4
+nop
+addu v0, s1, zero
+lb v1, $0000(v1)
+addiu s1, s1, 4
+
+addiu t0, zero, 1
+bne t0, s3, 4
+nop
+addu v0, s1, zero
+lh v1, $0000(v1)
+addiu s1, s1, 4
+
+addiu t0, zero, 2
+bne t0, s3, 4
+nop
+addu v0, s1, zero
+lw v1, $0000(v1)
+addiu s1, s1, 4
+
+addiu t0, zero, 3
+bne t0, s3, 4
+nop
+addu v0, s1, zero
+ld v1, $0000(v1)
+addiu s1, s1, 4
+
+addiu t0, zero, 4
+bne t0, s3, 4
+nop
+addu v0, s1, zero
+lq v1, $0000(v1)
+addiu s1, s1, 4
+
+
+//-------------------- Mark Result
+bne v1, s4, 5
+nop
+lw v0, $0000(v0)
+sw v0, $0020(s5)
+addiu s6, s6, 1
+addiu s5, s5, 4
+
+addiu v0, zero, 5100
+slt v0, s6, v0
+beq v0, zero, :_MemReSearchProcessComplete
+nop
+
+bne s7, zero, :_MemReSearchMiniLoop
+addiu s7, s7, -1
+
+jal :vSync
+nop
+
+//------------------------------ Circle (Force Stop Scan)
+jal :_ReadPad
+addiu a0, zero, $DFFF
+bne v0, zero, :_MemReSearchProcessLeave
+nop
+
+beq zero, zero, :_MemReSearchProcessLoop
+nop
+_MemReSearchProcessComplete:
+
+sw zero, $0020(s5)
+lui s5, $8005
+sw s6, $B02C(s5)
+
+//-------------------------------------
+
+addiu s6, zero, 1
+_MemReSearchProcessWaitQuitLoop:
+
+lui t0, $0009        // Packet
+addiu t1, zero, 0    // x
+addiu t2, zero, 60   // y
+daddu t3, zero, zero   // z
+addiu t4, zero, $000 // r
+addiu t5, zero, $000 // g
+addiu t6, zero, $000 // b
+daddu t7, zero, zero // size
+addiu t8, zero, 640  // w
+addiu t9, zero, 380  // h
+jal :_AddPixel
+nop
+lui a0, $0009
+jal :_SendPacket
+addiu a1, zero, 80
+
+// Text (Search process completed.)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $47EC
+addiu t0, zero, 170
+addiu t1, zero, 70
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+// Text (Total Results:)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $4808
+addiu t0, zero, 182
+addiu t1, zero, 135
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+addiu a0, s5, $B02C
+lw a1, $0018(k0)
+jal :_lineToHex
+addiu a2, zero, 8
+
+lw a1, $0018(k0)
+lw a0, $001C(k0)
+addiu t0, zero, 362
+addiu t1, zero, 135
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+// Text (Search Query:)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $4830
+addiu t0, zero, 242
+addiu t1, zero, 165
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+// Start
+addu a0, s0, zero
+lw a1, $0018(k0)
+jal :_lineToHex
+addiu a2, zero, 8
+
+lw a1, $0018(k0)
+lw a0, $001C(k0)
+addiu t0, zero, 110
+addiu t1, zero, 185
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+// Stop
+addiu a0, s0, $0004
+lw a1, $0018(k0)
+jal :_lineToHex
+addiu a2, zero, 8
+
+lw a1, $0018(k0)
+lw a0, $001C(k0)
+addiu t0, zero, 110
+addiu t1, zero, 205
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+// Value
+lw s7, $0018(k0)
+
+addiu a0, s0, $0014
+addu a1, s7, zero
+jal :_lineToHex
+addiu a2, zero, 8
+
+addiu s7, s7, 8
+
+addiu a0, s0, $0010
+addu a1, s7, zero
+jal :_lineToHex
+addiu a2, zero, 8
+
+addiu s7, s7, 8
+
+addiu a0, s0, $000C
+addu a1, s7, zero
+jal :_lineToHex
+addiu a2, zero, 8
+
+addiu s7, s7, 8
+
+addiu a0, s0, $0008
+addu a1, s7, zero
+jal :_lineToHex
+addiu a2, zero, 8
+
+
+lw a1, $0018(k0)
+lw a0, $001C(k0)
+addiu t0, zero, 110
+addiu t1, zero, 225
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+
+// Text (Press (X) To Continue.)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $4818
+addiu t0, zero, 188
+addiu t1, zero, 250
+daddu t2, zero, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+call _drawString
+
+jal :vSync
+nop
+
+bne s6, zero, :_MemReSearchProcessWaitNoInput
+nop
+
+//------------------------------ Cross
+jal :_ReadPad
+addiu a0, zero, $BFFF
+beq v0, zero, :_MemReSearchProcessWaitNoInput
+nop
+goto _MemReSearchProcessLeave
+
+_MemReSearchProcessWaitNoInput:
+jal :_ReadPad
+addiu a0, zero, -1
+beq v0, zero, :_MemReSearchProcessExitToLoop
+nop
+addu s6, zero, zero
+
+
+_MemReSearchProcessExitToLoop:
+jal :vSync
+nop
+beq zero, zero, :_MemReSearchProcessWaitQuitLoop
+nop
+
+_MemReSearchProcessLeave:
+lq ra, $0000(sp)
+lw s0, $0010(sp)
+lw s1, $0014(sp)
+lw s2, $0018(sp)
+lw s3, $001C(sp)
+lw s4, $0020(sp)
+lw s5, $0024(sp)
+lw s6, $0028(sp)
+lw s7, $002C(sp)
+lq k0, $0060(sp)
+lq k1, $0070(sp)
+jr ra
+addiu sp, sp, $00B0
