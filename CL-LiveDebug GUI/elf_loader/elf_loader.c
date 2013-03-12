@@ -174,7 +174,6 @@ int load_elf_ram(char *elf) {
 	/* Scan through the ELF's program headers and copy them into apropriate RAM
 	 * section, then padd with zeros if needed.
 	 */
-	if (boot_pheader.vaddr
 	for (i = 0; i < boot_header->phnum; i++) {
 		if (boot_pheader[i].type != ELF_PT_LOAD)
 			continue;
