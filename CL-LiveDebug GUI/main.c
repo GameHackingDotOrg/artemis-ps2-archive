@@ -143,6 +143,11 @@ char *SettLayout = "autojoker 0\nulejoker 0\n";
 int AutoJoker = 0;
 int uLEJoker = 0;
 
+/* Kernel/Syscall hook address and value */
+u32 HookValue = (0x0007F000 / 4) + 0x08000000;
+//u32 HookAddr = 0x800002FC;
+u32 HookAddr = 0x800001A0;
+
 /* ELF-header structures and identifiers */
 #define ELF_MAGIC	0x464c457f
 #define ELF_PT_LOAD	1
@@ -250,9 +255,6 @@ void load_elf(char *elf_path)
 		if (boot_pheader[i].memsz > boot_pheader[i].filesz)
 			memset(boot_pheader[i].vaddr + boot_pheader[i].filesz, 0, boot_pheader[i].memsz - boot_pheader[i].filesz);
 	}
-
-	/* Create hook hex value */
-	u32 HookValue = (0x0007F000 / 4) + 0x0C000000;
 
 	/* Install the spacing into the kernel */
 	u32 SpaceStore = 0x8002FE00;
@@ -402,7 +404,7 @@ void load_elf(char *elf_path)
 	
 	DI();
 	ee_kmode_enter();
-		*(u32*)0x800002FC = HookValue; // Install the kernel hook
+		*(u32*)HookAddr = HookValue; // Install the kernel hook
 	ee_kmode_exit();
 	EI();
 	

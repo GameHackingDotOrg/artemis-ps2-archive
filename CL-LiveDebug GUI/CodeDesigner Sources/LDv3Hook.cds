@@ -14,11 +14,12 @@ address $0007F000
 _init:
 addiu sp, sp, $FFF0
 sq ra, $0000(sp)
-jalr k0
-nop
 call _start
 lq ra, $0000(sp)
 addiu sp, sp, $0010
+//jalr k0
+jr k0
+nop
 
 //==========================================================
 
@@ -55,6 +56,14 @@ sq fp, $01b0(sp)
 sq gp, $01c0(sp)
 sq ra, $01d0(sp)
 
+//This was designed to set the screen w/h, but this has nothing to do with that
+//I am leaving it here in case someone wants to force high resolution and use this...?
+//addiu t1, zero, $0002
+//beq v1, t1, :_SetGsCrtSyscall
+//nop
+
+_AfterGsCrt:
+
 lui t1, $8008
 lw t1, $E7FC(t1)
 
@@ -72,10 +81,26 @@ addiu a0, zero, $FFF9
 beq v0, zero, :LDv3HookExit
 nop
 
+//Gets current screen width and height
+lui t1, $8005
+jal :_GetDisplay
+nop
+sd v0, $0100(t1)
+sd v1, $0108(t1)
+
+//Sets screen width and height
+jal :_SetDisplay
+nop
+
 jal $00078250
 daddu a0, zero, zero
 
-
+//Return screen to normal width and height
+lui t1, $8005
+ld a0, $0100(t1)
+ld a1, $0108(t1)
+jal :_RestoreDisplay
+nop
 
 LDv3HookExit:
 lq at, $0000(sp)
@@ -184,3 +209,124 @@ lw s0, $0004(sp)
 lw s1, $0008(sp)
 jr ra
 addiu sp, sp, $0010
+
+/*
+GRAPH_MODE graph_mode[22] =
+{
+
+	{   0,   0,    0,    0,    0 }, // AUTO
+	{ 652,  26, 2560,  256, 0x02 }, // NTSC-NI
+	{ 680,  37, 2560,  256, 0x03 }, // PAL-NI
+	{ 232,  35, 1440,  480, 0x50 }, // 480P
+	{ 320,  64, 1312,  576, 0x53 }, // 576P only in bios>=220
+	{ 420,  40, 1280,  720, 0x52 }, // 720P
+	{ 300, 120, 1920,  540, 0x51 }, // 1080I
+	{ 280,  18, 1280,  480, 0x1A }, // VGA   640x480@60
+	{ 330,  18, 1280,  480, 0x1B }, // VGA   640x480@72
+	{ 360,  18, 1280,  480, 0x1C }, // VGA   640x480@75
+	{ 260,  18, 1280,  480, 0x1D }, // VGA   640x480@85
+	{ 450,  25, 1600,  600, 0x2A }, // VGA   800x600@56
+	{ 465,  25, 1600,  600, 0x2B }, // VGA   800x600@60
+	{ 465,  25, 1600,  600, 0x2C }, // VGA   800x600@72
+	{ 510,  25, 1600,  600, 0x2D }, // VGA   800x600@75
+	{ 500,  25, 1600,  600, 0x2E }, // VGA   800x600@85
+	{ 580,  30, 2048,  768, 0x3B }, // VGA  1024x768@60
+	{ 266,  30, 1024,  768, 0x3C }, // VGA  1024x768@70
+	{ 260,  30, 1024,  768, 0x3D }, // VGA  1024x768@75
+	{ 290,  30, 1024,  768, 0x3E }, // VGA  1024x768@85
+	{ 350,  40, 1280, 1024, 0x4A }, // VGA 1280x1024@60
+	{ 350,  40, 1280, 1024, 0x4B }, // VGA 1280x1024@75
+
+};
+*/
+
+_SetGsCrtSyscall:
+lui t1, $8005
+sq a0, $0030(t1)
+sq a1, $0040(t1)
+sq a2, $0050(t1)
+sq a3, $0060(t1)
+
+//I have no method to shift a register over 96 bits...
+//So I have to be elaborate
+lui a2, $0500
+sw a2, $000C(t1)
+lq a2, $0000(t1)
+sq a2, $0010(t1)
+
+addiu a0, zero, $0001
+addiu a1, zero, $0002
+addiu a3, zero, zero
+
+GsCrtHookExit:
+lq at, $0000(sp)
+lq v0, $0010(sp)
+lq v1, $0020(sp)
+lq t0, $0070(sp)
+lq t1, $0080(sp)
+lq t2, $0090(sp)
+lq t3, $00a0(sp)
+lq t4, $00b0(sp)
+lq t5, $00c0(sp)
+lq t6, $00d0(sp)
+lq t7, $00e0(sp)
+lq s0, $00f0(sp)
+lq s1, $0100(sp)
+lq s2, $0110(sp)
+lq s3, $0120(sp)
+lq s4, $0130(sp)
+lq s5, $0140(sp)
+lq s6, $0150(sp)
+lq s7, $0160(sp)
+lq t8, $0170(sp)
+lq t9, $0180(sp)
+lq k0, $0190(sp)
+lq k1, $01a0(sp)
+lq fp, $01b0(sp)
+lq gp, $01c0(sp)
+lq ra, $01d0(sp)
+jr ra
+addiu sp, sp, $0200
+
+//By Gtlcpimp
+//==========================================================
+_GetDisplay:
+
+lui a0, $1200
+
+ld v0, $0080(a0) // Get Display 1
+ld v1, $00A0(a0) // Get Display 2
+
+jr ra
+nop
+//==========================================================
+_RestoreDisplay:
+
+lui v0, $1200
+
+sd a0, $0080(v0) // Get Display 1
+sd a1, $00A0(v0) // Get Display 2
+
+jr ra
+nop
+
+//==========================================================
+// GS_SET_DISPLAY(632, 50, 3, 0, 2559,  447)
+// 0x12000080 = GS_REG_DISPLAY1
+// 0x120000A0 = GS_REG_DISPLAY2
+// 01832278 001BF9FF
+_SetDisplay:
+
+lui a0, $1200
+
+lui v0, $001B
+ori v0, v0, $F9FF
+dsll32 v0, v0, 0
+lui v1, $0183
+ori v1, v1, $2278
+daddu v0, v0, v1
+sd v0, $0080(a0)   // Set Display 1
+sd v0, $00A0(a0)   // Set Display 2
+
+jr ra
+nop

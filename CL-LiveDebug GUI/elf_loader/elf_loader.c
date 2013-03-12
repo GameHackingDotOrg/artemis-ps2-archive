@@ -122,9 +122,19 @@ int main (int argc, char *argv[1])
 
 	SifInitRpc(0);
 	load_elf_ram(boot_path);
+	
+	//If that fails, then boot OSDSYS
+	GS_BGCOLOUR = 0xff00ff; /* PINK: Launching OSDSYS */
+  	SifLoadFileExit();
+  	fioExit();
+  	SifExitRpc();
+  	launch_OSDSYS();
+
+ 	GS_BGCOLOUR = 0xffffff; /* WHITE: Failed to load OSDSYS */
+  	SleepThread();
 	//execute_elf(argv[0]);
 
-	return 0;
+	return -1;
 }
 
 int load_elf_ram(char *elf) {
@@ -164,6 +174,7 @@ int load_elf_ram(char *elf) {
 	/* Scan through the ELF's program headers and copy them into apropriate RAM
 	 * section, then padd with zeros if needed.
 	 */
+	if (boot_pheader.vaddr
 	for (i = 0; i < boot_header->phnum; i++) {
 		if (boot_pheader[i].type != ELF_PT_LOAD)
 			continue;
@@ -174,35 +185,21 @@ int load_elf_ram(char *elf) {
 			memset(boot_pheader[i].vaddr + boot_pheader[i].filesz, 0, boot_pheader[i].memsz - boot_pheader[i].filesz);
 	}
 	
+	if (boot_header->entry > 0x02000000 || boot_header->entry < 0x00080000)
+		return -1;
+	
 	//Booting part
-	if (boot_header->entry) {
+	GS_BGCOLOUR = 0x00ffff; /* YELLOW: ExecPS2 */
+  	SifLoadFileExit();
+  	fioExit();
+  	SifExitRpc(); /* some programs need it to be here */
 
-		GS_BGCOLOUR = 0x00ffff; /* YELLOW: ExecPS2 */
-  	    SifLoadFileExit();
-  	  	fioExit();
-  	  	SifExitRpc(); /* some programs need it to be here */
-
-  	  	FlushCache(0);
-  	  	FlushCache(2);
+  	FlushCache(0);
+  	FlushCache(2);
 		
-    	args[0] = elf;
-    	//ExecPS2((void*)boot_header.epc, (void*)boot_header.gp, 1, args);
-		ExecPS2((u32*)boot_header->entry, 0, 1, args);
+    args[0] = elf;
+    //ExecPS2((void*)boot_header.epc, (void*)boot_header.gp, 1, args);
+	ExecPS2((u32*)boot_header->entry, 0, 1, args);
 
-    	SleepThread();
-  	}
-  	else {
-	
-		GS_BGCOLOUR = 0xff00ff; /* PINK: Launching OSDSYS */
-  	    SifLoadFileExit();
-  	  	fioExit();
-  	  	SifExitRpc();
-
-  		launch_OSDSYS();
-	}
-
- 	GS_BGCOLOUR = 0xffffff; /* WHITE: Failed to load OSDSYS */
-  	while (1){;}
-	
-	return 0;
+	return -1;
 }
