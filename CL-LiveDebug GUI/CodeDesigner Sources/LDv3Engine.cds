@@ -141,7 +141,7 @@ addu a0, zero, zero
 
 //000A0094 = op
 //000A009C = j $RETURNADDR
-lui t0, $000A
+lui t0, $000B
 lw t1, $0000(t0)
 bne t1, zero, :_DumperExists
 nop
@@ -853,7 +853,7 @@ bne zero, s1, 3
 nop
 beq zero, zero, :_RDumperMenuExit
 nop
-lui t0, $000A
+lui t0, $000B
 jal :_RemoveDumper
 lw a0, $FFFC(t0)
 beq zero, zero, :_MainRDLoop
