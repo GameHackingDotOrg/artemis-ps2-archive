@@ -41,6 +41,7 @@ EE_OBJS = elf_loader.o
 
 all:    
 	$(MAKE) $(EE_BIN)
+	$(MAKE) clean
 
 clean:
 	rm -f *.irx *.o

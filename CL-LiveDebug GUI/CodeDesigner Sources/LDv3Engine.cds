@@ -16,7 +16,7 @@ hexcode $80030008
 */
 
 //==========================================================
-address $00078250
+address $00060000
 
 _main:
 
@@ -139,6 +139,16 @@ nop
 jal :_drawMenuControls
 addu a0, zero, zero
 
+//000A0094 = op
+//000A009C = j $RETURNADDR
+lui t0, $000A
+lw t1, $0000(t0)
+bne t1, zero, :_DumperExists
+nop
+jal :_installDumper
+nop
+
+_DumperExists:
 addu s6, zero, zero // Holding
 addu s5, zero, zero // Selected
 _MainMenuLoop:
@@ -194,7 +204,7 @@ lui a0, $0008
 lw a0, $001C(a0)
 lui a1, $8004
 addiu a1, a1, $462C
-addiu t0, zero, 290
+addiu t0, zero, 280
 addiu t1, zero, 80
 daddu t2, s4, zero
 addiu t3, zero, $dc
@@ -208,7 +218,7 @@ lui a0, $0008
 lw a0, $001C(a0)
 lui a1, $8004
 addiu a1, a1, $4634
-addiu t0, zero, 278
+addiu t0, zero, 272
 addiu t1, zero, 100
 daddu t2, s4, zero
 addiu t3, zero, $dc
@@ -231,13 +241,27 @@ addiu t5, zero, $dc
 addiu t6, zero, $0000
 call _drawString
 
+// Text (Register Dumper)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $489C
+addiu t0, zero, 236
+addiu t1, zero, 140
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
 // Text (Return To Game)
 lui a0, $0008
 lw a0, $001C(a0)
 lui a1, $8004
 addiu a1, a1, $461C
 addiu t0, zero, 236
-addiu t1, zero, 140
+addiu t1, zero, 160
 daddu t2, s4, zero
 addiu t3, zero, $dc
 addiu t4, zero, $dc
@@ -297,7 +321,7 @@ addiu a0, zero, $FFBF // Down
 beq v0, zero, 6
 nop
 addiu s6, zero, 1
-sltiu v0, s5, $0004
+sltiu v0, s5, $0005
 beq v0, zero, 2
 nop
 addiu s5, s5, 1
@@ -334,7 +358,14 @@ jal :_MemSearchMenu
 addu a0, zero, zero
 goto _MainMenuExitToLoop
 
-addiu v0, zero, 4 // ----- Return to Game
+addiu v0, zero, 4 // ----- Register Dumper
+bne s5, v0, 5
+nop
+jal :_RegisterDumpMenu
+addu a0, zero, zero
+goto _MainMenuExitToLoop
+
+addiu v0, zero, 5 // ----- Return to Game
 bne s5, v0, 5
 nop
 nop
@@ -368,6 +399,817 @@ lq k0, $0060(sp)
 lq k1, $0070(sp)
 jr ra
 addiu sp, sp, $00B0
+
+//==========================================================
+_installDumper:
+//Kernel location: 80044A00
+//EE location: 000A0000
+//Dumper size: 000A00A4
+
+lui t0, $000B //Store location
+lui t1, $8004
+ori t1, t1, $5000 //Load location
+ori t2, t0, $00B8 //Size
+
+_LoopDumpInstall:
+beq t0, t2, :_DoneInstall
+nop
+
+lw t3, $0000(t1)
+sw t3, $0000(t0)
+
+addiu t1, t1, 4
+addiu t0, t0, 4
+beq zero, zero, :_LoopDumpInstall
+nop
+
+_DoneInstall:
+jr ra
+nop
+
+//==========================================================
+/*
+a0 = Install address
+Returns v0 as 0 if successful or 1 if not within 0x00080000 and 0x02000000
+*/
+_PlaceDumper:
+addiu sp, sp, $FFE0
+sq s0, $0000(sp)
+sq ra, $0010(sp)
+daddu s0, a0, zero
+
+daddu a0, s0, zero
+lui a1, $0008
+jal :_IfBetween
+lui a2, $0200
+bne v0, zero, :_ExitPDumper
+nop
+
+lui t0, $000B
+lw t1, $FFFC(t0)
+beq t1, zero, 3
+nop
+jal :_RemoveDumper
+daddu a0, t1, zero
+sw s0, $FFFC(t0)
+
+//j $regdumper, t9
+lui t0, $000B
+addiu t1, zero, 4
+divu t0, t1
+mflo t0
+lui t1, $0800
+addu t9, t1, t0 //Result is a j $REGDUMPERADDR
+
+//Return j $installaddr + 8, t8
+addu t0, s0, zero
+addiu t1, zero, 4
+divu t0, t1
+mflo t0
+lui t1, $0800
+addiu t1, t1, 2
+addu t8, t1, t0 //Result is a j $INSTALLEDADDR + 8
+
+//get installedaddr's operation, t7
+lw t7, $0000(s0)
+
+//Actual installation
+lui t0, $000B
+sw t7, $00A8(t0) //Store installaddr's op
+sw t8, $00B0(t0) //Store j $install addr + 4
+sw t9, $0000(s0) //Store j $regdumper
+
+add v0, zero, zero
+_ExitPDumper:
+lq s0, $0000(sp)
+lq ra, $0010(sp)
+jr ra
+addiu sp, sp, $0020
+
+//==========================================================
+/*
+a0 = installed address
+*/
+_RemoveDumper:
+addiu sp, sp, $FFF0
+sq ra, $0000(sp)
+
+lui t0, $000B
+lw t7, $00A8(t0)
+
+lui a1, $0008
+jal :_IfBetween
+lui a2, $0200
+bne v0, zero, :_RemDMain
+nop
+sw t7, $0000(a0) //Store installaddr's operation
+
+_RemDMain:
+sw zero, $FFFC(t0)
+sw zero, $00A8(t0)
+sw zero, $00B0(t0)
+
+//Clear register dump
+addiu t1, t0, $0100
+addiu t2, t0, $0300
+_RemDLoop:
+beq t1, t2, :_ExitRemD
+nop
+sq zero, $0000(t1)
+addiu t1, t1, $0010
+beq zero, zero, :_RemDLoop
+nop
+
+_ExitRemD:
+lq ra, $0000(sp)
+jr ra
+addiu sp, sp, $0010
+
+//==========================================================
+/*
+a0 = value
+a1 = small between
+a2 = big between
+v0 returns 0 if it is between, 1 if it is not
+NOTE: This is designed to reserve the used temporary registers!
+*/
+_IfBetween:
+addiu sp, sp, $FFE0
+sq t0, $0000(sp)
+sq t1, $0010(sp)
+
+slt t0, a0, a1
+slt t1, a2, a0
+
+or v0, t0, t1 //If t0 or t1 is 1, returns 1. Otherwise returns 0
+lq t0, $0000(sp)
+lq t1, $0010(sp)
+jr ra
+addiu sp, sp, $0020
+
+//==========================================================
+_RegisterDumpMenu:
+addiu sp, sp, $FF50
+sq ra, $0000(sp)
+sw s0, $0010(sp)
+sw s1, $0014(sp)
+sw s2, $0018(sp)
+sw s3, $001C(sp)
+sw s4, $0020(sp)
+sw s5, $0024(sp)
+sw s6, $0028(sp)
+sw s7, $002C(sp)
+sq k0, $0060(sp)
+sq k1, $0070(sp)
+
+addu s1, zero, zero //Blue marker
+addiu s6, zero, 1
+addiu k0, zero, 0 //Register scroll (0 - 1)
+
+_MainRDLoop:
+// Clear menu space
+lui t0, $0009        // Packet
+addiu t1, zero, 0    // x
+addiu t2, zero, 60   // y
+daddu t3, zero, zero // z
+addiu t4, zero, $030 // r
+addiu t5, zero, $030 // g
+addiu t6, zero, $030 // b
+daddu t7, zero, zero // size
+addiu t8, zero, 640  // w
+addiu t9, zero, 380  // h
+jal :_AddPixel
+nop
+lui a0, $0009
+jal :_SendPacket
+addiu a1, zero, 160
+
+
+// Text (^)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $49AE
+addiu t0, zero, 540
+addiu t1, zero, 120
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+// Text (v)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $49AC
+addiu t0, zero, 540
+addiu t1, zero, 340
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+// Text (Register Dumper hooked to:)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $4978
+addiu t0, zero, 100
+addiu t1, zero, 60
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+lui s5, $000A
+ori s5, s5, $FFFC
+lui s4, $8004
+ori s4, s4, $5200
+
+addu a0, s5, zero
+addu a1, s4, zero
+jal :_lineToHex
+addiu a2, zero, 8
+
+// Text of ADDRESS
+lui a0, $0008
+lw a0, $001C(a0)
+daddu a1, s4, zero
+addiu t0, zero, 350
+addiu t1, zero, 60
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+//Loop for printing registers (if k0 = 0: at - s0. if k0 = 1: s1 - ra)
+//at - s0
+lui a1, $8004
+ori a1, a1, $48AC //Starting register label address
+lui s3, $8004
+ori s3, s3, $48EC //End point
+beq k0, zero, 5
+nop
+//s1 - ra
+lui a1, $8004
+ori a1, a1, $48EC //Starting register label address
+lui s3, $8004
+ori s3, s3, $4928 //End point
+
+lui a0, $0008
+lw a0, $001C(a0)
+addiu s2, zero, 80
+
+_RegPrintLoop:
+beq a1, s3, :_RegPrintExitLoop
+nop
+
+addiu t0, zero, 40
+daddu t1, zero, s2
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+addiu a1, a1, 4 //Register label address
+addiu s2, s2, 20 //Y value
+
+beq zero, zero, :_RegPrintLoop
+nop
+_RegPrintExitLoop:
+
+//Loop for printing quad-words of registers
+addiu sp, sp, $FFF0
+sq s4, $0000(sp)
+
+lui s5, $000B
+ori s5, s5, $0100
+lui s3, $000B
+ori s3, s3, $0200
+beq k0, zero, 5
+nop
+lui s5, $000B
+ori s5, s5, $0200
+lui s3, $000B
+ori s3, s3, $02F0
+
+addiu s2, zero, 80
+
+_RegValPrintLoop:
+lui s4, $8004
+ori s4, s4, $5200
+beq s5, s3, :_RegValPrintExitLoop
+nop
+
+//Part 1
+addiu a0, s5, 12
+addu a1, s4, zero
+jal :_lineToHex
+addiu a2, zero, 8
+addiu s4, s4, 8
+
+//Adds a space
+addiu v0, zero, $0020
+sb v0, $0000(s4)
+addiu s4, s4, 1
+
+//Part 2
+addiu a0, s5, 8
+addu a1, s4, zero
+jal :_lineToHex
+addiu a2, zero, 8
+addiu s4, s4, 8
+
+//Adds a space
+addiu v0, zero, $0020
+sb v0, $0000(s4)
+addiu s4, s4, 1
+
+//Part 3
+addiu a0, s5, 4
+addu a1, s4, zero
+jal :_lineToHex
+addiu a2, zero, 8
+addiu s4, s4, 8
+
+//Adds a space
+addiu v0, zero, $0020
+sb v0, $0000(s4)
+addiu s4, s4, 1
+
+//Part 4
+addiu a0, s5, 0
+addu a1, s4, zero
+jal :_lineToHex
+addiu a2, zero, 8
+addiu s4, s4, 8
+
+addiu s5, s5, $0010
+
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+ori a1, a1, $5200
+addiu t0, zero, 80
+addu t1, s2, zero
+lq t2, $0000(sp) //s4 (Z) is stored here
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, 12 //Spacing
+call _drawString
+
+addiu s2, s2, 20
+beq zero, zero, :_RegValPrintLoop
+nop
+
+_RegValPrintExitLoop:
+lq s4, $0000(sp)
+addiu sp, sp, $0010
+
+//Instead of looping and overwriting the register stuff above, since they never change,
+//I have it just redraw the bottom part with the options
+//This just speeds it up a bit
+
+_RDMenuLoop:
+// Clear lower region space
+lui t0, $0009        // Packet
+addiu t1, zero, 0    // x
+addiu t2, zero, 400   // y
+daddu t3, zero, zero // z
+addiu t4, zero, $030 // r
+addiu t5, zero, $030 // g
+addiu t6, zero, $030 // b
+daddu t7, zero, zero // size
+addiu t8, zero, 640  // w
+addiu t9, zero, 40  // h
+jal :_AddPixel
+nop
+lui t0, $0009        // Packet
+addiu t1, zero, 220
+multu t1, t1, s1
+addiu t1, t1, 60     // x
+addiu t2, zero, 400  // y
+daddu t3, zero, zero // z
+addiu t4, zero, $030 // r
+addiu t5, zero, $030 // g
+addiu t6, zero, $0A0 // b
+addiu t7, zero, 80   // size
+addiu t8, zero, 200  // w
+addiu t9, zero, 20   // h
+jal :_AddPixel
+nop
+lui a0, $0009
+jal :_SendPacket
+addiu a1, zero, 160
+
+// Text (Go Back)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $47D4
+addiu t0, zero, 120
+addiu t1, zero, 400
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+// Text (Remove dumper)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $4968
+addiu t0, zero, 310
+addiu t1, zero, 400
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+bne s6, zero, :_RDMenuWaitNoInput
+nop
+//------------------------------ Cross
+jal :_ReadPad
+addiu a0, zero, $BFFF
+beq v0, zero, :_RDNoCross
+nop
+addiu s6, zero, 1
+bne zero, s1, 3
+nop
+beq zero, zero, :_RDumperMenuExit
+nop
+lui t0, $000A
+jal :_RemoveDumper
+lw a0, $FFFC(t0)
+beq zero, zero, :_MainRDLoop
+nop
+
+_RDNoCross:
+//------------------------------- Up
+jal :_ReadPad
+addiu a0, zero, $FFEF
+beq v0, zero, :_RDNoUp
+nop
+addiu s6, zero, 1
+beq k0, zero, :_RDNoUp
+nop
+addiu k0, k0, -1
+beq zero, zero, :_MainRDLoop
+nop
+
+_RDNoUp:
+//------------------------------- Down
+jal :_ReadPad
+addiu a0, zero, $FFBF
+beq v0, zero, :_RDNoDown
+nop
+addiu v0, zero, 1
+beq k0, v0, :_RDNoDown
+nop
+addiu k0, k0, 1
+beq zero, zero, :_MainRDLoop
+nop
+
+_RDNoDown:
+//------------------------------- Left
+jal :_ReadPad
+addiu a0, zero, $FF7F
+beq v0, zero, :_RDNoLeft
+nop
+beq s1, zero, :_RDNoLeft
+nop
+addiu s1, s1, -1
+
+_RDNoLeft:
+//------------------------------- Right
+jal :_ReadPad
+addiu a0, zero, $FFDF
+beq v0, zero, :_RDNoRight
+nop
+addiu v0, zero, 1
+beq s1, v0, :_RDNoRight
+nop
+addiu s1, s1, 1
+
+_RDNoRight:
+
+beq zero, zero, :_RDMenuExitToLoop
+nop
+
+_RDMenuWaitNoInput:
+jal :_ReadPad
+addiu a0, zero, -1
+beq v0, zero, :_RDMenuExitToLoop
+nop
+addu s6, zero, zero
+
+_RDMenuExitToLoop:
+jal :vSync
+nop
+beq zero, zero, :_RDMenuLoop
+nop
+
+_RDumperMenuExit:
+lq ra, $0000(sp)
+lw s0, $0010(sp)
+lw s1, $0014(sp)
+lw s2, $0018(sp)
+lw s3, $001C(sp)
+lw s4, $0020(sp)
+lw s5, $0024(sp)
+lw s6, $0028(sp)
+lw s7, $002C(sp)
+lq k0, $0060(sp)
+lq k1, $0070(sp)
+jr ra
+addiu sp, sp, $00B0
+
+//==========================================================
+_InstallRDMenu:
+addiu sp, sp, $FFA0
+sq ra, $0000(sp)
+sq s1, $0010(sp)
+sq s0, $0020(sp)
+sq s5, $0030(sp)
+sq s6, $0040(sp)
+sq s7, $0050(sp)
+
+daddu s7, a0, zero
+
+jal :_ClearPad
+nop
+
+lui s1, $0008
+add s5, zero, zero
+daddu s6, zero, zero
+
+_IRDMenuLoop:
+// Make a little box
+lui t0, $0009        // Packet
+addiu t1, zero, 150  // x
+addiu t2, zero, 150  // y
+daddu t3, s4, zero   // z
+addiu t4, zero, $030 // r
+addiu t5, zero, $030 // g
+addiu t6, zero, $040 // b
+daddu t7, zero, zero // size
+addiu t8, zero, 300  // w
+addiu t9, zero, 100  // h
+jal :_AddPixel
+nop
+lui t0, $0009        // Packet
+addiu t1, zero, 160   // x
+addiu t2, zero, 20   // y
+multu t2, t2, s5
+addiu t2, t2, 200
+daddu t3, s4, zero   // z
+addiu t4, zero, $030 // r
+addiu t5, zero, $030 // g
+addiu t6, zero, $0A0 // b
+addiu t7, zero, 80   // size
+addiu t8, zero, 280  // w
+addiu t9, zero, 20   // h
+jal :_AddPixel
+nop
+lui a0, $0009
+jal :_SendPacket
+addiu a1, zero, 160
+
+//Text "Ok"
+lw a0, $001C(s1)
+lui a1, $8004
+addiu a1, a1, $44DD // "Ok"
+addiu t0, zero, 300
+addiu t1, zero, 200
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+//Text "Cancel"
+lw a0, $001C(s1)
+lui a1, $8004
+addiu a1, a1, $44C8 // "Cancel"
+addiu t0, zero, 280
+addiu t1, zero, 220
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+//Text "Install Dumper at"
+lw a0, $001C(s1)
+lui a1, $8004
+addiu a1, a1, $4928 // "Install Dumper at"
+addiu t0, zero, 170
+addiu t1, zero, 160
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+lui s0, $8004
+sw s7, $4BFC(s0)
+addiu a0, s0, $4BFC
+ori a1, s0, $4C00
+jal :_lineToHex
+addiu a2, zero, 8
+
+//Text Name of Code
+lw a0, $001C(s1)
+addiu a1, s0, $4C00 // Pointer to address
+addiu t0, zero, 320
+addiu t1, zero, 160
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+jal :vSync
+nop
+
+bne s6, zero, :_IRDMenuWaitNoInput
+nop
+
+//------------------------------ Cross
+jal :_ReadPad
+addiu a0, zero, $BFFF
+beq v0, zero, :_IRD_NotCross
+nop
+addiu s6, zero, 1
+
+bne zero, s5, :_AfterIRDOk //Ok
+nop
+daddu a0, s7, zero
+jal :_PlaceDumper
+nop
+beq v0, zero, :_IRDMenuExit
+nop
+
+jal :_ReadPad
+addiu a0, zero, $BFFF
+bne a0, zero, :_LoopIRDError
+nop
+
+_LoopIRDError:
+// Make a little box
+lui t0, $0009        // Packet
+addiu t1, zero, 50   // x
+addiu t2, zero, 150  // y
+daddu t3, s4, zero   // z
+addiu t4, zero, $030 // r
+addiu t5, zero, $030 // g
+addiu t6, zero, $040 // b
+daddu t7, zero, zero // size
+addiu t8, zero, 500  // w
+addiu t9, zero, 100  // h
+jal :_AddPixel
+nop
+lui t0, $0009        // Packet
+addiu t1, zero, 160  // x
+addiu t2, zero, 20   // y
+multu t2, t2, s5
+addiu t2, t2, 200
+daddu t3, s4, zero   // z
+addiu t4, zero, $030 // r
+addiu t5, zero, $030 // g
+addiu t6, zero, $0A0 // b
+addiu t7, zero, 80   // size
+addiu t8, zero, 280  // w
+addiu t9, zero, 20   // h
+jal :_AddPixel
+nop
+lui a0, $0009
+jal :_SendPacket
+addiu a1, zero, 160
+
+//Text "Address not between 00080000 and 02000000!"
+lw a0, $001C(s1)
+lui a1, $8004
+addiu a1, a1, $493C // "Address not between 00080000 and 02000000!"
+addiu t0, zero, 100
+addiu t1, zero, 160
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+jal :vSync
+nop
+
+jal :_ReadPad
+addiu a0, zero, -1
+beq v0, zero, :_LoopIRDError
+nop
+
+//So I was having issue making it wait for no button to be pressed before looking for X to be pressed..
+//I ended up having to use this method. It waits for it to be ready then it prints the press X and waits for X to be pressed
+_IRDRP:
+
+//Text (Press (X) To Continue.)
+lw a0, $001C(s1)
+lui a1, $8004
+addiu a1, a1, $4818
+addiu t0, zero, 170
+addiu t1, zero, 200
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+jal :vSync
+nop
+
+jal :_ReadPad
+addiu a0, zero, $BFFF
+beq v0, zero, :_IRDRP
+nop
+
+beq zero, zero, :_IRDMenuExit
+nop
+
+_AfterIRDOk:
+// Exit CDMenu and return 0
+add v0, zero, zero
+beq zero, zero, :_IRDMenuExit
+nop
+
+_IRD_NotCross:
+//------------------------------ Up
+jal :_ReadPad
+addiu a0, zero, $FFEF
+beq v0, zero, :_IRD_NotUp
+nop
+addiu s6, zero, $0001
+beq s5, zero, 2
+nop
+addiu s5, s5, -1
+
+_IRD_NotUp:
+//------------------------------ Down
+jal :_ReadPad
+addiu a0, zero, $FFBF
+beq v0, zero, :_IRD_NotDown
+nop
+addiu t1, zero, $0001
+addiu s6, zero, $0001
+beq s5, t1, 2
+nop
+addiu s5, s5, 1
+
+_IRD_NotDown:
+
+beq zero, zero, :_IRDMenuLoop
+nop
+
+_IRDMenuWaitNoInput:
+jal :_ReadPad
+addiu a0, zero, -1
+beq v0, zero, :_IRDMenuExitToLoop
+nop
+addu s6, zero, zero
+
+_IRDMenuExitToLoop:
+beq zero, zero, :_IRDMenuLoop
+nop
+
+_IRDMenuExit:
+
+lq ra, $0000(sp)
+lq s1, $0010(sp)
+lq s0, $0020(sp)
+lq s5, $0030(sp)
+lq s6, $0040(sp)
+lq s7, $0050(sp)
+jr ra
+addiu sp, sp, $0060
 
 //==========================================================
 _CodesMenu:
@@ -3134,6 +3976,11 @@ sw s6, $B02C(s5)
 lui t0, $0008
 lw at, $43F8(t0)
 sd zero, $0000(at) //Nop after the result so that when you do another search for change/unchange it doesn't read old stuff
+addiu s5, s5, $B040
+addiu t0, zero, 4
+multu s6, s6, t0
+add s5, s5, s6
+sw zero, $0000(s5)
 
 jal :_ClearPad
 nop
@@ -3490,6 +4337,7 @@ addiu sp, sp, $FFF0
 sq ra, $0000(sp)
 jal :_ProcessAddress
 daddu a0, s7, zero
+daddu s7, v0, zero
 lq ra, $0000(sp)
 addiu sp, sp, $0010
 
@@ -3541,49 +4389,24 @@ addiu sp, sp, $00B0
 //==========================================================
 //ProcessAddress will take an address like 01334321 and return 01334320
 //This will make you be able to press R2 on an address that does not end with 0, 4, 8, or C and not freeze
-//Returns result in s7
+//Returns result in v0
 _ProcessAddress:
-addiu sp, sp, $FFD0
+addiu sp, sp, $FFE0
 sq t0, $0000(sp)
 sq t1, $0010(sp)
-sq t2, $0020(sp)
 
-sll t2, a0, 28
-srl t2, t2, 28
+sll t1, a0, 28
+srl t1, t1, 28 //Gets last 4 bits
+addiu t0, zero, 4
+divu t1, t0
+mfhi t1
 
-addiu t1, zero, $0004
-beq t2, t1, :_ExitProcAddr
-nop
-
-addiu t1, zero, $0008
-beq t2, t1, :_ExitProcAddr
-nop
-
-addiu t1, zero, $000C
-beq t2, t1, :_ExitProcAddr
-nop
-
-addiu t0, zero, $0004
-_ProcLoop:
-slt t1, t0, t2
-beq t1, zero, :_FinishProcAddr
-nop
-
-sub t2, t2, t0
-
-beq zero, zero, :_ProcLoop
-nop
-
-_FinishProcAddr:
-sub s7, a0, t2
-
-_ExitProcAddr:
+subu v0, a0, t1
 
 lq t0, $0000(sp)
 lq t1, $0010(sp)
-lq t2, $0020(sp)
 jr ra
-addiu sp, sp, $0030
+addiu sp, sp, $0020
 
 //==========================================================
 _PatchesMenuBrowser:
@@ -4170,22 +4993,55 @@ lw t1, $0040(t0)
 lq t0, $0000(t1) //Grab string of Code name
 sq t0, $0000(s1) //Store string of Code name
 
+//Calculate bit offset of value
+lui v1, $0008
+lb v0, $4301(v1) //Offset
+addiu v1, zero, 8
+multu v0, v0, v1
+
 lw t0, $0004(s0) //Load Value (ON)
+srlv t0, t0, v0
 sw t0, $0014(s1) //Store value
 lw t0, $0008(s0) //Load Value (OFF)
+srlv t0, t0, v0
 sw t0, $0018(s1) //Store value
 
 lui v1, $0008
 lb v0, $4300(v1) //Loads bit (8 = 0, 16 = 1, or 32 = 2)
 lw t0, $0000(s0) //Load address
 sll v0, v0, 28 //32 bit would return 2, then sll 28 would make it 20000000
+add t0, v0, t0 //Adds bit command
+lb v0, $4301(v1) //Loads offset
+add t0, t0, v0 //Adds offset
 
-add t0, v0, t0
+//A check to make sure that they entered a valid offset
+//8 bit (bit = 0) accepts anything
+//If the bit is 1 (16), offset must be 0 or 2
+//If the bit is 2 (32), offset must be 0
+lb t1, $4300(v1) //Bit
+lb t2, $4301(v1) //Offset
+addiu v0, zero, 1 //16 bit
+bne t1, v0, :_BitOff32
+nop
+beq t2, zero, :_BitOffOK //0
+nop
+addiu v0, zero, 2
+beq t2, v0, :_BitOffOK //2
+nop
+//Not ok
+subu t0, t0, t2 //Just make it go back to the original address
+beq zero, zero, :_BitOffOK
+nop
+_BitOff32:
+addiu v0, zero, 2 //32 bit
+bne t1, v0, :_BitOffOK
+nop
+beq t2, zero, :_BitOffOK
+nop
+subu t0, t0, t2 //Just make it go back to the original address
+
+_BitOffOK:
 sw t0, $0010(s1) //Store address
-
-
-//beq zero, zero, :_ATCloop
-//nop
 
 _ExitATCloop:
 
@@ -4369,12 +5225,59 @@ addiu t5, zero, $dc
 addiu t6, zero, $0000
 call _drawString
 
+//Draw Offset: and Offset options
+lw a0, $001C(s1)
+lui a1, $8004
+addiu a1, a1, $49B0 // Offset:
+addiu t0, zero, 120
+addiu t1, zero, 220
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
+lui a1, $8004
+lui v0, $0008
+lb v0, $4301(v0)
+
+bne v0, zero, 2
+nop
+addiu a1, a1, $49B8 // 0
+
+addiu v1, zero, 1
+bne v0, v1, 2
+nop
+addiu a1, a1, $49BA // 1
+
+addiu v1, zero, 2
+bne v0, v1, 2
+nop
+addiu a1, a1, $49BC // 2
+
+addiu v1, zero, 3
+bne v0, v1, 2
+nop
+addiu a1, a1, $49BE // 3
+
+//Text "0", or "1", or "2" or "3"
+lw a0, $001C(s1)
+addiu t0, zero, 230
+addiu t1, zero, 220
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
+
 //Text "Ok"
 lw a0, $001C(s1)
 lui a1, $8004
 addiu a1, a1, $44DD // "Ok"
 addiu t0, zero, 230
-addiu t1, zero, 220
+addiu t1, zero, 240
 daddu t2, s4, zero
 addiu t3, zero, $dc
 addiu t4, zero, $dc
@@ -4387,7 +5290,7 @@ lw a0, $001C(s1)
 lui a1, $8004
 addiu a1, a1, $44C8 // "Cancel"
 addiu t0, zero, 210
-addiu t1, zero, 240
+addiu t1, zero, 260
 daddu t2, s4, zero
 addiu t3, zero, $dc
 addiu t4, zero, $dc
@@ -4411,7 +5314,7 @@ nop
 addiu s6, zero, 1
 
 // Exit ACTMenu and return 1
-addiu v0, zero, 2 //Ok
+addiu v0, zero, 3 //Ok
 bne v0, s5, 4
 nop
 addiu v0, zero, $0001
@@ -4419,7 +5322,7 @@ beq zero, zero, :_ACTMenuExit
 nop
 
 // Exit ACTMenu and return 0
-addiu v0, zero, 3 //Cancel
+addiu v0, zero, 4 //Cancel
 bne v0, s5, 4
 nop
 add v0, zero, zero
@@ -4550,7 +5453,7 @@ addiu s6, zero, $0001
 bne k0, zero, 5
 nop
 
-addiu t1, zero, $0003
+addiu t1, zero, $0004
 beq s5, t1, 2
 nop
 addiu s5, s5, 1
@@ -4581,6 +5484,16 @@ nop
 addiu v0, v0, -1
 sb v0, $4300(v1)
 
+addiu v0, zero, 2
+bne s5, v0, 7
+nop
+lui v1, $0008
+lb v0, $4301(v1)
+beq v0, zero, 3
+nop
+addiu v0, v0, -1
+sb v0, $4301(v1)
+
 //Code name marker decrementor
 beq k0, zero, 4
 nop
@@ -4607,6 +5520,17 @@ beq v0, t1, 3
 nop
 addiu v0, v0, 1
 sb v0, $4300(v1)
+
+addiu v0, zero, $0002
+bne s5, v0, 8
+nop
+addiu t1, zero, $0003
+lui v1, $0008
+lb v0, $4301(v1)
+beq v0, t1, 3
+nop
+addiu v0, v0, 1
+sb v0, $4301(v1)
 
 beq k0, zero, 5
 nop
@@ -4738,8 +5662,6 @@ lq s1, $0060(sp)
 lq s2, $0070(sp)
 jr ra
 addiu sp, sp, $0080
-
-
 
 
 //==========================================================
@@ -4936,6 +5858,8 @@ _LineBrowserCleanOff:
 jal :_ClearPad
 nop
 
+_LineBrowserCleanOff2:
+
 // Clear menu space
 lui t0, $0009        // Packet
 addiu t1, zero, 0    // x
@@ -5048,6 +5972,19 @@ addu a0, zero, zero
 beq zero, zero, :_LineBrowserCleanOff
 nop
 
+//------------------------------ Install Dumper - L1
+jal :_ReadPad
+addiu a0, zero, $FBFF
+beq v0, zero, :_NotLBL1
+nop
+lw v0, $0020(s0)
+sll a0, s5, 2
+jal :_InstallRDMenu
+addu a0, a0, v0
+addiu s6, zero, 1
+beq zero, zero, :_LineBrowserCleanOff
+nop
+_NotLBL1:
 
 _LineBrowserWaitNoInput:
 jal :_ReadPad
@@ -5751,6 +6688,10 @@ nop
 goto _GotoAddressLoop
 
 _GotoAddressExit:
+jal :_ProcessAddress
+lw a0, $0020(s0)
+sw v0, $0020(s0)
+
 lq ra, $0000(sp)
 lw s0, $0010(sp)
 lw s1, $0014(sp)
@@ -6028,7 +6969,6 @@ lw ra, $0000(sp)
 lw s0, $0004(sp)
 jr ra
 addiu sp, sp, $0010
-
 
 //==========================================================
 _drawString:
@@ -6672,7 +7612,19 @@ addiu t5, zero, $dc
 addiu t6, zero, $0000
 call _drawString
 
-
+// Text (L1: Install Reg Dumper)
+lui a0, $0008
+lw a0, $001C(a0)
+lui a1, $8004
+addiu a1, a1, $4994
+addiu t0, zero, 320
+addiu t1, zero, 200
+daddu t2, s4, zero
+addiu t3, zero, $dc
+addiu t4, zero, $dc
+addiu t5, zero, $dc
+addiu t6, zero, $0000
+call _drawString
 
 goto _drawMenuControls_Leave
 _drawMenuControls_Codes:
@@ -7609,4 +8561,3 @@ nop
 addiu v0, zero, $0030
 jr ra
 nop
-

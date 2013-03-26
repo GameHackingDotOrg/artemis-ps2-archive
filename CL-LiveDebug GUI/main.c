@@ -18,6 +18,7 @@
 #include "Exports/LDCheats.c"
 #include "Exports/LDHook.c"
 #include "Exports/LDScanner.c"
+#include "Exports/LDRegD.c"
 
 //qwerty IOP mod from CogSwap source (booting backups)
 #include "qwerty.c"
@@ -299,7 +300,7 @@ void load_elf(char *elf_path)
 	}
 
 	/* Install the LiveDebug v3 Engine into the kernel */
-	u32 EngineStore = 0x80078250;
+	u32 EngineStore = 0x80060000;
 	u32 EngineRead = (u32)LDEngine;
 	for (i = 0; i < sizeof(LDEngine); i += 4)
 	{
@@ -338,6 +339,20 @@ void load_elf(char *elf_path)
 		EI();
 		ScannerStore += 4;
 		ScannerRead += 4;
+	}
+	
+	/* Install the Register Dumper into the EE */
+	u32 RegStore = 0x80045000; //Right after the font ends
+	u32 RegRead = (u32)LDRegD;
+	for (i = 0; i < sizeof(LDRegD); i += 4)
+	{
+		DI();
+		ee_kmode_enter();
+		*(u32*)RegStore = *(u32*)RegRead;
+		ee_kmode_exit();
+		EI();
+		RegStore += 4;
+		RegRead += 4;
 	}
 	
 	u32 joker = 0;
@@ -437,10 +452,10 @@ ee_kmode_enter();
 *(u32*)0x800444F4 = 0x7478654E; //"Next"
 *(u32*)0x800444F8 = 0x61655320; //" Sea"
 *(u32*)0x800444FC = 0x00686372; //"rch"
-*(u32*)0x80044500 = 0x4C2D4C43;
+*(u32*)0x80044500 = 0x4C2D4C43; //CL-LiveDebug v4
 *(u32*)0x80044504 = 0x44657669; 
 *(u32*)0x80044508 = 0x67756265;
-*(u32*)0x8004450C = 0x00337620;
+*(u32*)0x8004450C = 0x00347620;
 *(u32*)0x80044510 = 0x61657243;
 *(u32*)0x80044514 = 0x20646574;
 *(u32*)0x80044518 = 0x203A7962;
@@ -689,6 +704,90 @@ ee_kmode_enter();
 *(u32*)0x80044890 = 0x7473206F;
 *(u32*)0x80044894 = 0x2065726F;
 *(u32*)0x80044898 = 0x00003032;
+
+*(u32*)0x8004489C = 0x69676552; //Register Dumper
+*(u32*)0x800448A0 = 0x72657473;
+*(u32*)0x800448A4 = 0x6D754420;
+*(u32*)0x800448A8 = 0x00726570;
+
+//Registers at - ra (zero skipped because it is a constant)
+*(u32*)0x800448AC = 0x003A7461; //at
+*(u32*)0x800448B0 = 0x003A3076; //v0
+*(u32*)0x800448B4 = 0x003A3176; //v1
+*(u32*)0x800448B8 = 0x003A3061; //a0
+*(u32*)0x800448BC = 0x003A3161; //a1
+*(u32*)0x800448C0 = 0x003A3261; //a2
+*(u32*)0x800448C4 = 0x003A3361; //a3
+*(u32*)0x800448C8 = 0x003A3074; //t0
+*(u32*)0x800448CC = 0x003A3174; //t1
+*(u32*)0x800448D0 = 0x003A3274; //t2
+*(u32*)0x800448D4 = 0x003A3374; //t3
+*(u32*)0x800448D8 = 0x003A3474; //t4
+*(u32*)0x800448DC = 0x003A3574; //t5
+*(u32*)0x800448E0 = 0x003A3674; //t6
+*(u32*)0x800448E4 = 0x003A3774; //t7
+*(u32*)0x800448E8 = 0x003A3073; //s0
+*(u32*)0x800448EC = 0x003A3173; //s1
+*(u32*)0x800448F0 = 0x003A3273; //s2
+*(u32*)0x800448F4 = 0x003A3373; //s3
+*(u32*)0x800448F8 = 0x003A3473; //s4
+*(u32*)0x800448FC = 0x003A3573; //s5
+*(u32*)0x80044900 = 0x003A3673; //s6
+*(u32*)0x80044904 = 0x003A3773; //s7
+*(u32*)0x80044908 = 0x003A3874; //t8
+*(u32*)0x8004490C = 0x003A3974; //t9
+*(u32*)0x80044910 = 0x003A306B; //k0
+*(u32*)0x80044914 = 0x003A316B; //k1
+*(u32*)0x80044918 = 0x003A7067; //gp
+*(u32*)0x8004491C = 0x003A7066; //fp
+*(u32*)0x80044920 = 0x003A7073; //sp
+*(u32*)0x80044924 = 0x003A6172; //ra
+
+*(u32*)0x80044928 = 0x74736E49; //Install Dumper at
+*(u32*)0x8004492C = 0x206C6C61;
+*(u32*)0x80044930 = 0x706D7544;
+*(u32*)0x80044934 = 0x61207265;
+*(u32*)0x80044938 = 0x00000074;
+
+*(u32*)0x8004493C = 0x72646441; //Address not between 00080000 and 02000000!
+*(u32*)0x80044940 = 0x20737365;
+*(u32*)0x80044944 = 0x20746F6E;
+*(u32*)0x80044948 = 0x77746562;
+*(u32*)0x8004494C = 0x206E6565;
+*(u32*)0x80044950 = 0x38303030;
+*(u32*)0x80044954 = 0x30303030;
+*(u32*)0x80044958 = 0x646E6120;
+*(u32*)0x8004495C = 0x30323020;
+*(u32*)0x80044960 = 0x30303030;
+*(u32*)0x80044964 = 0x00002130;
+
+*(u32*)0x80044968 = 0x6F6D6552; //Remove dumper
+*(u32*)0x8004496C = 0x64206576;
+*(u32*)0x80044970 = 0x65706D75;
+*(u32*)0x80044974 = 0x00000072;
+
+*(u32*)0x80044978 = 0x69676552; //Register Dumper hooked to:
+*(u32*)0x8004497C = 0x72657473;
+*(u32*)0x80044980 = 0x6D754420;
+*(u32*)0x80044984 = 0x20726570;
+*(u32*)0x80044988 = 0x6B6F6F68;
+*(u32*)0x8004498C = 0x74206465;
+*(u32*)0x80044990 = 0x00003A6F;
+
+*(u32*)0x80044994 = 0x203A314C; //L1: Install Reg Dumper
+*(u32*)0x80044998 = 0x74736E49;
+*(u32*)0x8004499C = 0x206C6C61;
+*(u32*)0x800449A0 = 0x20676552;
+*(u32*)0x800449A4 = 0x706D7544;
+*(u32*)0x800449A8 = 0x00007265;
+
+*(u32*)0x800449AC = 0x005E0076; //v, ^ (Up and Down)
+
+*(u32*)0x800449B0 = 0x7366664F; //Offset:
+*(u32*)0x800449B4 = 0x003A7465;
+
+*(u32*)0x800449B8 = 0x00310030; //0, 1
+*(u32*)0x800449BC = 0x00330032; //2, 3
 
 ee_kmode_exit();
 EI();
@@ -1310,8 +1409,8 @@ int LoadSettings(void) {
 		while (z < (size - 1)) {
 			while (result[x] != '\n' && ((x + z + 1) < size)) { x++; }
 			x--;
-			if (y == 0) { AutoJoker = (result[x] - 0x30); }
-			if (y == 1) { uLEJoker = (result[x] - 0x30); }
+			if (y == 0) { AutoJoker = atoi((char*)&result[x]); }
+			if (y == 1) { uLEJoker = atoi((char*)&result[x]); }
 			x++;
 			while (result[x] == '\n' && ((x + z + 1) < size)) { x++; }
 			result += x;

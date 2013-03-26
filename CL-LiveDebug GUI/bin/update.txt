@@ -4,7 +4,7 @@ Bug fixes:
 
 - LiveDebug doesn't freeze as commonly as before on some games. It no longer searches for joker addresses after it has found one. I am not sure if this looses pad functionality for some games.
 
-- Fixed a TON of compiler warnings, now there are only 4.
+- Fixed a TON of compiler warnings. There are now 0 :D.
 
 - Fixed immense lag when reading at least 4 words worth of bytes that are greater than 0x7F. The drawString function had trouble printing those so I replaced them in a function with 0x01 (which shows a square).
 
@@ -13,6 +13,18 @@ Bug fixes:
 - No longer randomly freezes when booting a game. I didn't know to DI when entering kernel mode and EI after exiting kernel mode.
 
 What's new:
+
+3/25/13:
+
+- Added Process Register Dumper
+
+- Added offset option for AddToCodes menu. Since the patches system only stores 32 bit value, you must set whether you want an 8/16/32 bit value. But if you do a 8 or 16 bit value, then there may be an offset from the original address. So the offset allows you to add to the the original address. If the offset is not compatible with the bit selected, the address will be unmodified.
+
+- Added jokers for Need For Speed Carbon NTSC and Need For Speed: Most Wanted NTSC U/C (Greatest Hits)
+
+- Added spacing for font created by PS2FontCreator (which means the spacing has been created using math and not my eye)
+
+- Added a program called PS2FontCreator made by Dnawrkshp and ORCXodus
 
 3/10/13:
 

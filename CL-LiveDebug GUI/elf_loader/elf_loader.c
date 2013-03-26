@@ -11,6 +11,14 @@
 char boot_path[1024];
 int load_elf_ram(char *elf);
 
+/* Debug colors. Now NTSC Safe! */
+int red = 0x1010B4; /* RED: Opening elf */
+int green = 0x10B410; /* GREEN: Reading elf */
+int blue = 0xB41010; /* BLUE: Installing elf header */
+int yellow = 0x10B4B4; /* YELLOW: ExecPS2 */
+int pink = 0xB410B4; /* PINK: Launching OSDSYS */
+int white = 0xEBEBEB; /* WHITE: Failed to launch OSDSYS */
+
 /* ELF-header structures and identifiers */
 #define ELF_MAGIC	0x464c457f
 #define ELF_PT_LOAD	1
@@ -124,13 +132,13 @@ int main (int argc, char *argv[1])
 	load_elf_ram(boot_path);
 	
 	//If that fails, then boot OSDSYS
-	GS_BGCOLOUR = 0xff00ff; /* PINK: Launching OSDSYS */
+	GS_BGCOLOUR = pink; /* PINK: Launching OSDSYS */
   	SifLoadFileExit();
   	fioExit();
   	SifExitRpc();
   	launch_OSDSYS();
 
- 	GS_BGCOLOUR = 0xffffff; /* WHITE: Failed to load OSDSYS */
+ 	GS_BGCOLOUR = white; /* WHITE: Failed to load OSDSYS */
   	SleepThread();
 	//execute_elf(argv[0]);
 
@@ -145,7 +153,7 @@ int load_elf_ram(char *elf) {
 	char *args[1];
 
 	
-	GS_BGCOLOUR = 0x0000ff; /* RED: Opening elf */
+	GS_BGCOLOUR = red; /* RED: Opening elf */
 	fd = fioOpen(elf, O_RDONLY); //Open the elf
 	if (fd < 0) { fioClose(fd); return -1; } //If it doesn't exist, return null
 
@@ -154,14 +162,14 @@ int load_elf_ram(char *elf) {
 	
 	if (size < 0) { fioClose(fd); return -1; }
 	
-	GS_BGCOLOUR = 0x00ff00; /* GREEN: Reading elf */
+	GS_BGCOLOUR = green; /* GREEN: Reading elf */
 	fioRead(fd, (u32*)elfloc, size); //Reads the elf and stores it into the memory at 0x01000000
 	fioClose(fd); //Closes system.cnf
 	elfloc = 0x01800000;
 
 	/* Get Elf header */
 	//boot_header = &elfloc;
-	GS_BGCOLOUR = 0xff0000; /* BLUE: Installing elf */
+	GS_BGCOLOUR = blue; /* BLUE: Installing elf */
 	boot_header = (elf_header_t*)elfloc;
 
 	/* Check elf magic */
@@ -188,7 +196,7 @@ int load_elf_ram(char *elf) {
 		return -1;
 	
 	//Booting part
-	GS_BGCOLOUR = 0x00ffff; /* YELLOW: ExecPS2 */
+	GS_BGCOLOUR = yellow; /* YELLOW: ExecPS2 */
   	SifLoadFileExit();
   	fioExit();
   	SifExitRpc(); /* some programs need it to be here */

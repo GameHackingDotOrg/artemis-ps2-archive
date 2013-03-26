@@ -113,10 +113,12 @@ char *replace_str(char *str, char *orig, char *rep)
 }
 
 //Joker array (pad address), must end with { "", "" }
-char *padaddr[5][2] = {
+char *padaddr[6][2] = {
 	{ "SCUS_974.65", "001EE682" }, //Ratchet: Deadlocked
-	{ "SLUS_211.94", "0084305C" }, //Phantasy Star Univers
+	{ "SLUS_211.94", "0084305C" }, //Phantasy Star Universe
 	{ "SCUS_971.24", "0012e842" }, //Jak 1
+	{ "SLUS_214.93", "00300F82" }, //Need For Speed Carbon
+	{ "SLUS_212.67", "00AAE882" }, //Need For Speed: Most Wanted NTSC U/C (Greatest Hits)
 	{ "", "" }, //Do not delete!
 	//{ "", "" },
 };

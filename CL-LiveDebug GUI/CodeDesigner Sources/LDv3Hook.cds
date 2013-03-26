@@ -92,7 +92,7 @@ sd v1, $0108(t1)
 jal :_SetDisplay
 nop
 
-jal $00078250
+jal $00060000
 daddu a0, zero, zero
 
 //Return screen to normal width and height

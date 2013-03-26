@@ -5,6 +5,8 @@ EE_BIN = LDv4_GUI.elf
 EE_BIN_PACKED = LDv4_Dna_GUI.elf
 EE_BIN_DIR = bin
 
+IP_ADDR = 10.0.1.100
+
 EE_OBJS = main.o gui.o timer.o pad.o joker.o
 EE_OBJS += font_neuropol.o
 EE_OBJS += background.o logo.o logo_ghost.o
@@ -37,9 +39,13 @@ all: $(EE_BIN)
 run:	
 	make clean
 	make
-	#EDIT TO YOUR IP ADDRESS
-	ps2client -h 10.0.1.100 execee "host:$(EE_BIN_DIR)/$(EE_BIN)"
- 
+	#EDIT TO YOUR IP ADDRESS IN THE MAKEFILE
+	ps2client -h $(IP_ADDR) execee "host:$(EE_BIN_DIR)/$(EE_BIN)"
+
+exec:
+	#EDIT TO YOUR IP ADDRESS IN THE MAKEFILE
+	ps2client -h $(IP_ADDR) execee "host:$(EE_BIN_DIR)/$(EE_BIN)"
+	
 clean:
 	$(MAKE) -C elf_loader clean		
 	rm -f $(EE_OBJS) $(EE_SRC) *.elf *.ELF
