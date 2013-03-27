@@ -19,6 +19,7 @@
 #include "Exports/LDHook.c"
 #include "Exports/LDScanner.c"
 #include "Exports/LDRegD.c"
+#include "Exports/LDExcept.c"
 
 //qwerty IOP mod from CogSwap source (booting backups)
 #include "qwerty.c"
@@ -128,7 +129,6 @@ void delay(int count);
 void launch_OSDSYS(void);
 void Update_MainMenu(void);
 void Update_AboutMenu(void);
-char *readcnf(void);
 int LoadPatches(int m);
 int WritePatches(void);
 void WriteLabels(void);
@@ -137,12 +137,15 @@ int LoadModules(void);
 int LoadSettings(void);
 void NewSett(void);
 int StoreSett(void);
+int ParseSYSTEMCNF(char *system_cnf, char *boot_path);
 
 //Settings variables
 char *SettFile = "mc0:/LiveDebug/settings.txt";
 char *SettLayout = "autojoker 0\nulejoker 0\n";
 int AutoJoker = 0;
 int uLEJoker = 0;
+
+char *sys_cnf = "cdrom0:\\SYSTEM.CNF;1";
 
 /* Kernel/Syscall hook address and value */
 u32 HookValue = (0x0007F000 / 4) + 0x08000000;
@@ -220,6 +223,9 @@ int LoadModules(void) {
  */
 void load_elf(char *elf_path)
 {
+
+	if (elf_path == NULL) { return; }
+	
 	u8 *boot_elf;
 	elf_header_t *boot_header;
 	elf_pheader_t *boot_pheader;
@@ -256,7 +262,7 @@ void load_elf(char *elf_path)
 		if (boot_pheader[i].memsz > boot_pheader[i].filesz)
 			memset(boot_pheader[i].vaddr + boot_pheader[i].filesz, 0, boot_pheader[i].memsz - boot_pheader[i].filesz);
 	}
-
+	
 	/* Install the spacing into the kernel */
 	u32 SpaceStore = 0x8002FE00;
 	u32 SpaceRead = (u32)LDSpace;
@@ -355,6 +361,20 @@ void load_elf(char *elf_path)
 		RegRead += 4;
 	}
 	
+	/* Install the Exception Handler into the Kernel */
+	u32 ExcStore = 0x80050000;
+	u32 ExcRead = (u32)LDExcept;
+	for (i = 0; i < sizeof(LDExcept); i += 4)
+	{
+		DI();
+		ee_kmode_enter();
+		*(u32*)ExcStore = *(u32*)ExcRead;
+		ee_kmode_exit();
+		EI();
+		ExcStore += 4;
+		ExcRead += 4;
+	}
+	
 	u32 joker = 0;
 	if (AutoJoker == 1 && uLEJoker == 1) {
 	
@@ -369,14 +389,19 @@ void load_elf(char *elf_path)
 			}
 		}
 	
-		char *temp = readcnf();
-		temp = replace_str(temp, ";1", "");
-		temp = replace_str(temp, " ", ""); //Don't ask...
-		temp = replace_str(temp, "cdrom0:\\", "");
-		joker = TextToCode(LoadJoker(temp, loc));
+		char *tempJoker = malloc(50);
+		int x = 0;
+		ParseSYSTEMCNF(sys_cnf, tempJoker);
+		
+		while (tempJoker[0] != '\\') { tempJoker++; } //Finds '\' in cdrom0:\\....
+		tempJoker++; //Skips '\'
+		while (tempJoker[x] != ';') { x++; } //Finds the ';' in ????_???.??;1
+		tempJoker[x] = '\0'; //Ends string at S???_???.??
+		joker = TextToCode(LoadJoker(tempJoker, loc));
 		
 		//If that doesn't find a joker, try looking in the array
-		if (joker == 0) { joker = TextToCode(LoadJokerArray(temp)); }
+		if (joker == 0) { joker = TextToCode(LoadJokerArray(tempJoker)); }
+		free(tempJoker);
 	}
 	
 	/* Install the Scanner Config into the kernel */
@@ -926,42 +951,83 @@ int WritePatches(void)
 	return 1;
 }
 
-/*
- * Reads the system.cnf and returns the elf path
-*/
-char *readcnf(void) {
-	int fd, size;
-	char *result;
-	int x = 0;
+//----------------------------------------------------------------
+int     get_CNF_string(u8 **CNF_p_p, u8 **name_p_p, u8 **value_p_p) //Taken from uLaunchElf
+{
+        
+        u8 *np, *vp, *tp = *CNF_p_p;
 
-	result = malloc(50);
+start_line:
+        while((*tp<=' ') && (*tp>'\0')) tp+=1;  //Skip leading whitespace, if any
+        if(*tp=='\0') return 0;                         //but exit at EOF
+        np = tp;                                //Current pos is potential name
+        if(*tp<'A')                             //but may be a comment line
+        {                                       //We must skip a comment line
+                while((*tp!='\r')&&(*tp!='\n')&&(*tp>'\0')) tp+=1;  //Seek line end
+                goto start_line;                    //Go back to try next line
+        }
 
-	fd = fioOpen("cdrom0:\\SYSTEM.CNF;1", O_RDONLY); //Open the SYSTEM.CNF
-	if (fd < 0) { fioClose(fd); return NULL; } //If it doesn't exist, return null
+        while((*tp>='A')||((*tp>='0')&&(*tp<='9'))) tp+=1;  //Seek name end
+        if(*tp=='\0') return -1;                        //but exit at EOF
 
-	size = fioLseek(fd, 0, SEEK_END); //Gets the size of the system.cnf
-	fioLseek(fd, 0, SEEK_SET);
-	
-	if (size < 0) { fioClose(fd); return NULL; }
-	
-	fioRead(fd, result, size); //Reads the system.cnf and stores it into result
-	fioClose(fd); //Closes system.cnf
-	if (result == NULL) { return NULL; } //If it can't read, return null
+        while((*tp<=' ') && (*tp>'\0'))
+                *tp++ = '\0';                       //zero&skip post-name whitespace
+        if(*tp!='=') return -2;                 //exit (syntax error) if '=' missing
+        *tp++ = '\0';                           //zero '=' (possibly terminating name)
 
-	result += 5; //Skip "BOOT2"
-	
-	//Since there are multiple CNF styles we must skip some characters.
-	while (*result == ' ' || *result == '=' || *result == '\t') { result++; }
-	
-	while (result[x] != '\n' && result[x] != '\r') //Read each character until it hits a newline or return
-	{
-		x++;
-	}
+        while((*tp<=' ') && (*tp>'\0')          //Skip pre-value whitespace, if any
+                && (*tp!='\r') && (*tp!='\n')           //but do not pass the end of the line
+                )tp+=1;                                                         
+        if(*tp=='\0') return -3;                        //but exit at EOF
+        vp = tp;                                //Current pos is potential value
 
-	if (result[x] == ' ') { result[x - 1] = '\0'; } else { result[x] = '\0'; } //End string with a NULL 0x00
-	
+        while((*tp!='\r')&&(*tp!='\n')&&(*tp!='\0')) tp+=1;  //Seek line end
+        if(*tp!='\0') *tp++ = '\0';             //terminate value (passing if not EOF)
+        while((*tp<=' ') && (*tp>'\0')) tp+=1;  //Skip following whitespace, if any
 
-	return result;
+        *CNF_p_p = tp;                          //return new CNF file position
+        *name_p_p = np;                         //return found variable name
+        *value_p_p = vp;                        //return found variable value
+        return 1;                               //return control to caller
+}       //Ends get_CNF_string
+
+//----------------------------------------------------------------
+int ParseSYSTEMCNF(char *system_cnf, char *boot_path)
+{
+        int r, entrycnt, cnfsize;
+        u8 *pcnf, *pcnf_start, *name, *value;
+        int fd = -1;
+        
+        fd = open(system_cnf, O_RDONLY);
+        if (fd < 0)
+                return -1;              
+
+        cnfsize = lseek(fd, 0, SEEK_END);
+        lseek(fd, 0, SEEK_SET);
+        
+        pcnf = (char *)malloc(cnfsize);
+        pcnf_start = pcnf;
+        if (!pcnf) {
+                close(fd);
+                return -2;
+        }
+        
+        r = read(fd, pcnf, cnfsize);    // Read CNF in one pass
+        if (r != cnfsize)
+                return -3;
+                
+        close(fd);
+        pcnf[cnfsize] = 0;                              // Terminate the CNF string
+        
+        for (entrycnt = 0; get_CNF_string(&pcnf, &name, &value); entrycnt++) {
+                if (!strcmp(name,"BOOT2"))  // check for BOOT2 entry
+                        strcpy(boot_path, value);                       
+        }
+                        
+        pcnf = pcnf_start;
+        free(pcnf);
+        
+        return 1;
 }
 
 /*
@@ -1204,12 +1270,16 @@ int main(int argc, char *argv[])
 				load_submenu_Textures();
 				load_Font();
 				
+				char cnf[1024];
+				
 				/* Taking action for button press */
 				switch (selected_button) {
 					
 					case 1: /* start game */
 						//launch_OSDSYS();
-						load_elf(readcnf());
+						
+						ParseSYSTEMCNF(sys_cnf, cnf);
+						load_elf(cnf);
 						break;
 						
 					case 2: /* stop disc */
@@ -1342,7 +1412,7 @@ int main(int argc, char *argv[])
 
 	/* We won't get here */
 //err_out:
-	scr_printf("\t Artemis GUI Init failed...\n");
+	scr_printf("\t CL-LiveDebug GUI Init failed...\n");
 
 	SleepThread();
 
@@ -1372,7 +1442,8 @@ void ResetCNF(void)
 void StopDisc(void)
 {
 	fioOpen("qwerty:r",1); // Wait for the disc to be ready
-	readcnf();
+	int fd = fioOpen(sys_cnf, O_RDONLY); //Just to get the disc spinning
+	fioClose(fd);
 	
 	ResetCNF();
 	IOP_Reset();

@@ -63,17 +63,27 @@ sq ra, $01d0(sp)
 //nop
 
 _AfterGsCrt:
+//Check if the install handler has already been installed
+lui t1, $0009
+lw t1, $A000(t1)
 
+bne t1, zero, 3
+nop
+
+jal :_InstallEH
+nop
+
+//Joker scanner on/off switch
 lui t1, $8008
 lw t1, $E7FC(t1)
 
 bne t1, zero, 3
 nop
 
-jal $0007E880
+jal $0007E880 //Joker scanner
 nop
 
-jal $0007F800
+jal $0007F800 //Cheat engine
 nop
 
 jal :_ReadPad
@@ -330,3 +340,70 @@ sd v0, $00A0(a0)   // Set Display 2
 
 jr ra
 nop
+
+//Moves exception handler from 80050000 to 000E0000
+//==============================================================
+_InstallEH:
+addiu sp, sp, $FFB0
+sq ra, $0000(sp)
+sq a0, $0010(sp)
+sq a1, $0020(sp)
+sq v0, $0030(sp)
+sq v1, $0040(sp)
+
+lui s0, $8005 //Start
+addiu s1, s0, $27EC //End
+setreg s2, $0008A000
+
+_LoopIEH:
+lw t0, $0000(s0)
+sw t0, $0000(s2)
+
+addiu s2, s2, 4
+addiu s0, s0, 4
+
+bne s1, s0, :_LoopIEH
+nop
+
+//Then installs a pointer to the handler
+//==============================================================
+_installHandler:
+
+lui a0, $8000
+addiu a1, zero, $8f5a
+
+_IH_ScanLoop:
+
+lh v0, $0000(a0)
+lh v1, $0002(a0)
+bne a1, v1, :_IH_ScanLoop
+addiu a0, a0, 4
+
+lui a0, $8001
+daddu a0, a0, v0
+
+setreg v0, $0008A000
+//lui v1, $8000
+//addu v0, v0, v1
+
+sw v0, $0004(a0) // TLB Modification
+sw v0, $0008(a0) // TLB Load/Inst Fetch
+sw v0, $000c(a0) // TLB Store
+sw v0, $0010(a0) // Address Load/Inst Fetch
+sw v0, $0014(a0) // Address Store
+sw v0, $0018(a0) // Bus Error (instr)
+sw v0, $001c(a0) // Bus Error (data)
+//sw v0, $0020(a0) // Syscall()
+//sw v0, $0024(a0) // Breakpoint
+sw v0, $0028(a0) // Reserved Instruction
+sw v0, $002c(a0) // Coprocessor Unsuable
+sw v0, $0030(a0) // Overflow
+sw v0, $0034(a0) // Something
+
+lq ra, $0000(sp)
+lq a0, $0010(sp)
+lq a1, $0020(sp)
+lq v0, $0030(sp)
+lq v1, $0040(sp)
+jr ra
+addiu sp, sp, $0050

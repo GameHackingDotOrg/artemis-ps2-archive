@@ -94,29 +94,12 @@ char *LoadJoker(char *elfname, char *file) {
 	return NULL;
 }
 
-//I got a little lazy and just googled a solution :P
-//From http://www.linuxquestions.org/questions/programming-9/replace-a-substring-with-another-string-in-c-170076/
-char *replace_str(char *str, char *orig, char *rep)
-{
-  static char buffer[100];
-  char *p;
-
-  if(!(p = strstr(str, orig)))  // Is 'orig' even in 'str'?
-    return str;
-
-  strncpy(buffer, str, p-str); // Copy characters from 'str' start to 'orig' st$
-  buffer[p-str] = '\0';
-
-  sprintf(buffer+(p-str), "%s%s", rep, p+strlen(orig));
-
-  return buffer;
-}
-
 //Joker array (pad address), must end with { "", "" }
-char *padaddr[6][2] = {
+char *padaddr[7][2] = {
 	{ "SCUS_974.65", "001EE682" }, //Ratchet: Deadlocked
 	{ "SLUS_211.94", "0084305C" }, //Phantasy Star Universe
 	{ "SCUS_971.24", "0012e842" }, //Jak 1
+	{ "SLUS_205.71", "0058D19C" }, //Ty the Tasmanian Tiger
 	{ "SLUS_214.93", "00300F82" }, //Need For Speed Carbon
 	{ "SLUS_212.67", "00AAE882" }, //Need For Speed: Most Wanted NTSC U/C (Greatest Hits)
 	{ "", "" }, //Do not delete!

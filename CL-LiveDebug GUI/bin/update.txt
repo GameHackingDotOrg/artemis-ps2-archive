@@ -2,6 +2,10 @@ Dnawrkshp's contributions to CL-LiveDebug:
 
 Bug fixes:
 
+- Uses uLE's SYSTEM.CNF parser. Just more reliable.
+
+- Now tries to boot uLE if booting from disc fails (purple screen)
+
 - LiveDebug doesn't freeze as commonly as before on some games. It no longer searches for joker addresses after it has found one. I am not sure if this looses pad functionality for some games.
 
 - Fixed a TON of compiler warnings. There are now 0 :D.
@@ -15,6 +19,10 @@ Bug fixes:
 What's new:
 
 3/25/13:
+
+- Added Gtlcpimp's Exception Handler
+
+- Added joker address for Ty the Tasmanian Tiger
 
 - Added Process Register Dumper
 

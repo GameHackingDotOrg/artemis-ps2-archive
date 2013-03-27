@@ -18,6 +18,7 @@ int blue = 0xB41010; /* BLUE: Installing elf header */
 int yellow = 0x10B4B4; /* YELLOW: ExecPS2 */
 int pink = 0xB410B4; /* PINK: Launching OSDSYS */
 int white = 0xEBEBEB; /* WHITE: Failed to launch OSDSYS */
+int purple = 0x801080; /* PURPLE: Luanching uLaunchELF */
 
 /* ELF-header structures and identifiers */
 #define ELF_MAGIC	0x464c457f
@@ -131,6 +132,28 @@ int main (int argc, char *argv[1])
 	SifInitRpc(0);
 	load_elf_ram(boot_path);
 	
+	GS_BGCOLOUR = purple; /* PURPLE: Luanching uLaunchELF */
+	char *uLE = "mc0:/BOOT/BOOT.ELF";
+	int fd = fioOpen(uLE, O_RDONLY);
+				
+	if (fd < 0) {
+		uLE = "mc1:/BOOT/BOOT.ELF";
+		fd = fioOpen(uLE, O_RDONLY);
+		if (fd < 0) {
+			uLE = "mass:/BOOT/BOOT.ELF";
+			fd = fioOpen(uLE, O_RDONLY);
+			if (fd < 0) {
+				uLE = "mass:/BOOT.ELF";
+				fd = fioOpen(uLE, O_RDONLY);
+				if (fd < 0) {
+					uLE = NULL;
+				}
+			}
+		}
+	}
+	fioClose(fd);
+	if (uLE != NULL) { load_elf_ram(uLE); }
+
 	//If that fails, then boot OSDSYS
 	GS_BGCOLOUR = pink; /* PINK: Launching OSDSYS */
   	SifLoadFileExit();
