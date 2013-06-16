@@ -70,10 +70,19 @@ nop
 jal $0007F800 //Cheat engine
 nop
 
+//Check if the debugger is already open
+lw t0, $0030(s0)
+bne t0, zero, :LDv3HookExit
+nop
+
 jal :_ReadPad
 lh a0, $002C(s0) //Joker combo
 beq v0, zero, :LDv3HookExit
 nop
+
+//Update state
+addiu v0, zero, 1
+sw v0, $0030(s0)
 
 //Finds a memory region for the packet
 lui a0, $0008
@@ -146,6 +155,9 @@ ld a0, $FFF0(t1)
 ld a1, $FFF8(t1)
 jal :_RestoreDisplay
 nop
+
+//Update state
+sw zero, $0030(s0)
 
 /*
 lq t1, $0080(s0)

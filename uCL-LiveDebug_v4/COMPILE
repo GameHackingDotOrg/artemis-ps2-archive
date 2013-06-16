@@ -1,0 +1,12 @@
+In order to compile uLDv4, you must have a port of libpng and zlib installed.
+Both can be acquired at: https://github.com/ps2dev/ps2sdk-ports
+
+You will also need a working version of gsKit.
+For some reason the one located here https://github.com/ps2dev/gsKit doesn't compile for me...
+I used the one from the pre-compiled binaries that gamehacking.org provides here: http://gamehacking.org/downloads/gshi_ps2sdk.7z
+You can just extract the gsKit folder that should be in the ps2dev folder.
+
+From there everything should compile fine... Unless there is a major update to the SDK and it breaks this source.
+If that happens, please email me at werewu45@yahoo.com. Hopefully I will be able to fix it.
+
+Enjoy!

@@ -6,8 +6,6 @@ Bug fixes:
 
 - Now tries to boot uLE if booting from disc fails (purple screen)
 
-- LiveDebug doesn't freeze as commonly as before on some games. It no longer searches for joker addresses after it has found one. I am not sure if this looses pad functionality for some games.
-
 - Fixed a TON of compiler warnings. There are now 0 :D.
 
 - Fixed immense lag when reading at least 4 words worth of bytes that are greater than 0x7F. The drawString function had trouble printing those so I replaced them in a function with 0x01 (which shows a square).
@@ -18,7 +16,7 @@ Bug fixes:
 
 What's new:
 
-6/13/13:
+6/13/13: 4.1.1 Unofficial
 
 - Added ability to change the joker combo to enter the debugger
 
@@ -26,7 +24,21 @@ What's new:
 
 - Added ver option to the preset joker list. If you do not enter one it will not check for the number
 
-3/25/13:
+4/02/13: 4.1.0 Beta
+
+- Added dynamic allocation for both the register dumper and the packet
+
+- Removed Gtlcpimp's exception handler
+
+- Added ability to add preset joker from the GUI
+
+- Added a keyboard to the GUI
+
+- Added ability to set boot path to uLE from the GUI
+
+- When booting SifLoadElf is attempted before trying to load and boot the elf itself
+
+3/25/13: 4.0.1 Beta
 
 - Added Gtlcpimp's Exception Handler
 
@@ -42,7 +54,7 @@ What's new:
 
 - Added a program called PS2FontCreator made by Dnawrkshp and ORCXodus
 
-3/10/13:
+3/10/13: 4.0.0 Beta
 
 - Finished BETA GUI
 
@@ -50,11 +62,11 @@ What's new:
 
 - Added boot uLaunchELF option
 
-12/15/12:
+12/15/12: Mod Update
 
 - Applied spacing for individual characters. The strings look a lot nicer. A new argument is now passed to _drawString as register t6. If you want a constant spacing between characters, set t6 equal to that space. Otherwise, set t6 equal to zero and it will use my non-constant spacing system.
 
-12/12/12:
+12/12/12: Update
 
 - Implemented searching for changed values and searching for unchanged values (next search only). Only works with 8, 16, and 32 bit change/unchange searches)
 
@@ -65,7 +77,7 @@ What's new:
 - Optimized the cheat engine so that it doesn't run through all 512 possible codes. It now stops looping through the codes when it hits an address of 0. This, as far as I know, means there are no more valid codes after it.
 
 
-12/09/12:
+12/09/12: Update
 
 - Implemented a 'Next Search' function that I give Gtlcpimp 98% credit because I copy pasted his search function and made it search through the results instead of the memory.
 
