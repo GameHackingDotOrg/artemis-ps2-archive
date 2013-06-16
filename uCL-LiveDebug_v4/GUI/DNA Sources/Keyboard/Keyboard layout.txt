@@ -1,0 +1,22 @@
+if (SHIFT == 0 && CAPS_LOCK == 0)
+` | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 0 | - | =
+\t| q | w | e | r | t | y | u | i | o | p | [ | ]
+^^| a | s | d | f | g | h | j | k | l | ; | \'| ENTER
+^ | z | x | c | v | b | n | m | , | , | / | :/| CANCEL
+  |					  SPACE					  |
+
+if (SHIFT == 1 || CAPS_LOCK == 1)
+\ | ! | @ | # | $ | % | ^ | & | * | ( | ) | _ | +
+\t| Q | W | E | R | T | Y | U | I | O | P | { | }
+^^| A | S | D | F | G | H | J | K | L | : | \"| ENTER
+^ | Z | X | C | V | B | N | M | < | > | ? | :/| CANCEL
+  |					  SPACE					  |
+
+5 rows
+13 columns
+
+\t = TAB
+^^ = CAPS LOCK
+^ = SHIFT
+
+The '|' represents a split between characters/keys on the keyboard.
