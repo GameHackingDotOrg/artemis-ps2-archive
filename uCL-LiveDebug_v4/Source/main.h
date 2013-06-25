@@ -241,7 +241,7 @@ char *SettLayout = "# CL-LiveDebug config file\n\n" \
 						"pkt_alloc = 0x00090000;\n\t" \
 						"eh_alloc = 0x000A0000;\n\t" \
 						"regd_alloc = 0x00080000;\n" \
-						"jok_combo = 0x0000FFF9;\n" \
+						"jok_combo = 0xFFFFFFF9;\n" \
 					"};\n\n" \
 					"joker: {\n\t" \
 						"joker_array = [\n\t" \

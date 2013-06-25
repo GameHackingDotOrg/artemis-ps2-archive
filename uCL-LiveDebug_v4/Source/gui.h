@@ -30,7 +30,7 @@ int  Draw_AboutMenu(char *version, struct about_content *about_text);
 void Render_GUI(void);
 int LoadPatches(int m);
 int DrawMenuBar(int X);
-int draw_keyBoard(char *ret, int mode);
+int draw_keyBoard(char *ret, int mode, char *title);
 int draw_kb_chars(void);
 int draw_kb_hex(void);
 int draw_kb_frame(void);
@@ -185,6 +185,10 @@ int kb_xoff = 0, kb_xrate = 0, kb_xspace = 0;
 int kb_yoffH = 0, kb_yrateH = 0, kb_yenterH = 0;
 int kb_xoffH = 0, kb_xrateH = 0, kb_xenterH = 0, kb_xcancelH = 0;
 int kb_box_max = 0; /* Defined in draw_keyBoard, sets the max width of the string drawn in the box */
+
+/* Width and height of the keyboard frame */
+int kb_frame_w = 610;
+int kb_frame_h = 265;
 
 /* Character sizes and "SPACE" size */
 int kb_char_size = 15, kb_spaceSize = 20, kb_charH_size = 20;

@@ -577,7 +577,7 @@ int Draw_OptionsMenu(void)
 		optselbutt++; //Down
 	
 	if (new_pad & PAD_CROSS) {
-			if (optselbutt == 5) {
+			if (optselbutt == 5) { /* Joker combo to open the debugger */
 				retval = 0x20000;
 				while (retval == 0x20000) {
 					retval = draw_jokerCombo("Press the buttons you wish to set as the joker", "Then press the Cross (X) button");
@@ -595,7 +595,7 @@ int Draw_OptionsMenu(void)
 				StoreSett(NULL, NULL, NULL);
 				
 				opt_5_exit: ;
-			} else if (optselbutt == 4) {
+			} else if (optselbutt == 4) { /* Set the uLE boot path */
 			
 			//Load the keyboard and font textures into the vram
 			LoadTextures(lkeyb);
@@ -606,7 +606,7 @@ int Draw_OptionsMenu(void)
 			kb_ptr = strlen(ret);
 			kb_sel = 27; //0
 			while (retval <= 0) {
-				retval = draw_keyBoard(ret, 0);
+				retval = draw_keyBoard(ret, 0, "uLaunchELF boot path");
 				Render_GUI();
 			}
 		
@@ -621,10 +621,11 @@ int Draw_OptionsMenu(void)
 			//Reload the textures into the vram
 			LoadTextures(loptM);
 			
-		} else if (optselbutt == (int)opt_max) {
+		} else if (optselbutt == (int)opt_max) { /* Add custom preset joker */
 			
 			char *ret = malloc(50);
 			char *ret2 = malloc(11);
+			int loadType = 0;
 			
 			//Load the keyboard and font textures into the vram
 			LoadTextures(lyorn);
@@ -639,6 +640,7 @@ int Draw_OptionsMenu(void)
 			if (retval == 3)
 				goto exit_opt_max;
 			
+			loadType = retval;
 			if (retval == 1) { //Load from SYSTEM.CNF
 				int x = 0;
 				ParseSYSTEMCNF(sys_cnf, ret);
@@ -653,7 +655,7 @@ int Draw_OptionsMenu(void)
 				kb_sel = 27; //A
 				retval = 0;
 				while (retval <= 0) {
-					retval = draw_keyBoard(ret, 0);
+					retval = draw_keyBoard(ret, 0, "ELF ID");
 					Render_GUI();
 				}
 			}
@@ -665,16 +667,28 @@ int Draw_OptionsMenu(void)
 				kb_sel = 0; //0
 				retval = 0;
 				while (retval <= 0) {
-					retval = draw_keyBoard(ret2, 1);
+					retval = draw_keyBoard(ret2, 1, "Joker address");
 					Render_GUI();
 				}
 			
 				if (DEBUG)
 					printf("ret = %s\nret2 = %s\n", (char*)ret, (char*)ret2);
 				
-				if (ret != NULL && ret2 != NULL && ret2 != "0x" && retval == 1) { //Enter was selected
+				if (ret != NULL && ret2 != NULL && strcmp(ret2, "0x") != 0 && retval == 1) { //Enter was selected
 					char *ret3 = malloc(10);
-					ParseVerNumber(sys_cnf, ret3);
+					if (loadType == 1) { /* Load from CNF */
+						ParseVerNumber(sys_cnf, ret3);
+					} else { /* Enter manually */
+						memset(ret3, 0, 11);
+						strcpy(ret3, "");
+						kb_ptr = 0;
+						kb_sel = 0; //0
+						retval = 0;
+						while (retval <= 0) {
+							retval = draw_keyBoard(ret3, 0, "Version number");
+							Render_GUI();
+						}
+					}
 					
 					if (ret3 == NULL) {
 						free(ret2);
@@ -1101,15 +1115,21 @@ int DrawMenuBar(int X) {
 	return 0;
 }
 
-int aaa = 1;
-
-int draw_keyBoard(char *ret, int mode) {
+int draw_keyBoard(char *ret, int mode, char *title) {
 	kb_box_max = kb_frame_x + 490;
 	
 	/* Set Alpha settings */
 	gsKit_set_primalpha(gsGlobal, GS_SETREG_ALPHA(0,1,0,1,0), 0);
 	gsKit_set_test(gsGlobal, GS_ATEST_OFF);
 	
+	/* Calculate the title string's x and y */
+	int tStringFontSize = 20;
+	int tString_x = ((kb_frame_x + kb_frame_w) / 2) - (getStringWidth_neuropol(title, tStringFontSize, 0) / 2);
+	int tString_y = 0;
+	if (mode == 0)
+		tString_y = (kb_frame_y + kb_frame_h) - getStringHeight_neuropol(title, tStringFontSize) - 25;
+	else
+		tString_y = (kb_frame_y + kb_frame_h) - getStringHeight_neuropol(title, tStringFontSize) - 70;
 	
 	switch (mode) {
 		case 0:
@@ -1166,6 +1186,9 @@ int draw_keyBoard(char *ret, int mode) {
 	draw_image(tex_sel_bar2, selSize + kb_xoff - 20, (kb_yoff - 50) * Y_RATIO, highlight_alpha);
 	
 	}
+	
+	/* Draw the title string */
+	drawString_neuropol(tString_x, tString_y * Y_RATIO, 128, tStringFontSize, 0, title);
 	
 	free(selSizetemp);
 	
