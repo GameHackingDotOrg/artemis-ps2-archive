@@ -16,7 +16,7 @@ Many thanks to the following authors for their generous help:
 * [Daniel "Dnawrkshp" Gerendasy](https://github.com/Dnawrkshp)
 * Gtlcpimp
 * [Michaël "jimmikaelkael" Jimenez](https://github.com/jimmikaelkael)
-* [Lazy Bastard](https://github.com/LBGSHI)
+* [Lazy Bastard/LBGSHI](https://github.com/LBGSHI)
 * [Mathias "misfire" Lafeldt](https://github.com/mlafeldt)
 * [rimsky82](https://github.com/rimsky82)
 * [Viper187](https://github.com/Viper187)
